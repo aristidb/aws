@@ -54,6 +54,10 @@ data TimeInfo
     | Expires { fromExpires :: UTCTime }
     deriving (Show)
              
+defaultPort :: Protocol -> Int
+defaultPort HTTP = 80
+defaultPort HTTPS = 443
+             
 addQuery :: [(String, String)] -> Query -> Query
 addQuery xs q = q { query = xs ++ query q }
       
@@ -116,7 +120,7 @@ queryToURI Query{..}
                 , uriAuthority = Just (URIAuth {
                                          uriUserInfo = ""
                                        , uriRegName = host
-                                       , uriPort = ':' : show port
+                                       , uriPort = if port == defaultPort protocol then "" else ':' : show port
                                        })
                 , uriPath = path
                 , uriQuery = '?' : HTTP.urlEncodeVars query
