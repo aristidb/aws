@@ -1,7 +1,34 @@
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses #-}
+
 module AWS.SimpleDB.Actions
 where
   
-import AWS.Query  
+import           AWS.Query
+import qualified Network.HTTP as HTTP
+import qualified Data.ByteString.Lazy.Char8 as L
+
+data SDBInfo
+    = SDBInfo {
+        sdbiProtocol :: Protocol
+      , sdbiHttpMethod :: HTTP.RequestMethod
+      , sdbiHost :: String
+      , sdbiPort :: Int
+      }
+    deriving (Show)
+             
+sdbiBaseQuery :: SDBInfo -> Query
+sdbiBaseQuery SDBInfo{..} = Query { 
+                              api = SimpleDB
+                            , method = sdbiHttpMethod
+                            , protocol = sdbiProtocol
+                            , host = sdbiHost
+                            , port = sdbiPort 
+                            , path = "/"
+                            , query = [("Version", "2009-04-15")]
+                            , date = Nothing
+                            , metadata = []
+                            , body = L.empty
+                            }
 
 data CreateDomain
     = CreateDomain {
@@ -9,12 +36,18 @@ data CreateDomain
       }
     deriving (Show)
              
+instance AsQuery CreateDomain SDBInfo where
+    asQuery i CreateDomain{..} = addQuery [("Action", "CreateDomain"), ("DomainName", cdDomainName)] (sdbiBaseQuery i)
+             
 data DeleteDomain
     = DeleteDomain {
         ddDomainName :: String
       }
     deriving (Show)
              
+instance AsQuery DeleteDomain SDBInfo where
+    asQuery i DeleteDomain{..} = addQuery [("DomainName", ddDomainName)] (sdbiBaseQuery i)
+
 data ListDomains
     = ListDomains {
         ldMaxNumberOfDomains :: Int

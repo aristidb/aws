@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FunctionalDependencies #-}
 
 module AWS.Query
 where
@@ -14,6 +14,9 @@ import           Data.HMAC
 import qualified Codec.Binary.Base64        as Base64
 import qualified Codec.Binary.UTF8.String   as Utf8
 import           System.Locale
+
+class AsQuery d i | d -> i where
+    asQuery :: i -> d -> Query
   
 data API
     = SimpleDB
@@ -50,6 +53,9 @@ data TimeInfo
     = Timestamp { fromTimestamp :: UTCTime }
     | Expires { fromExpires :: UTCTime }
     deriving (Show)
+             
+addQuery :: [(String, String)] -> Query -> Query
+addQuery xs q = q { query = xs ++ query q }
       
 addTimeInfo :: TimeInfo -> Query -> Query
 addTimeInfo (Timestamp time) q@Query{..} = q {
