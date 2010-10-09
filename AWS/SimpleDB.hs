@@ -69,3 +69,11 @@ data BatchPutAttributes
 data Item a
     = Item { itemName :: String, itemData :: a }
     deriving (Show)
+             
+data Select
+    = Select {
+        sSelectExpression :: String
+      , sConsistentRead :: Bool
+      , sNextToken :: String
+      }
+    deriving (Show)
