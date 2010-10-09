@@ -65,14 +65,14 @@ addSignatureData Credentials{..} q@Query{..} = q {
                                          }
                                                
 signPreparedQuery :: Credentials -> Query -> Query
-signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
+signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : sortedQuery }
     where sig = Base64.encode $ hmac_sha1 (Utf8.encode secretAccessKey) (Utf8.encode stringToSign)
           sortedQuery = sortBy (compare `on` Utf8.encode . fst) query
           stringToSign = case api of 
                            SimpleDB -> show method ++ "\n" ++
                                        show host ++ "\n" ++
                                        path ++ "\n" ++
-                                       HTTP.urlEncodeVars query
+                                       HTTP.urlEncodeVars sortedQuery
                                        
 signQuery :: TimeInfo -> Credentials -> Query -> Query
 signQuery ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
