@@ -57,7 +57,10 @@ Library
                        bytestring ==0.9.*,
                        network ==2.2.*,
                        HTTP ==4000.*,
-                       time ==1.2.*
+                       time ==1.2.*,
+                       utf8-string ==0.3.*,
+                       dataenc ==0.13.*,
+                       Crypto ==4.2.*
   
   -- Modules not exported by this package.
   -- Other-modules:       
