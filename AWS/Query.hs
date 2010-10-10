@@ -3,6 +3,7 @@
 module AWS.Query
 where
 
+import           AWS.Credentials
 import           Control.Arrow
 import           Control.Monad
 import           Data.Function
@@ -40,13 +41,6 @@ data Query
       , date :: Maybe UTCTime
       , metadata :: [HTTP.Header]
       , body :: L.ByteString  
-      }
-    deriving (Show)
-
-data Credentials
-    = Credentials {
-        accessKeyID :: String
-      , secretAccessKey :: String
       }
     deriving (Show)
       
