@@ -1,4 +1,4 @@
-module AWS.HttpRequest
+module AWS.Http
 where
   
 import qualified Network.HTTP               as HTTP

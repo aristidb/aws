@@ -49,8 +49,9 @@ Library
   -- Modules exported by the library.
   Exposed-modules:
                        AWS.Query,
-                       AWS.SimpleDB,
-                       AWS.Credentials
+                       AWS.SimpleDb,
+                       AWS.Credentials,
+                       AWS.Http
   
   -- Packages needed in order to build this package.
   Build-depends:

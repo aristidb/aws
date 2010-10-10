@@ -4,7 +4,7 @@ module AWS.Query
 where
 
 import           AWS.Credentials
-import           AWS.HttpRequest
+import           AWS.Http
 import           Control.Arrow
 import           Control.Monad
 import           Data.Function

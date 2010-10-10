@@ -1,10 +1,10 @@
 {-# LANGUAGE RecordWildCards, MultiParamTypeClasses #-}
 
-module AWS.SimpleDB
+module AWS.SimpleDb
 where
   
 import           AWS.Query
-import           AWS.HttpRequest
+import           AWS.Http
 import           Data.Maybe
 import qualified Network.HTTP               as HTTP
 import qualified Data.ByteString.Lazy.Char8 as L
