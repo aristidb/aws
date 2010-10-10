@@ -146,8 +146,14 @@ attributeQuery :: (a -> [(String, String)]) -> Attribute a -> [(String, String)]
 attributeQuery  f (ForAttribute name x) =  ("Name", name) : f x
              
 data SetAttribute
-    = SetAttribute { setAttribute :: String, replaceAttribute :: Bool }
+    = SetAttribute { setAttribute :: String, isReplaceAttribute :: Bool }
     deriving (Show)
+             
+addAttribute :: String -> String -> Attribute SetAttribute
+addAttribute name value = ForAttribute name (SetAttribute value False)
+
+replaceAttribute :: String -> String -> Attribute SetAttribute
+replaceAttribute name value = ForAttribute name (SetAttribute value True)
              
 setAttributeQuery :: SetAttribute -> [(String, String)]
 setAttributeQuery (SetAttribute value replace)
@@ -155,8 +161,14 @@ setAttributeQuery (SetAttribute value replace)
              
 data ExpectedAttribute
     = ExpectedValue { expectedAttributeValue :: String }
-    | ExpectedExists { expectedExists :: Bool }
+    | ExpectedExists { expectedAttributeExists :: Bool }
     deriving (Show)
+             
+expectedValue :: String -> String -> Attribute ExpectedAttribute
+expectedValue name value = ForAttribute name (ExpectedValue value)
+
+expectedExists :: String -> Bool -> Attribute ExpectedAttribute
+expectedExists name exists = ForAttribute name (ExpectedExists exists)
              
 expectedAttributeQuery :: ExpectedAttribute -> [(String, String)]
 expectedAttributeQuery (ExpectedValue value) = [("Value", value)]
