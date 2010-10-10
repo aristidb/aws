@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, MultiParamTypeClasses #-}
 
-module AWS.SimpleDB.Actions
+module AWS.SimpleDB
 where
   
 import           AWS.Query
