@@ -4,7 +4,8 @@ module AWS.SimpleDB.Actions
 where
   
 import           AWS.Query
-import qualified Network.HTTP as HTTP
+import           Data.Maybe
+import qualified Network.HTTP               as HTTP
 import qualified Data.ByteString.Lazy.Char8 as L
 
 data SDBInfo
@@ -16,6 +17,18 @@ data SDBInfo
       }
     deriving (Show)
              
+sdbHttpGet :: SDBInfo
+sdbHttpGet = SDBInfo HTTP HTTP.GET "sdb.amazonaws.com" (defaultPort HTTP)
+                          
+sdbHttpPost :: SDBInfo
+sdbHttpPost = SDBInfo HTTP HTTP.POST "sdb.amazonaws.com" (defaultPort HTTP)
+              
+sdbHttpsGet :: SDBInfo
+sdbHttpsGet = SDBInfo HTTPS HTTP.GET "sdb.amazonaws.com" (defaultPort HTTPS)
+             
+sdbHttpsPost :: SDBInfo
+sdbHttpsPost = SDBInfo HTTPS HTTP.POST "sdb.amazonaws.com" (defaultPort HTTPS)
+
 sdbiBaseQuery :: SDBInfo -> Query
 sdbiBaseQuery SDBInfo{..} = Query { 
                               api = SimpleDB
@@ -36,6 +49,9 @@ data CreateDomain
       }
     deriving (Show)
              
+createDomain :: String -> CreateDomain
+createDomain name = CreateDomain { cdDomainName = name }
+             
 instance AsQuery CreateDomain SDBInfo where
     asQuery i CreateDomain{..} = addQuery [("Action", "CreateDomain"), ("DomainName", cdDomainName)] (sdbiBaseQuery i)
              
@@ -45,21 +61,39 @@ data DeleteDomain
       }
     deriving (Show)
              
+deleteDomain :: String -> DeleteDomain
+deleteDomain name = DeleteDomain { ddDomainName = name }
+             
 instance AsQuery DeleteDomain SDBInfo where
-    asQuery i DeleteDomain{..} = addQuery [("DomainName", ddDomainName)] (sdbiBaseQuery i)
+    asQuery i DeleteDomain{..} = addQuery [("Action", "DeleteDomain"), ("DomainName", ddDomainName)] (sdbiBaseQuery i)
 
 data ListDomains
     = ListDomains {
-        ldMaxNumberOfDomains :: Int
+        ldMaxNumberOfDomains :: Maybe Int
       , ldNextToken :: String
       }
     deriving (Show)
+
+listDomains :: ListDomains
+listDomains = ListDomains { ldMaxNumberOfDomains = Nothing, ldNextToken = "" }
              
+instance AsQuery ListDomains SDBInfo where
+    asQuery i ListDomains{..} = addQuery [("Action", "ListDomains")]
+                                . addQueryMaybe show ("MaxNumberOfDomains", ldMaxNumberOfDomains)
+                                . addQueryUnless (null ldNextToken) [("NextToken", ldNextToken)]
+                                $ sdbiBaseQuery i
+                                
 data DomainMetadata
     = DomainMetadata {
         dmDomainName :: String
       }
     deriving (Show)
+             
+domainMetadata :: String -> DomainMetadata
+domainMetadata name = DomainMetadata { dmDomainName = name }
+
+instance AsQuery DomainMetadata SDBInfo where
+    asQuery i DomainMetadata{..} = addQuery [("Action", "DomainMetadata"), ("DomainName", dmDomainName)] (sdbiBaseQuery i)
              
 data GetAttributes
     = GetAttributes {
@@ -70,6 +104,16 @@ data GetAttributes
       }
     deriving (Show)
              
+getAttributes :: String -> String -> GetAttributes
+getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
+
+instance AsQuery GetAttributes SDBInfo where
+    asQuery i GetAttributes{..}
+        = addQuery [("Action", "GetAttributes"), ("ItemName", gaItemName), ("DomainName", gaDomainName)]
+          . addQueryMaybe id ("AttributeName", gaAttributeName)
+          . addQueryIf gaConsistentRead [("ConsistentRead", awsTrue)]
+          $ sdbiBaseQuery i
+             
 data PutAttributes
     = PutAttributes {
         paItemName :: String
@@ -79,18 +123,44 @@ data PutAttributes
       }
     deriving (Show)
              
+putAttributes :: String -> [Attribute SetAttribute] -> String -> PutAttributes
+putAttributes item attributes domain = PutAttributes { 
+                                         paItemName = item
+                                       , paAttributes = attributes
+                                       , paExpected = []
+                                       , paDomainName = domain 
+                                       }
+                                       
+instance AsQuery PutAttributes SDBInfo where
+    asQuery i PutAttributes{..}
+        = addQuery [("Action", "PutAttributes"), ("ItemName", paItemName), ("DomainName", paDomainName)]
+          . addQueryList (attributeQuery setAttributeQuery) "Attribute" paAttributes
+          . addQueryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
+          $ sdbiBaseQuery i
+             
 data Attribute a
     = ForAttribute { attributeName :: String, attributeData :: a }
     deriving (Show)
+             
+attributeQuery :: (a -> [(String, String)]) -> Attribute a -> [(String, String)]
+attributeQuery  f (ForAttribute name x) =  ("Name", name) : f x
              
 data SetAttribute
     = SetAttribute { setAttribute :: String, replaceAttribute :: Bool }
     deriving (Show)
              
+setAttributeQuery :: SetAttribute -> [(String, String)]
+setAttributeQuery (SetAttribute value replace)
+    = ("Value", value) : (if replace then [("Replace", awsTrue)] else [])
+             
 data ExpectedAttribute
     = ExpectedValue { expectedAttributeValue :: String }
     | ExpectedExists { expectedExists :: Bool }
     deriving (Show)
+             
+expectedAttributeQuery :: ExpectedAttribute -> [(String, String)]
+expectedAttributeQuery (ExpectedValue value) = [("Value", value)]
+expectedAttributeQuery (ExpectedExists exists) = [("Exists", awsBool exists)]
 
 data BatchPutAttributes
     = BatchPutAttributes {
@@ -98,10 +168,22 @@ data BatchPutAttributes
       , bpaDomainName :: String
       }
     deriving (Show)
+             
+batchPutAttributes :: [Item [Attribute SetAttribute]] -> String -> BatchPutAttributes
+batchPutAttributes items domain = BatchPutAttributes { bpaItems = items, bpaDomainName = domain }
+
+instance AsQuery BatchPutAttributes SDBInfo where
+    asQuery i BatchPutAttributes{..}
+        = addQuery [("Action", "BatchPutAttributes"), ("DomainName", bpaDomainName)]
+          . addQueryList (itemQuery $ queryList (attributeQuery setAttributeQuery) "Attribute") "Item" bpaItems
+          $ sdbiBaseQuery i
 
 data Item a
     = Item { itemName :: String, itemData :: a }
     deriving (Show)
+             
+itemQuery :: (a -> [(String, String)]) -> Item a -> [(String, String)]
+itemQuery f (Item name x) = ("ItemName", name) : f x
              
 data Select
     = Select {
@@ -110,3 +192,13 @@ data Select
       , sNextToken :: String
       }
     deriving (Show)
+
+select :: String -> Select
+select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextToken = "" }
+
+instance AsQuery Select SDBInfo where
+    asQuery i Select{..}
+        = addQuery [("Action", "Select"), ("SelectExpression", sSelectExpression)]
+          . addQueryIf sConsistentRead [("ConsistentRead", awsTrue)]
+          . addQueryUnless (null sNextToken) [("NextToken", sNextToken)]
+          $ sdbiBaseQuery i

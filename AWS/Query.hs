@@ -3,6 +3,7 @@
 module AWS.Query
 where
 
+import           Control.Arrow
 import           Control.Monad
 import           Data.Function
 import           Data.List
@@ -60,7 +61,38 @@ defaultPort HTTPS = 443
              
 addQuery :: [(String, String)] -> Query -> Query
 addQuery xs q = q { query = xs ++ query q }
+
+addQueryIf :: Bool -> [(String, String)] -> Query -> Query
+addQueryIf True  = addQuery
+addQueryIf False = const id
+
+addQueryUnless :: Bool -> [(String, String)] -> Query -> Query
+addQueryUnless = addQueryIf . not
       
+addQueryMaybe :: (a -> String) -> (String, Maybe a) -> Query -> Query
+addQueryMaybe f (name, Just a) q = q { query = (name, f a) : query q }
+addQueryMaybe _ (_, Nothing) q = q
+
+dot x y = x ++ '.' : y
+
+queryList :: (a -> [(String, String)]) -> String -> [a] -> [(String, String)]
+queryList f prefix xs = concat $ zipWith combine prefixList (map f xs)
+    where prefixList = map (dot prefix . show) [1..]
+          combine pf = map $ first (pf `dot`)
+          
+addQueryList :: (a -> [(String, String)]) -> String -> [a] -> Query -> Query 
+addQueryList f prefix xs = addQuery $ queryList f prefix xs
+          
+awsBool :: Bool -> String
+awsBool True = "true"
+awsBool False = "false"
+
+awsTrue :: String
+awsTrue = awsBool True
+
+awsFalse :: String
+awsFalse = awsBool False
+
 addTimeInfo :: TimeInfo -> Query -> Query
 addTimeInfo (Timestamp time) q@Query{..} = q {
                                              query = ("Timestamp", fmtAmzTime time) : query
