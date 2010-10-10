@@ -4,6 +4,7 @@ module AWS.Query
 where
 
 import           AWS.Credentials
+import           AWS.HttpRequest
 import           Control.Arrow
 import           Control.Monad
 import           Data.Function
@@ -22,11 +23,6 @@ class AsQuery d i | d -> i where
   
 data API
     = SimpleDB
-    deriving (Show)
-  
-data Protocol
-    = HTTP
-    | HTTPS
     deriving (Show)
 
 data Query 
@@ -48,10 +44,6 @@ data TimeInfo
     = Timestamp { fromTimestamp :: UTCTime }
     | Expires { fromExpires :: UTCTime }
     deriving (Show)
-             
-defaultPort :: Protocol -> Int
-defaultPort HTTP = 80
-defaultPort HTTPS = 443
              
 addQuery :: [(String, String)] -> Query -> Query
 addQuery xs q = q { query = xs ++ query q }
@@ -116,42 +108,28 @@ signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) :
 signQuery :: TimeInfo -> Credentials -> Query -> Query
 signQuery ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
 
-queryToHTTPRequest :: Query -> (Protocol, HTTP.Request L.ByteString)
-queryToHTTPRequest Query{..}
-    = (protocol, req)
-    where req = HTTP.Request {
-                  rqURI = nullURI {
-                            uriPath  = path
-                          , uriQuery = '?' : HTTP.urlEncodeVars query
-                          }
-                , rqMethod = method
-                , rqHeaders = (HTTP.Header HTTP.HdrHost host :)
-                              . (HTTP.Header HTTP.HdrContentLength (show $ L.length body) :)
-                              . addDate
-                              $ metadata
-                , rqBody = body
-                }
-          addDate = case date of
-                      Nothing -> id
-                      Just time -> (HTTP.Header HTTP.HdrDate (fmtRfc822Time time) :)
-                      
-queryToURI :: Query -> Maybe URI
-queryToURI Query{..}
-    = case test of
-        False -> Nothing
-        True -> Just $ nullURI {
-                  uriScheme = case protocol of
-                                HTTP -> "http:"
-                                HTTPS -> "https:"
-                , uriAuthority = Just (URIAuth {
-                                         uriUserInfo = ""
-                                       , uriRegName = host
-                                       , uriPort = if port == defaultPort protocol then "" else ':' : show port
-                                       })
-                , uriPath = path
-                , uriQuery = '?' : HTTP.urlEncodeVars query
-                }
-      where test = (L.null body) && (null metadata)
+queryToRequest :: Query -> HttpRequest
+queryToRequest Query{..}
+    = HttpRequest { 
+        method = method
+      , uri = nullURI {
+                uriScheme = case protocol of
+                              HTTP -> "http:"
+                              HTTPS -> "https:"
+              , uriAuthority = Just (URIAuth {
+                                       uriUserInfo = ""
+                                     , uriRegName = host
+                                     , uriPort = if port == defaultPort protocol then "" else ':' : show port
+                                     })
+              , uriPath = path
+              , uriQuery = guard isGet >> ('?' : HTTP.urlEncodeVars query)
+              }
+      , postQuery = guard isPost >> map urlEncodeSingleVar query
+      , body = L.empty
+      }
+    where isGet = method == HTTP.GET
+          isPost = method == HTTP.POST
+          urlEncodeSingleVar (a, b) = HTTP.urlEncode a ++ '=' : HTTP.urlEncode b
 
 fmtTime :: String -> UTCTime -> String
 fmtTime = formatTime defaultTimeLocale
