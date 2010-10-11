@@ -35,7 +35,6 @@ data Query
       , path :: String
       , query :: [(String, String)]
       , date :: Maybe UTCTime
-      , metadata :: [HTTP.Header]
       , body :: L.ByteString  
       }
     deriving (Show)
@@ -111,21 +110,22 @@ signQuery ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
 queryToRequest :: Query -> HttpRequest
 queryToRequest Query{..}
     = HttpRequest { 
-        method = method
-      , uri = nullURI {
-                uriScheme = case protocol of
-                              HTTP -> "http:"
-                              HTTPS -> "https:"
-              , uriAuthority = Just (URIAuth {
-                                       uriUserInfo = ""
-                                     , uriRegName = host
-                                     , uriPort = if port == defaultPort protocol then "" else ':' : show port
-                                     })
-              , uriPath = path
-              , uriQuery = guard isGet >> ('?' : HTTP.urlEncodeVars query)
-              }
-      , postQuery = guard isPost >> map urlEncodeSingleVar query
-      , body = L.empty
+        requestMethod = method
+      , requestUri = nullURI {
+                       uriScheme = case protocol of
+                                     HTTP -> "http:"
+                                     HTTPS -> "https:"
+                     , uriAuthority = Just (URIAuth {
+                                              uriUserInfo = ""
+                                            , uriRegName = host
+                                            , uriPort = if port == defaultPort protocol then "" else ':' : show port
+                                            })
+                     , uriPath = path
+                     , uriQuery = guard isGet >> ('?' : HTTP.urlEncodeVars query)
+                     }
+      , requestDate = date
+      , requestPostQuery = guard isPost >> map urlEncodeSingleVar query
+      , requestBody = L.empty
       }
     where isGet = method == HTTP.GET
           isPost = method == HTTP.POST

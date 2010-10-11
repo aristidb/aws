@@ -40,7 +40,6 @@ sdbiBaseQuery SDBInfo{..} = Query {
                             , path = "/"
                             , query = [("Version", "2009-04-15")]
                             , date = Nothing
-                            , metadata = []
                             , body = L.empty
                             }
 
