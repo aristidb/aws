@@ -5,6 +5,7 @@ where
 
 import           AWS.Credentials
 import           AWS.Http
+import           AWS.Util
 import           Control.Arrow
 import           Control.Monad
 import           Data.Function
@@ -16,7 +17,6 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.HMAC
 import qualified Codec.Binary.Base64        as Base64
 import qualified Codec.Binary.UTF8.String   as Utf8
-import           System.Locale
 
 class AsQuery d i | d -> i where
     asQuery :: i -> d -> Query
@@ -130,12 +130,3 @@ queryToRequest Query{..}
     where isGet = method == HTTP.GET
           isPost = method == HTTP.POST
           urlEncodeSingleVar (a, b) = HTTP.urlEncode a ++ '=' : HTTP.urlEncode b
-
-fmtTime :: String -> UTCTime -> String
-fmtTime = formatTime defaultTimeLocale
-
-fmtRfc822Time :: UTCTime -> String
-fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"
-
-fmtAmzTime :: UTCTime -> String
-fmtAmzTime = fmtTime "%Y-%m-%dT%H:%M:%S"
