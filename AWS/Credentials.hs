@@ -38,26 +38,30 @@ makeAbsoluteTimeInfo (ExpiresAt t) = return $ AbsoluteExpires t
 makeAbsoluteTimeInfo (ExpiresIn s) = AbsoluteExpires . addUTCTime s <$> getCurrentTime
 
 addTimeInfo :: AbsoluteTimeInfo -> Query -> Query
-addTimeInfo (AbsoluteTimestamp time) q@Query{..} = q {
-                                                     query = ("Timestamp", fmtAmzTime time) : query
-                                                   , date = Just time
-                                                   }
-addTimeInfo (AbsoluteExpires time) q@Query{..} = q {
-                                                   query = ("Expires", fmtAmzTime time) : query
-                                                 }
+addTimeInfo (AbsoluteTimestamp time) q@Query{..} 
+    = q {
+        query = ("Timestamp", fmtAmzTime time) : query
+      , date = Just time
+      }
+addTimeInfo (AbsoluteExpires time) q@Query{..} 
+    = q {
+        query = ("Expires", fmtAmzTime time) : query
+      }
 
 addSignatureData :: Credentials -> Query -> Query
-addSignatureData Credentials{..} q@Query{..} = q {
-                                           query = [("AWSAccessKeyId", accessKeyID), ("SignatureMethod", "HmacSHA1"), ("SignatureVersion", "2")]
-                                                   ++ query
-                                         }
+addSignatureData Credentials{..} q@Query{..} 
+    = q {
+        query = [("AWSAccessKeyId", accessKeyID), ("SignatureMethod", "HmacSHA1"), ("SignatureVersion", "2")]
+                ++ query
+      }
 
 stringToSign :: Query -> String
-stringToSign Query{..} = case api of 
-                           SimpleDB -> show method ++ "\n" ++
-                                       host ++ "\n" ++
-                                       path ++ "\n" ++
-                                       HTTP.urlEncodeVars sortedQuery
+stringToSign Query{..} 
+    = case api of 
+        SimpleDB -> show method ++ "\n" ++
+                    host ++ "\n" ++
+                    path ++ "\n" ++
+                    HTTP.urlEncodeVars sortedQuery
     where sortedQuery = sortBy (compare `on` Utf8.encode . fst) query
                                                
 signPreparedQuery :: Credentials -> Query -> Query
