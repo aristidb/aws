@@ -39,15 +39,17 @@ data HttpResponse
       }
     deriving (Show)
              
-curlRequest :: HttpRequest -> IO HttpResponse
-curlRequest HttpRequest{..} = parse <$> curlGetResponse_ uriString options
+curlRequest :: [CurlOption] -> HttpRequest -> IO HttpResponse
+curlRequest otherOptions HttpRequest{..} = parse <$> curlGetResponse_ uriString options
     where uriString = show requestUri
           options = (case requestMethod of
                       HTTP.GET -> [CurlHttpGet True]
                       HTTP.POST -> [CurlPostFields requestPostQuery]) ++
                     (case requestDate of
                        Just d -> [CurlTimeValue . round . utcTimeToPOSIXSeconds $ d]
-                       Nothing -> [])
+                       Nothing -> []) ++
+                    [CurlFailOnError False]
+                    ++ otherOptions
           parse :: CurlResponse_ [(String, String)] L.ByteString -> HttpResponse
           parse CurlResponse{..} = HttpResponse {
                                           responseError = show respCurlCode <$ guard (respCurlCode /= CurlOK)
