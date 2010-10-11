@@ -21,6 +21,8 @@ data Protocol
 defaultPort :: Protocol -> Int
 defaultPort HTTP = 80
 defaultPort HTTPS = 443
+
+-- Note/TODO: Large data: just use files
   
 data HttpRequest
     = HttpRequest {
