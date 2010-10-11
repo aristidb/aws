@@ -3,7 +3,6 @@
 module AWS.Query
 where
 
-import           AWS.Credentials
 import           AWS.Http
 import           AWS.Util
 import           Control.Arrow
@@ -37,11 +36,6 @@ data Query
       , date :: Maybe UTCTime
       , body :: L.ByteString  
       }
-    deriving (Show)
-      
-data TimeInfo
-    = Timestamp { fromTimestamp :: UTCTime }
-    | Expires { fromExpires :: UTCTime }
     deriving (Show)
              
 addQuery :: [(String, String)] -> Query -> Query
@@ -77,35 +71,6 @@ awsTrue = awsBool True
 
 awsFalse :: String
 awsFalse = awsBool False
-
-addTimeInfo :: TimeInfo -> Query -> Query
-addTimeInfo (Timestamp time) q@Query{..} = q {
-                                             query = ("Timestamp", fmtAmzTime time) : query
-                                           , date = Just time
-                                           }
-addTimeInfo (Expires time) q@Query{..} = q {
-                                           query = ("Expires", fmtAmzTime time) : query
-                                         }
-
-addSignatureData :: Credentials -> Query -> Query
-addSignatureData Credentials{..} q@Query{..} = q {
-                                           query = [("AWSAccessKeyId", accessKeyID), ("SignatureMethod", "HmacSHA1"), ("SignatureVersion", "2")]
-                                                   ++ query
-                                         }
-                                               
-stringToSign Query{..} = case api of 
-                           SimpleDB -> show method ++ "\n" ++
-                                       host ++ "\n" ++
-                                       path ++ "\n" ++
-                                       HTTP.urlEncodeVars sortedQuery
-    where sortedQuery = sortBy (compare `on` Utf8.encode . fst) query
-                                               
-signPreparedQuery :: Credentials -> Query -> Query
-signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
-    where sig = Base64.encode $ hmac_sha1 (Utf8.encode secretAccessKey) (Utf8.encode . stringToSign $ q)
-                           
-signQuery :: TimeInfo -> Credentials -> Query -> Query
-signQuery ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
 
 queryToRequest :: Query -> HttpRequest
 queryToRequest Query{..}
