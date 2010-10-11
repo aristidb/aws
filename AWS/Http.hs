@@ -3,6 +3,7 @@
 module AWS.Http
 where
   
+import           AWS.Util
 import           Control.Applicative
 import           Control.Monad
 import           Data.Time
@@ -48,8 +49,14 @@ curlRequest otherOptions HttpRequest{..} = parse <$> curlGetResponse_ uriString 
                     (case requestDate of
                        Just d -> [CurlTimeValue . round . utcTimeToPOSIXSeconds $ d]
                        Nothing -> []) ++
-                    [CurlFailOnError False]
+                    [
+                      CurlHttpHeaders headers
+                    , CurlFailOnError False
+                    ]
                     ++ otherOptions
+          headers = case requestDate of
+                      Just d -> ["Date: " ++ fmtRfc822Time d]
+                      Nothing -> []
           parse :: CurlResponse_ [(String, String)] L.ByteString -> HttpResponse
           parse CurlResponse{..} = HttpResponse {
                                           responseError = show respCurlCode <$ guard (respCurlCode /= CurlOK)
