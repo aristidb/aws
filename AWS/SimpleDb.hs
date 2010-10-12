@@ -18,17 +18,29 @@ data SDBInfo
       }
     deriving (Show)
              
-sdbHttpGet :: SDBInfo
-sdbHttpGet = SDBInfo HTTP HTTP.GET "sdb.amazonaws.com" (defaultPort HTTP)
-                          
-sdbHttpPost :: SDBInfo
-sdbHttpPost = SDBInfo HTTP HTTP.POST "sdb.amazonaws.com" (defaultPort HTTP)
-              
-sdbHttpsGet :: SDBInfo
-sdbHttpsGet = SDBInfo HTTPS HTTP.GET "sdb.amazonaws.com" (defaultPort HTTPS)
+sdbUsEast :: String
+sdbUsEast = "sdb.amazonaws.com" 
+
+sdbUsWest :: String
+sdbUsWest = "sdb.us-west-1.amazonaws.com"
+
+sdbEuWest :: String
+sdbEuWest = "sdb.eu-west-1.amazonaws.com"
+
+sdbApSoutheast :: String
+sdbApSoutheast = "sdb.ap-southeast-1.amazonaws.com"
              
-sdbHttpsPost :: SDBInfo
-sdbHttpsPost = SDBInfo HTTPS HTTP.POST "sdb.amazonaws.com" (defaultPort HTTPS)
+sdbHttpGet :: String -> SDBInfo
+sdbHttpGet endpoint = SDBInfo HTTP HTTP.GET endpoint (defaultPort HTTP)
+                          
+sdbHttpPost :: String -> SDBInfo
+sdbHttpPost endpoint = SDBInfo HTTP HTTP.POST endpoint (defaultPort HTTP)
+              
+sdbHttpsGet :: String -> SDBInfo
+sdbHttpsGet endpoint = SDBInfo HTTPS HTTP.GET endpoint (defaultPort HTTPS)
+             
+sdbHttpsPost :: String -> SDBInfo
+sdbHttpsPost endpoint = SDBInfo HTTPS HTTP.POST endpoint (defaultPort HTTPS)
 
 sdbiBaseQuery :: SDBInfo -> Query
 sdbiBaseQuery SDBInfo{..} = Query { 
