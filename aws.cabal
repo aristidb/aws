@@ -67,6 +67,7 @@ Library
                        filepath ==1.1.*,
                        network ==2.2.*,
                        old-locale ==1.*,
+                       shortcircuit ==0.1.*,
                        time ==1.2.*,
                        utf8-string ==0.3.*,
                        xml ==1.3.*

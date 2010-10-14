@@ -7,6 +7,7 @@ import           AWS.Query
 import           AWS.Util
 import           Control.Applicative
 import           Control.Monad
+import           Control.Shortcircuit
 import           Data.Function
 import           Data.List
 import           Data.Time
@@ -61,7 +62,7 @@ loadCredentialsFromEnv = do
   return (Credentials <$> keyID <*> secret)
   
 loadCredentialsFromEnvOrFile :: FilePath -> String -> IO (Maybe Credentials)
-loadCredentialsFromEnvOrFile file key = loadCredentialsFromEnv `orElse` loadCredentialsFromFile file key
+loadCredentialsFromEnvOrFile file key = loadCredentialsFromEnv `orM` loadCredentialsFromFile file key
 
 loadCredentialsDefault :: IO (Maybe Credentials)
 loadCredentialsDefault = do
