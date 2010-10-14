@@ -7,7 +7,7 @@ import           AWS.Query
 import           AWS.Util
 import           Control.Applicative
 import           Control.Monad
-import           Control.Shortcircuit
+import           Control.Shortcircuit     (orM)
 import           Data.Function
 import           Data.List
 import           Data.Time
