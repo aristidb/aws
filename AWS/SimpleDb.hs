@@ -9,8 +9,8 @@ import           Data.Maybe
 import qualified Network.HTTP               as HTTP
 import qualified Data.ByteString.Lazy.Char8 as L
 
-data SDBInfo
-    = SDBInfo {
+data SdbInfo
+    = SdbInfo {
         sdbiProtocol :: Protocol
       , sdbiHttpMethod :: HTTP.RequestMethod
       , sdbiHost :: String
@@ -30,20 +30,20 @@ sdbEuWest = "sdb.eu-west-1.amazonaws.com"
 sdbApSoutheast :: String
 sdbApSoutheast = "sdb.ap-southeast-1.amazonaws.com"
              
-sdbHttpGet :: String -> SDBInfo
-sdbHttpGet endpoint = SDBInfo HTTP HTTP.GET endpoint (defaultPort HTTP)
+sdbHttpGet :: String -> SdbInfo
+sdbHttpGet endpoint = SdbInfo HTTP HTTP.GET endpoint (defaultPort HTTP)
                           
-sdbHttpPost :: String -> SDBInfo
-sdbHttpPost endpoint = SDBInfo HTTP HTTP.POST endpoint (defaultPort HTTP)
+sdbHttpPost :: String -> SdbInfo
+sdbHttpPost endpoint = SdbInfo HTTP HTTP.POST endpoint (defaultPort HTTP)
               
-sdbHttpsGet :: String -> SDBInfo
-sdbHttpsGet endpoint = SDBInfo HTTPS HTTP.GET endpoint (defaultPort HTTPS)
+sdbHttpsGet :: String -> SdbInfo
+sdbHttpsGet endpoint = SdbInfo HTTPS HTTP.GET endpoint (defaultPort HTTPS)
              
-sdbHttpsPost :: String -> SDBInfo
-sdbHttpsPost endpoint = SDBInfo HTTPS HTTP.POST endpoint (defaultPort HTTPS)
+sdbHttpsPost :: String -> SdbInfo
+sdbHttpsPost endpoint = SdbInfo HTTPS HTTP.POST endpoint (defaultPort HTTPS)
 
-sdbiBaseQuery :: SDBInfo -> Query
-sdbiBaseQuery SDBInfo{..} = Query { 
+sdbiBaseQuery :: SdbInfo -> Query
+sdbiBaseQuery SdbInfo{..} = Query { 
                               api = SimpleDB
                             , method = sdbiHttpMethod
                             , protocol = sdbiProtocol
@@ -64,7 +64,7 @@ data CreateDomain
 createDomain :: String -> CreateDomain
 createDomain name = CreateDomain { cdDomainName = name }
              
-instance AsQuery CreateDomain SDBInfo where
+instance AsQuery CreateDomain SdbInfo where
     asQuery i CreateDomain{..} = addQuery [("Action", "CreateDomain"), ("DomainName", cdDomainName)] (sdbiBaseQuery i)
              
 data DeleteDomain
@@ -76,7 +76,7 @@ data DeleteDomain
 deleteDomain :: String -> DeleteDomain
 deleteDomain name = DeleteDomain { ddDomainName = name }
              
-instance AsQuery DeleteDomain SDBInfo where
+instance AsQuery DeleteDomain SdbInfo where
     asQuery i DeleteDomain{..} = addQuery [("Action", "DeleteDomain"), ("DomainName", ddDomainName)] (sdbiBaseQuery i)
 
 data ListDomains
@@ -89,7 +89,7 @@ data ListDomains
 listDomains :: ListDomains
 listDomains = ListDomains { ldMaxNumberOfDomains = Nothing, ldNextToken = "" }
              
-instance AsQuery ListDomains SDBInfo where
+instance AsQuery ListDomains SdbInfo where
     asQuery i ListDomains{..} = addQuery [("Action", "ListDomains")]
                                 . addQueryMaybe show ("MaxNumberOfDomains", ldMaxNumberOfDomains)
                                 . addQueryUnless (null ldNextToken) [("NextToken", ldNextToken)]
@@ -104,7 +104,7 @@ data DomainMetadata
 domainMetadata :: String -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
-instance AsQuery DomainMetadata SDBInfo where
+instance AsQuery DomainMetadata SdbInfo where
     asQuery i DomainMetadata{..} = addQuery [("Action", "DomainMetadata"), ("DomainName", dmDomainName)] (sdbiBaseQuery i)
              
 data GetAttributes
@@ -119,7 +119,7 @@ data GetAttributes
 getAttributes :: String -> String -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
 
-instance AsQuery GetAttributes SDBInfo where
+instance AsQuery GetAttributes SdbInfo where
     asQuery i GetAttributes{..}
         = addQuery [("Action", "GetAttributes"), ("ItemName", gaItemName), ("DomainName", gaDomainName)]
           . addQueryMaybe id ("AttributeName", gaAttributeName)
@@ -143,7 +143,7 @@ putAttributes item attributes domain = PutAttributes {
                                        , paDomainName = domain 
                                        }
                                        
-instance AsQuery PutAttributes SDBInfo where
+instance AsQuery PutAttributes SdbInfo where
     asQuery i PutAttributes{..}
         = addQuery [("Action", "PutAttributes"), ("ItemName", paItemName), ("DomainName", paDomainName)]
           . addQueryList (attributeQuery setAttributeQuery) "Attribute" paAttributes
@@ -196,7 +196,7 @@ data BatchPutAttributes
 batchPutAttributes :: [Item [Attribute SetAttribute]] -> String -> BatchPutAttributes
 batchPutAttributes items domain = BatchPutAttributes { bpaItems = items, bpaDomainName = domain }
 
-instance AsQuery BatchPutAttributes SDBInfo where
+instance AsQuery BatchPutAttributes SdbInfo where
     asQuery i BatchPutAttributes{..}
         = addQuery [("Action", "BatchPutAttributes"), ("DomainName", bpaDomainName)]
           . addQueryList (itemQuery $ queryList (attributeQuery setAttributeQuery) "Attribute") "Item" bpaItems
@@ -220,7 +220,7 @@ data Select
 select :: String -> Select
 select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextToken = "" }
 
-instance AsQuery Select SDBInfo where
+instance AsQuery Select SdbInfo where
     asQuery i Select{..}
         = addQuery [("Action", "Select"), ("SelectExpression", sSelectExpression)]
           . addQueryIf sConsistentRead [("ConsistentRead", awsTrue)]
