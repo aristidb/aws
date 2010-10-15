@@ -6,6 +6,7 @@ where
 import           AWS.Query
 import           AWS.Http
 import           Data.Maybe
+import qualified Data.Map                   as M
 import qualified Network.HTTP               as HTTP
 import qualified Data.ByteString.Lazy.Char8 as L
 
@@ -54,6 +55,160 @@ sdbiBaseQuery SdbInfo{..} = Query {
                             , date = Nothing
                             , body = L.empty
                             }
+
+data Response a
+    = Response { 
+        fromResponse :: Either Error a 
+      , requestId :: RequestId
+      , boxUsage :: Maybe BoxUsage
+      }
+    deriving (Show)
+
+instance Functor Response where
+    fmap f (Response a id bu) = Response (fmap f a) id bu
+
+type RequestId = String
+type BoxUsage = String
+
+data Error
+    = Error {
+        statusCode :: Int
+      , errorCode :: ErrorCode
+      , errorMessage :: String
+      }
+    deriving (Show)
+
+data ErrorCode
+    = AccessFailure
+    | AttributeDoesNotExist
+    | AttributesExceeded
+    | AuthFailure
+    | AuthMissingFailure
+    | ConditionalCheckFailed
+    | ExistsAndExpectedValue
+    | FeatureDeprecated
+    | IncompleteExpectedExpression
+    | InternalError
+    | InvalidAction
+    | InvalidHttpAuthHeader
+    | InvalidHttpRequest
+    | InvalidLiteral
+    | InvalidNextToken
+    | InvalidNumberPredicates
+    | InvalidNumberValueTests
+    | InvalidParameterCombination
+    | InvalidParameterValue
+    | InvalidQueryExpression
+    | InvalidResponseGroups
+    | InvalidSoapRequest
+    | InvalidService
+    | InvalidSortExpression
+    | InvalidUri
+    | InvalidWsAddressingProperty
+    | InvalidWsdlVersion
+    | MalformedSoapSignature
+    | MissingAction
+    | MissingParameter
+    | MissingWsAddressingProperty
+    | MultiValuedAttribute
+    | MultipleExistsConditions
+    | MultipleExpectedNames
+    | MultipleExpectedValues
+    | NoSuchDomain
+    | NoSuchVersion
+    | NotYetImplemented
+    | NumberDomainAttributes
+    | NumberDomainBytesExceeded
+    | NumberDomainsExceeded
+    | NumberItemAttributes
+    | NumberSubmitted
+    | NumberSubmittedAttributesExceeded
+    | NumberSubmittedItemsExceeded
+    | RequestExpired
+    | RequestTimeout
+    | ServiceUnavailable
+    | TooManyRequestedAttributes
+    | UriTooLong
+    | UnsupportedHttpVerb
+    | UnsupportedNextToken
+    | UnrecognizedErrorCode String
+    deriving (Eq, Ord)
+
+errorCodeStrings :: [(ErrorCode, String)]
+errorCodeStrings = [(AccessFailure, "AccessFailure")
+                   , (AttributeDoesNotExist, "AttributeDoesNotExist")
+                   , (AttributesExceeded, "AttributesExceeded")
+                   , (AuthFailure, "AuthFailure")
+                   , (AuthMissingFailure, "AuthMissingFailure")
+                   , (ConditionalCheckFailed, "ConditionalCheckFailed")
+                   , (ExistsAndExpectedValue, "ExistsAndExpectedValue")
+                   , (FeatureDeprecated, "FeatureDeprecated")
+                   , (IncompleteExpectedExpression, "IncompleteExpectedExpression")
+                   , (InternalError, "InternalError")
+                   , (InvalidAction, "InvalidAction")
+                   , (InvalidHttpAuthHeader, "InvalidHTTPAuthHeader")
+                   , (InvalidHttpRequest, "InvalidHttpRequest")
+                   , (InvalidLiteral, "InvalidLiteral")
+                   , (InvalidNextToken, "InvalidNextToken")
+                   , (InvalidNumberPredicates, "InvalidNumberPredicates")
+                   , (InvalidNumberValueTests, "InvalidNumberValueTests")
+                   , (InvalidParameterCombination, "InvalidParameterCombination")
+                   , (InvalidParameterValue, "InvalidParameterValue")
+                   , (InvalidQueryExpression, "InvalidQueryExpression")
+                   , (InvalidResponseGroups, "InvalidResponseGroups")
+                   , (InvalidSoapRequest, "InvalidSOAPRequest")
+                   , (InvalidService, "InvalidService")
+                   , (InvalidSortExpression, "InvalidSortExpression")
+                   , (InvalidUri, "InvalidURI")
+                   , (InvalidWsAddressingProperty, "InvalidWSAddressingProperty")
+                   , (InvalidWsdlVersion, "InvalidWSDLVersion")
+                   , (MalformedSoapSignature, "MalformedSOAPSignature")
+                   , (MissingAction, "MissingAction")
+                   , (MissingParameter, "MissingParameter")
+                   , (MissingWsAddressingProperty, "MissingWSAddressingProperty")
+                   , (MultiValuedAttribute, "MultiValuedAttribute")
+                   , (MultipleExistsConditions, "MultipleExistsConditions")
+                   , (MultipleExpectedNames, "MultipleExpectedNames")
+                   , (MultipleExpectedValues, "MultipleExpectedValues")
+                   , (NoSuchDomain, "NoSuchDomain")
+                   , (NoSuchVersion, "NoSuchVersion")
+                   , (NotYetImplemented, "NotYetImplemented")
+                   , (NumberDomainAttributes, "NumberDomainAttributes")
+                   , (NumberDomainBytesExceeded, "NumberDomainBytesExceeded")
+                   , (NumberDomainsExceeded, "NumberDomainsExceeded")
+                   , (NumberItemAttributes, "NumberItemAttributes")
+                   , (NumberSubmitted, "NumberSubmitted")
+                   , (NumberSubmittedAttributesExceeded, "NumberSubmittedAttributesExceeded")
+                   , (NumberSubmittedItemsExceeded, "NumberSubmittedItemsExceeded")
+                   , (RequestExpired, "RequestExpired")
+                   , (RequestTimeout, "RequestTimeout")
+                   , (ServiceUnavailable, "ServiceUnavailable")
+                   , (TooManyRequestedAttributes, "TooManyRequestedAttributes")
+                   , (UriTooLong, "URITooLong")
+                   , (UnsupportedHttpVerb, "UnsupportedHttpVerb")
+                   , (UnsupportedNextToken, "UnsupportedNextToken")
+                   ]
+
+errorCodeToNameMap :: M.Map ErrorCode String
+errorCodeToNameMap = M.fromList errorCodeStrings
+
+nameToErrorCodeMap :: M.Map String ErrorCode
+nameToErrorCodeMap = M.fromList . map (\(a, b) -> (b, a)) $ errorCodeStrings
+
+errorCodeToName :: ErrorCode -> String
+errorCodeToName (UnrecognizedErrorCode x) = x
+errorCodeToName x = fromJust $ M.lookup x errorCodeToNameMap
+
+nameToErrorCode :: String -> ErrorCode
+nameToErrorCode x = case M.lookup x nameToErrorCodeMap of
+                      Just c -> c
+                      Nothing -> UnrecognizedErrorCode x
+
+instance Show ErrorCode where
+    show x = errorCodeToName x
+
+instance Read ErrorCode where
+    readsPrec _ = readParen False (\x -> [(nameToErrorCode x, "")])
 
 data CreateDomain
     = CreateDomain {
