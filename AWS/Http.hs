@@ -36,12 +36,17 @@ data HttpRequest
 
 data HttpResponse
     = HttpResponse {
-        responseError :: Maybe String
+        responseError :: Maybe HttpError
       , responseStatus :: Maybe Int
       , responseBody :: L.ByteString
       }
     deriving (Show)
-             
+
+data HttpError
+    = CurlError CurlCode
+    | OtherError String
+    deriving (Show)
+
 curlRequest :: [CurlOption] -> HttpRequest -> IO HttpResponse
 curlRequest otherOptions HttpRequest{..} = parse <$> curlGetResponse_ uriString options
     where uriString = show requestUri
@@ -61,7 +66,7 @@ curlRequest otherOptions HttpRequest{..} = parse <$> curlGetResponse_ uriString 
                       Nothing -> []
           parse :: CurlResponse_ [(String, String)] L.ByteString -> HttpResponse
           parse CurlResponse{..} = HttpResponse {
-                                          responseError = show respCurlCode <$ guard (respCurlCode /= CurlOK)
+                                          responseError = CurlError respCurlCode <$ guard (respCurlCode /= CurlOK)
                                         , responseStatus = respStatus <$ guard (respStatus /= 0)
                                         , responseBody = respBody
                                         }
