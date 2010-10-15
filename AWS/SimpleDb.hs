@@ -5,6 +5,7 @@ where
   
 import           AWS.Query
 import           AWS.Http
+import           AWS.Response
 import           Data.Maybe
 import qualified Data.Map                   as M
 import qualified Network.HTTP               as HTTP
@@ -56,16 +57,19 @@ sdbiBaseQuery SdbInfo{..} = Query {
                             , body = L.empty
                             }
 
-data Response a
-    = Response { 
-        fromResponse :: Either Error a 
+data SdbResponse a
+    = SdbResponse { 
+        fromSdbResponse :: Either Error a 
       , requestId :: RequestId
       , boxUsage :: Maybe BoxUsage
       }
     deriving (Show)
 
-instance Functor Response where
-    fmap f (Response a id bu) = Response (fmap f a) id bu
+instance Functor SdbResponse where
+    fmap f (SdbResponse a id bu) = SdbResponse (fmap f a) id bu
+
+instance FromResponse (SdbResponse a) where
+    fromResponse (Response req) = Nothing
 
 type RequestId = String
 type BoxUsage = String
@@ -214,6 +218,10 @@ data CreateDomain
     = CreateDomain {
         cdDomainName :: String
       }
+    deriving (Show)
+
+data CreateDomainResponse 
+    = CreateDomainResponse
     deriving (Show)
              
 createDomain :: String -> CreateDomain
