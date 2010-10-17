@@ -10,6 +10,7 @@ import           Control.Shortcircuit
 import           Data.Char
 import           Data.Function
 import           Text.XML.Light
+import qualified Data.ByteString.Lazy      as L
 import qualified Data.ByteString.Lazy.UTF8 as BLU
 
 data Response
@@ -22,7 +23,8 @@ class FromResponse a where
     fromResponse :: Response -> ParseResult a
 
 data ParseError
-    = InvalidXml
+    = EmptyDocument Int
+    | InvalidXml
     | XmlElementNotFound String
     | UnexpectedElementName String String
     deriving (Show)
@@ -51,7 +53,9 @@ parseResultToMaybe :: ParseResult a -> Maybe a
 parseResultToMaybe = either (const Nothing) Just . runParseResult
 
 parseXmlResponse :: HttpResponse -> ParseResult Element
-parseXmlResponse = maybeRaise InvalidXml . parseXMLDoc . BLU.toString . responseBody
+parseXmlResponse resp = case responseBody resp of
+                          body | L.null body -> ParseResult (Left . EmptyDocument $ responseStatus resp)
+                               | otherwise -> maybeRaise InvalidXml . parseXMLDoc . BLU.toString $ body
 
 findElementName :: String -> Element -> ParseResult Element
 findElementName name = maybeRaise (XmlElementNotFound name) . filterElementName ((`strEqI` name) . qName)
