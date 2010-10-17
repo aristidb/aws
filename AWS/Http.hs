@@ -37,7 +37,7 @@ data HttpRequest
 data HttpResponse
     = HttpResponse {
         responseError :: Maybe HttpError
-      , responseStatus :: Maybe Int
+      , responseStatus :: Int
       , responseBody :: L.ByteString
       }
     deriving (Show)
@@ -67,6 +67,6 @@ curlRequest otherOptions HttpRequest{..} = parse <$> curlGetResponse_ uriString 
           parse :: CurlResponse_ [(String, String)] L.ByteString -> HttpResponse
           parse CurlResponse{..} = HttpResponse {
                                           responseError = CurlError respCurlCode <$ guard (respCurlCode /= CurlOK)
-                                        , responseStatus = respStatus <$ guard (respStatus /= 0)
+                                        , responseStatus = respStatus
                                         , responseBody = respBody
                                         }

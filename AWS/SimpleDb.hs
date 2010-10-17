@@ -6,10 +6,13 @@ where
 import           AWS.Query
 import           AWS.Http
 import           AWS.Response
+import           Control.Applicative
+import           Control.Shortcircuit       (if')
 import           Data.Maybe
 import qualified Data.Map                   as M
 import qualified Network.HTTP               as HTTP
 import qualified Data.ByteString.Lazy.Char8 as L
+import           Text.XML.Light
 
 data SdbInfo
     = SdbInfo {
@@ -68,8 +71,21 @@ data SdbResponse a
 instance Functor SdbResponse where
     fmap f (SdbResponse a id bu) = SdbResponse (fmap f a) id bu
 
-instance FromResponse (SdbResponse a) where
-    fromResponse (Response req) = Nothing
+instance SdbFromResponse a => FromResponse (SdbResponse a) where
+    fromResponse (Response resp) = SdbResponse <$> response <*> requestId <*> return boxUsage
+        where
+          response = if' xmlError (Left <$> err) (fmap Right $ sdbFromResponse =<< xml)
+          err = Error <$> return status <*> errCode <*> errMessage
+          status = responseStatus resp
+          xml = parseXmlResponse resp
+          xmlError = findElementName "Error" =<< xml
+          errCode = fmap (nameToErrorCode . strContent) $ findElementName "Code" =<< xmlError
+          errMessage = fmap strContent $ findElementName "Message" =<< xmlError
+          requestId = fmap strContent $ findElementName "RequestID" =<< xml
+          boxUsage = parseResultToMaybe $ fmap strContent $ findElementName "BoxUsage" =<< xml
+
+class SdbFromResponse a where
+    sdbFromResponse :: Element -> ParseResult a
 
 type RequestId = String
 type BoxUsage = String
@@ -229,6 +245,9 @@ createDomain name = CreateDomain { cdDomainName = name }
              
 instance AsQuery CreateDomain SdbInfo where
     asQuery i CreateDomain{..} = addQuery [("Action", "CreateDomain"), ("DomainName", cdDomainName)] (sdbiBaseQuery i)
+
+instance SdbFromResponse CreateDomainResponse where
+    sdbFromResponse xml = CreateDomainResponse <$ testElementName "CreateDomainResponse" xml
              
 data DeleteDomain
     = DeleteDomain {
