@@ -254,6 +254,10 @@ data DeleteDomain
         ddDomainName :: String
       }
     deriving (Show)
+
+data DeleteDomainResponse
+    = DeleteDomainResponse
+    deriving (Show)
              
 deleteDomain :: String -> DeleteDomain
 deleteDomain name = DeleteDomain { ddDomainName = name }
@@ -261,6 +265,9 @@ deleteDomain name = DeleteDomain { ddDomainName = name }
 instance AsQuery DeleteDomain SdbInfo where
     asQuery i DeleteDomain{..} = addQuery [("Action", "DeleteDomain"), ("DomainName", ddDomainName)] (sdbiBaseQuery i)
 
+instance SdbFromResponse DeleteDomainResponse where
+    sdbFromResponse xml = DeleteDomainResponse <$ testElementName "DeleteDomainResponse" xml
+             
 data ListDomains
     = ListDomains {
         ldMaxNumberOfDomains :: Maybe Int
