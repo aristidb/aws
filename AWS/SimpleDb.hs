@@ -12,7 +12,10 @@ import           Data.Maybe
 import qualified Data.Map                   as M
 import qualified Network.HTTP               as HTTP
 import qualified Data.ByteString.Lazy.Char8 as L
-import           Text.XML.Light
+import           Text.XML.Monad
+import qualified Text.XML.Light            as XL
+import           MonadLib
+import           MonadLib.Compose
 
 data SdbInfo
     = SdbInfo {
@@ -72,20 +75,24 @@ instance Functor SdbResponse where
     fmap f (SdbResponse a id bu) = SdbResponse (fmap f a) id bu
 
 instance SdbFromResponse a => FromResponse (SdbResponse a) where
-    fromResponse (Response resp) = SdbResponse <$> response <*> requestId <*> return boxUsage
-        where
-          response = if' xmlError (Left <$> err) (fmap Right $ sdbFromResponse =<< xml)
-          err = Error <$> return status <*> errCode <*> errMessage
-          status = responseStatus resp
-          xml = parseXmlResponse resp
-          xmlError = findElementName "Error" =<< xml
-          errCode = fmap (nameToErrorCode . strContent) $ findElementName "Code" =<< xmlError
-          errMessage = fmap strContent $ findElementName "Message" =<< xmlError
-          requestId = fmap strContent $ findElementName "RequestID" =<< xml
-          boxUsage = parseResultToMaybe $ fmap strContent $ findElementName "BoxUsage" =<< xml
+    fromResponse = do
+          status <- asks (responseStatus . httpResponse)
+          parseXmlResponse >>> fromXml status
+        where fromXml status = do
+                requestId <- strContent <<< findElementNameUI "RequestID"
+                boxUsage <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
+                xmlError <- tryMaybe $ findElementNameUI "Error"
+                inner <- case xmlError of
+                           Just err -> Left <$> mapply (fromError status) err
+                           Nothing -> Right <$> sdbFromResponse
+                return (SdbResponse inner requestId boxUsage)
+              fromError status = do
+                errCode <- asks nameToErrorCode <<< strContent <<< findElementNameUI "Code"
+                errMessage <- strContent <<< findElementNameUI "Message"
+                return (Error status errCode errMessage)
 
 class SdbFromResponse a where
-    sdbFromResponse :: Element -> ParseResult a
+    sdbFromResponse :: Xml XL.Element a
 
 type RequestId = String
 type BoxUsage = String
@@ -247,7 +254,7 @@ instance AsQuery CreateDomain SdbInfo where
     asQuery i CreateDomain{..} = addQuery [("Action", "CreateDomain"), ("DomainName", cdDomainName)] (sdbiBaseQuery i)
 
 instance SdbFromResponse CreateDomainResponse where
-    sdbFromResponse xml = CreateDomainResponse <$ testElementName "CreateDomainResponse" xml
+    sdbFromResponse = CreateDomainResponse <$ testElementNameUI "CreateDomainResponse"
              
 data DeleteDomain
     = DeleteDomain {
@@ -266,7 +273,7 @@ instance AsQuery DeleteDomain SdbInfo where
     asQuery i DeleteDomain{..} = addQuery [("Action", "DeleteDomain"), ("DomainName", ddDomainName)] (sdbiBaseQuery i)
 
 instance SdbFromResponse DeleteDomainResponse where
-    sdbFromResponse xml = DeleteDomainResponse <$ testElementName "DeleteDomainResponse" xml
+    sdbFromResponse = DeleteDomainResponse <$ testElementNameUI "DeleteDomainResponse"
              
 data ListDomains
     = ListDomains {
