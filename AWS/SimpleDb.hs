@@ -87,7 +87,7 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) where
                            Nothing -> Right <$> sdbFromResponse
                 return (SdbResponse inner requestId boxUsage)
               fromError status = do
-                errCode <- asks nameToErrorCode <<< strContent <<< findElementNameUI "Code"
+                errCode <- nameToErrorCode <$> strContent <<< findElementNameUI "Code"
                 errMessage <- strContent <<< findElementNameUI "Message"
                 return (Error status errCode errMessage)
 
