@@ -278,19 +278,33 @@ instance SdbFromResponse DeleteDomainResponse where
 data ListDomains
     = ListDomains {
         ldMaxNumberOfDomains :: Maybe Int
-      , ldNextToken :: String
+      , ldNextToken :: Maybe String
+      }
+    deriving (Show)
+
+data ListDomainsResponse 
+    = ListDomainsResponse {
+        ldrDomainNames :: [String]
+      , ldrNextToken :: Maybe String
       }
     deriving (Show)
 
 listDomains :: ListDomains
-listDomains = ListDomains { ldMaxNumberOfDomains = Nothing, ldNextToken = "" }
+listDomains = ListDomains { ldMaxNumberOfDomains = Nothing, ldNextToken = Nothing }
              
 instance AsQuery ListDomains SdbInfo where
     asQuery i ListDomains{..} = addQuery [("Action", "ListDomains")]
                                 . addQueryMaybe show ("MaxNumberOfDomains", ldMaxNumberOfDomains)
-                                . addQueryUnless (null ldNextToken) [("NextToken", ldNextToken)]
+                                . addQueryMaybe id ("NextToken", ldNextToken)
                                 $ sdbiBaseQuery i
-                                
+
+instance SdbFromResponse ListDomainsResponse where
+    sdbFromResponse = do
+      testElementNameUI "ListDomainsResponse"
+      names <- mapM (mapply strContent) =<< findElementsNameUI "DomainName"
+      nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
+      return $ ListDomainsResponse names nextToken
+
 data DomainMetadata
     = DomainMetadata {
         dmDomainName :: String
