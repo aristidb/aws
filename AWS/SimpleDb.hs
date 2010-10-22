@@ -92,7 +92,7 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) where
                 return (Error status errCode errMessage)
 
 class SdbFromResponse a where
-    sdbFromResponse :: Xml ParseError XL.Element a
+    sdbFromResponse :: Xml XmlError XL.Element a
 
 type RequestId = String
 type BoxUsage = String

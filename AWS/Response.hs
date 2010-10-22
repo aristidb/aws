@@ -23,7 +23,7 @@ data Response
     deriving (Show)
 
 class FromResponse a where
-    fromResponse :: Xml ParseError Response a
+    fromResponse :: Xml XmlError Response a
 
-parseXmlResponse :: Xml ParseError Response XL.Element
+parseXmlResponse :: Xml XmlError Response XL.Element
 parseXmlResponse = parseXMLDoc <<< asks (BLU.toString . responseBody . httpResponse)
