@@ -7,7 +7,6 @@ import           AWS.Query
 import           AWS.Http
 import           AWS.Response
 import           Control.Applicative
-import           Control.Shortcircuit       (if')
 import           Data.Maybe
 import qualified Data.Map                   as M
 import qualified Network.HTTP               as HTTP
