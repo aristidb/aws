@@ -301,7 +301,7 @@ instance AsQuery ListDomains SdbInfo where
 instance SdbFromResponse ListDomainsResponse where
     sdbFromResponse = do
       testElementNameUI "ListDomainsResponse"
-      names <- mapM (mapply strContent) =<< findElementsNameUI "DomainName"
+      names <- inList strContent <<< findElementsNameUI "DomainName"
       nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
       return $ ListDomainsResponse names nextToken
 
