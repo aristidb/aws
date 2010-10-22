@@ -12,8 +12,10 @@ import           Data.Maybe
 import qualified Data.Map                   as M
 import qualified Network.HTTP               as HTTP
 import qualified Data.ByteString.Lazy.Char8 as L
+import           Data.Time
+import           Data.Time.Clock.POSIX
 import           Text.XML.Monad
-import qualified Text.XML.Light            as XL
+import qualified Text.XML.Light             as XL
 import           MonadLib
 import           MonadLib.Compose
 
@@ -310,13 +312,37 @@ data DomainMetadata
         dmDomainName :: String
       }
     deriving (Show)
+
+data DomainMetadataResponse
+    = DomainMetadataResponse {
+        dmrTimestamp :: UTCTime
+      , dmrItemCount :: Integer
+      , dmrAttributeValueCount :: Integer
+      , dmrAttributeNameCount :: Integer
+      , dmrItemNamesSizeBytes :: Integer
+      , dmrAttributeValuesSizeBytes :: Integer
+      , dmrAttributeNamesSizeBytes :: Integer
+      }
+    deriving (Show)
              
 domainMetadata :: String -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
 instance AsQuery DomainMetadata SdbInfo where
     asQuery i DomainMetadata{..} = addQuery [("Action", "DomainMetadata"), ("DomainName", dmDomainName)] (sdbiBaseQuery i)
-             
+
+instance SdbFromResponse DomainMetadataResponse where
+    sdbFromResponse = do
+      testElementNameUI "DomainMetadataResponse"
+      dmrTimestamp <- posixSecondsToUTCTime . fromInteger <$> readContent <<< findElementNameUI "Timestamp"
+      dmrItemCount <- readContent <<< findElementNameUI "ItemCount"
+      dmrAttributeValueCount <- readContent <<< findElementNameUI "AttributeValueCount"
+      dmrAttributeNameCount <- readContent <<< findElementNameUI "AttributeNameCount"
+      dmrItemNamesSizeBytes <- readContent <<< findElementNameUI "ItemNamesSizeBytes"
+      dmrAttributeValuesSizeBytes <- readContent <<< findElementNameUI "AttributeValuesSizeBytes"
+      dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
+      return $ DomainMetadataResponse{..}
+
 data GetAttributes
     = GetAttributes {
         gaItemName :: String
