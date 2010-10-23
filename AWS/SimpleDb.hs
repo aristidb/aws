@@ -342,6 +342,13 @@ instance SdbFromResponse DomainMetadataResponse where
       dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
       return $ DomainMetadataResponse{..}
 
+data Attribute a
+    = ForAttribute { attributeName :: String, attributeData :: a }
+    deriving (Show)
+             
+attributeQuery :: (a -> [(String, String)]) -> Attribute a -> [(String, String)]
+attributeQuery  f (ForAttribute name x) =  ("Name", name) : f x
+
 data GetAttributes
     = GetAttributes {
         gaItemName :: String
@@ -350,6 +357,11 @@ data GetAttributes
       , gaDomainName :: String
       }
     deriving (Show)
+
+data GetAttributesResponse
+    = GetAttributesResponse {
+        garAttributes :: [Attribute String]
+      }
              
 getAttributes :: String -> String -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
@@ -360,6 +372,17 @@ instance AsQuery GetAttributes SdbInfo where
           . addQueryMaybe id ("AttributeName", gaAttributeName)
           . addQueryIf gaConsistentRead [("ConsistentRead", awsTrue)]
           $ sdbiBaseQuery i
+
+instance SdbFromResponse GetAttributesResponse where
+    sdbFromResponse = do
+      testElementNameUI "GetAttributesResponse"
+      attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
+      return $ GetAttributesResponse attributes
+          where
+            readAttribute = do
+                        name <- strContent <<< findElementNameUI "Name"
+                        value <- strContent <<< findElementNameUI "Value"
+                        return $ ForAttribute name value
              
 data PutAttributes
     = PutAttributes {
@@ -384,14 +407,7 @@ instance AsQuery PutAttributes SdbInfo where
           . addQueryList (attributeQuery setAttributeQuery) "Attribute" paAttributes
           . addQueryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
           $ sdbiBaseQuery i
-             
-data Attribute a
-    = ForAttribute { attributeName :: String, attributeData :: a }
-    deriving (Show)
-             
-attributeQuery :: (a -> [(String, String)]) -> Attribute a -> [(String, String)]
-attributeQuery  f (ForAttribute name x) =  ("Name", name) : f x
-             
+
 data SetAttribute
     = SetAttribute { setAttribute :: String, isReplaceAttribute :: Bool }
     deriving (Show)
