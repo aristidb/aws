@@ -383,7 +383,7 @@ instance SdbFromResponse GetAttributesResponse where
                         name <- strContent <<< findElementNameUI "Name"
                         value <- strContent <<< findElementNameUI "Value"
                         return $ ForAttribute name value
-             
+
 data PutAttributes
     = PutAttributes {
         paItemName :: String
@@ -391,6 +391,10 @@ data PutAttributes
       , paExpected :: [Attribute ExpectedAttribute]
       , paDomainName :: String
       }
+    deriving (Show)
+
+data PutAttributesResponse
+    = PutAttributesResponse
     deriving (Show)
              
 putAttributes :: String -> [Attribute SetAttribute] -> String -> PutAttributes
@@ -407,6 +411,9 @@ instance AsQuery PutAttributes SdbInfo where
           . addQueryList (attributeQuery setAttributeQuery) "Attribute" paAttributes
           . addQueryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
           $ sdbiBaseQuery i
+
+instance SdbFromResponse PutAttributesResponse where
+    sdbFromResponse = PutAttributesResponse <$ testElementNameUI "PutAttributesResponse"
 
 data SetAttribute
     = SetAttribute { setAttribute :: String, isReplaceAttribute :: Bool }
@@ -443,6 +450,10 @@ data BatchPutAttributes
       , bpaDomainName :: String
       }
     deriving (Show)
+
+data BatchPutAttributesResponse
+    = BatchPutAttributesResponse
+    deriving (Show)
              
 batchPutAttributes :: [Item [Attribute SetAttribute]] -> String -> BatchPutAttributes
 batchPutAttributes items domain = BatchPutAttributes { bpaItems = items, bpaDomainName = domain }
@@ -452,6 +463,9 @@ instance AsQuery BatchPutAttributes SdbInfo where
         = addQuery [("Action", "BatchPutAttributes"), ("DomainName", bpaDomainName)]
           . addQueryList (itemQuery $ queryList (attributeQuery setAttributeQuery) "Attribute") "Item" bpaItems
           $ sdbiBaseQuery i
+
+instance SdbFromResponse BatchPutAttributesResponse where
+    sdbFromResponse = BatchPutAttributesResponse <$ testElementNameUI "BatchPutAttributesResponse"
 
 data Item a
     = Item { itemName :: String, itemData :: a }
@@ -468,6 +482,13 @@ data Select
       }
     deriving (Show)
 
+data SelectResponse
+    = SelectResponse {
+        srItems :: [Item [Attribute String]]
+      , srNextToken :: Maybe String
+      }
+    deriving (Show)
+
 select :: String -> Select
 select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextToken = "" }
 
@@ -477,3 +498,18 @@ instance AsQuery Select SdbInfo where
           . addQueryIf sConsistentRead [("ConsistentRead", awsTrue)]
           . addQueryUnless (null sNextToken) [("NextToken", sNextToken)]
           $ sdbiBaseQuery i
+
+instance SdbFromResponse SelectResponse where
+    sdbFromResponse = do
+      testElementNameUI "SelectResponse"
+      items <- inList readItem <<< findElementsNameUI "Item"
+      nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
+      return $ SelectResponse items nextToken
+          where readItem = do
+                        name <- strContent <<< findElementNameUI "Name"
+                        attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
+                        return $ Item name attributes
+                readAttribute = do
+                             name <- strContent <<< findElementNameUI "Name"
+                             value <- strContent <<< findElementNameUI "Value"
+                             return $ ForAttribute name value
