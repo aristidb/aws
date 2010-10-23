@@ -375,6 +375,7 @@ data GetAttributesResponse
     = GetAttributesResponse {
         garAttributes :: [Attribute String]
       }
+    deriving (Show)
              
 getAttributes :: String -> String -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
