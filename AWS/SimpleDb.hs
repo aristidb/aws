@@ -279,6 +279,8 @@ instance AsQuery DeleteDomain SdbInfo where
 instance SdbFromResponse DeleteDomainResponse where
     sdbFromResponse = DeleteDomainResponse <$ testElementNameUI "DeleteDomainResponse"
              
+instance Transaction DeleteDomain SdbInfo (SdbResponse DeleteDomainResponse)
+
 data ListDomains
     = ListDomains {
         ldMaxNumberOfDomains :: Maybe Int
@@ -308,6 +310,8 @@ instance SdbFromResponse ListDomainsResponse where
       names <- inList strContent <<< findElementsNameUI "DomainName"
       nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
       return $ ListDomainsResponse names nextToken
+
+instance Transaction ListDomains SdbInfo (SdbResponse ListDomainsResponse)
 
 data DomainMetadata
     = DomainMetadata {
@@ -344,6 +348,8 @@ instance SdbFromResponse DomainMetadataResponse where
       dmrAttributeValuesSizeBytes <- readContent <<< findElementNameUI "AttributeValuesSizeBytes"
       dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
       return $ DomainMetadataResponse{..}
+
+instance Transaction DomainMetadata SdbInfo (SdbResponse DomainMetadataResponse)
 
 data Attribute a
     = ForAttribute { attributeName :: String, attributeData :: a }
@@ -387,6 +393,8 @@ instance SdbFromResponse GetAttributesResponse where
                         value <- strContent <<< findElementNameUI "Value"
                         return $ ForAttribute name value
 
+instance Transaction GetAttributes SdbInfo (SdbResponse GetAttributesResponse)
+
 data PutAttributes
     = PutAttributes {
         paItemName :: String
@@ -417,6 +425,8 @@ instance AsQuery PutAttributes SdbInfo where
 
 instance SdbFromResponse PutAttributesResponse where
     sdbFromResponse = PutAttributesResponse <$ testElementNameUI "PutAttributesResponse"
+
+instance Transaction PutAttributes SdbInfo (SdbResponse PutAttributesResponse)
 
 data SetAttribute
     = SetAttribute { setAttribute :: String, isReplaceAttribute :: Bool }
@@ -470,6 +480,8 @@ instance AsQuery BatchPutAttributes SdbInfo where
 instance SdbFromResponse BatchPutAttributesResponse where
     sdbFromResponse = BatchPutAttributesResponse <$ testElementNameUI "BatchPutAttributesResponse"
 
+instance Transaction BatchPutAttributes SdbInfo (SdbResponse BatchPutAttributesResponse)
+
 data Item a
     = Item { itemName :: String, itemData :: a }
     deriving (Show)
@@ -516,3 +528,5 @@ instance SdbFromResponse SelectResponse where
                              name <- strContent <<< findElementNameUI "Name"
                              value <- strContent <<< findElementNameUI "Value"
                              return $ ForAttribute name value
+
+instance Transaction Select SdbInfo (SdbResponse SelectResponse)
