@@ -55,6 +55,7 @@ Library
                        AWS.SimpleDb,
                        AWS.SimpleDb.Error,
                        AWS.SimpleDb.Info,
+                       AWS.SimpleDb.Model,
                        AWS.Transaction,
                        AWS.Util
   
