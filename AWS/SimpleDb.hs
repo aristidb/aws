@@ -80,18 +80,26 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) Error where
     fromResponse = do
           status <- asks (responseStatus . httpResponse)
           parseXmlResponse >>> fromXml status
-        where fromXml status = do
-                requestId <- strContent <<< findElementNameUI "RequestID"
-                boxUsage <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
-                xmlError <- tryMaybe $ findElementNameUI "Error"
-                inner <- case xmlError of
-                           Just err -> raise =<< mapply (fromError status) err
-                           Nothing -> sdbFromResponse
-                return (SdbResponse inner requestId boxUsage)
+        where fromXml :: SdbFromResponse a => Int -> Xml Error XL.Element (SdbResponse a)
+              fromXml status = do
+                     requestId <- strContent <<< findElementNameUI "RequestID"
+                     boxUsage <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
+                     innerTry <- try $ fromXmlInner status
+                     inner <- case innerTry of
+                       Left err -> raise (WithRequestId err requestId boxUsage)
+                       Right response -> return response
+                     return $ SdbResponse inner requestId boxUsage
+              fromXmlInner :: SdbFromResponse a => Int -> Xml Error XL.Element a
+              fromXmlInner status = do
+                     xmlError <- tryMaybe $ findElementNameUI "Error"
+                     case xmlError of
+                       Just err -> mapply (fromError status) err
+                       Nothing -> sdbFromResponse
+              fromError :: Int -> Xml Error XL.Element a
               fromError status = do
-                errCode <- nameToErrorCode <$> strContent <<< findElementNameUI "Code"
-                errMessage <- strContent <<< findElementNameUI "Message"
-                return (SdbError status errCode errMessage)
+                     errCode <- nameToErrorCode <$> strContent <<< findElementNameUI "Code"
+                     errMessage <- strContent <<< findElementNameUI "Message"
+                     raise $ SdbError status errCode errMessage
 
 class SdbFromResponse a where
     sdbFromResponse :: Xml Error XL.Element a
@@ -106,6 +114,11 @@ data Error
       , sdbErrorMessage :: String
       }
     | SdbXmlError { fromSdbXmlError :: XmlError }
+    | WithRequestId {
+        innerError :: Error
+      , errorRequestId :: RequestId
+      , errorBoxUsage :: Maybe BoxUsage
+      }
     deriving (Show)
 
 instance FromXmlError Error where
