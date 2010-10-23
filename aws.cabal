@@ -53,6 +53,7 @@ Library
                        AWS.Query,
                        AWS.Response,
                        AWS.SimpleDb,
+                       AWS.SimpleDb.Error,
                        AWS.SimpleDb.Info,
                        AWS.Transaction,
                        AWS.Util
