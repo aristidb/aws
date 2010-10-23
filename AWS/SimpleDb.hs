@@ -23,8 +23,8 @@ import           MonadLib.Compose
 data SdbResponse a
     = SdbResponse { 
         fromSdbResponse :: a 
-      , requestId :: RequestId
-      , boxUsage :: Maybe BoxUsage
+      , requestId :: String
+      , boxUsage :: Maybe String
       }
     deriving (Show)
 
@@ -59,9 +59,6 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) Error where
 class SdbFromResponse a where
     sdbFromResponse :: Xml Error XL.Element a
 
-type RequestId = String
-type BoxUsage = String
-
 data Error
     = SdbError {
         sdbStatusCode :: Int
@@ -71,8 +68,8 @@ data Error
     | SdbXmlError { fromSdbXmlError :: XmlError }
     | WithRequestId {
         innerError :: Error
-      , errorRequestId :: RequestId
-      , errorBoxUsage :: Maybe BoxUsage
+      , errorRequestId :: String
+      , errorBoxUsage :: Maybe String
       }
     deriving (Show)
 
