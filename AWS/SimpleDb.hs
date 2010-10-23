@@ -67,16 +67,16 @@ sdbiBaseQuery SdbInfo{..} = Query {
 
 data SdbResponse a
     = SdbResponse { 
-        fromSdbResponse :: Either Error a 
+        fromSdbResponse :: a 
       , requestId :: RequestId
       , boxUsage :: Maybe BoxUsage
       }
     deriving (Show)
 
 instance Functor SdbResponse where
-    fmap f (SdbResponse a id bu) = SdbResponse (fmap f a) id bu
+    fmap f (SdbResponse a id bu) = SdbResponse (f a) id bu
 
-instance SdbFromResponse a => FromResponse (SdbResponse a) where
+instance SdbFromResponse a => FromResponse (SdbResponse a) Error where
     fromResponse = do
           status <- asks (responseStatus . httpResponse)
           parseXmlResponse >>> fromXml status
@@ -85,27 +85,31 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) where
                 boxUsage <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
                 xmlError <- tryMaybe $ findElementNameUI "Error"
                 inner <- case xmlError of
-                           Just err -> Left <$> mapply (fromError status) err
-                           Nothing -> Right <$> sdbFromResponse
+                           Just err -> raise =<< mapply (fromError status) err
+                           Nothing -> sdbFromResponse
                 return (SdbResponse inner requestId boxUsage)
               fromError status = do
                 errCode <- nameToErrorCode <$> strContent <<< findElementNameUI "Code"
                 errMessage <- strContent <<< findElementNameUI "Message"
-                return (Error status errCode errMessage)
+                return (SdbError status errCode errMessage)
 
 class SdbFromResponse a where
-    sdbFromResponse :: Xml XmlError XL.Element a
+    sdbFromResponse :: Xml Error XL.Element a
 
 type RequestId = String
 type BoxUsage = String
 
 data Error
-    = Error {
-        statusCode :: Int
-      , errorCode :: ErrorCode
-      , errorMessage :: String
+    = SdbError {
+        sdbStatusCode :: Int
+      , sdbErrorCode :: ErrorCode
+      , sdbErrorMessage :: String
       }
+    | SdbXmlError { fromSdbXmlError :: XmlError }
     deriving (Show)
+
+instance FromXmlError Error where
+    fromXmlError = SdbXmlError
 
 data ErrorCode
     = AccessFailure
@@ -258,7 +262,7 @@ instance AsQuery CreateDomain SdbInfo where
 instance SdbFromResponse CreateDomainResponse where
     sdbFromResponse = CreateDomainResponse <$ testElementNameUI "CreateDomainResponse"
 
-instance Transaction CreateDomain SdbInfo (SdbResponse CreateDomainResponse)
+instance Transaction CreateDomain SdbInfo (SdbResponse CreateDomainResponse) Error
              
 data DeleteDomain
     = DeleteDomain {
@@ -279,7 +283,7 @@ instance AsQuery DeleteDomain SdbInfo where
 instance SdbFromResponse DeleteDomainResponse where
     sdbFromResponse = DeleteDomainResponse <$ testElementNameUI "DeleteDomainResponse"
              
-instance Transaction DeleteDomain SdbInfo (SdbResponse DeleteDomainResponse)
+instance Transaction DeleteDomain SdbInfo (SdbResponse DeleteDomainResponse) Error
 
 data ListDomains
     = ListDomains {
@@ -311,7 +315,7 @@ instance SdbFromResponse ListDomainsResponse where
       nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
       return $ ListDomainsResponse names nextToken
 
-instance Transaction ListDomains SdbInfo (SdbResponse ListDomainsResponse)
+instance Transaction ListDomains SdbInfo (SdbResponse ListDomainsResponse) Error
 
 data DomainMetadata
     = DomainMetadata {
@@ -349,7 +353,7 @@ instance SdbFromResponse DomainMetadataResponse where
       dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
       return $ DomainMetadataResponse{..}
 
-instance Transaction DomainMetadata SdbInfo (SdbResponse DomainMetadataResponse)
+instance Transaction DomainMetadata SdbInfo (SdbResponse DomainMetadataResponse) Error
 
 data Attribute a
     = ForAttribute { attributeName :: String, attributeData :: a }
@@ -393,7 +397,7 @@ instance SdbFromResponse GetAttributesResponse where
                         value <- strContent <<< findElementNameUI "Value"
                         return $ ForAttribute name value
 
-instance Transaction GetAttributes SdbInfo (SdbResponse GetAttributesResponse)
+instance Transaction GetAttributes SdbInfo (SdbResponse GetAttributesResponse) Error
 
 data PutAttributes
     = PutAttributes {
@@ -426,7 +430,7 @@ instance AsQuery PutAttributes SdbInfo where
 instance SdbFromResponse PutAttributesResponse where
     sdbFromResponse = PutAttributesResponse <$ testElementNameUI "PutAttributesResponse"
 
-instance Transaction PutAttributes SdbInfo (SdbResponse PutAttributesResponse)
+instance Transaction PutAttributes SdbInfo (SdbResponse PutAttributesResponse) Error
 
 data SetAttribute
     = SetAttribute { setAttribute :: String, isReplaceAttribute :: Bool }
@@ -480,7 +484,7 @@ instance AsQuery BatchPutAttributes SdbInfo where
 instance SdbFromResponse BatchPutAttributesResponse where
     sdbFromResponse = BatchPutAttributesResponse <$ testElementNameUI "BatchPutAttributesResponse"
 
-instance Transaction BatchPutAttributes SdbInfo (SdbResponse BatchPutAttributesResponse)
+instance Transaction BatchPutAttributes SdbInfo (SdbResponse BatchPutAttributesResponse) Error
 
 data Item a
     = Item { itemName :: String, itemData :: a }
@@ -529,4 +533,4 @@ instance SdbFromResponse SelectResponse where
                              value <- strContent <<< findElementNameUI "Value"
                              return $ ForAttribute name value
 
-instance Transaction Select SdbInfo (SdbResponse SelectResponse)
+instance Transaction Select SdbInfo (SdbResponse SelectResponse) Error

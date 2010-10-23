@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 
 module AWS.Response
 where
@@ -22,11 +22,11 @@ data Response
       }
     deriving (Show)
 
-class FromResponse a where
-    fromResponse :: Xml XmlError Response a
+class FromXmlError e => FromResponse a e | a -> e where
+    fromResponse :: Xml e Response a
 
-instance FromResponse Response where
+instance FromResponse Response XmlError where
     fromResponse = ask
 
-parseXmlResponse :: Xml XmlError Response XL.Element
+parseXmlResponse :: FromXmlError e => Xml e Response XL.Element
 parseXmlResponse = parseXMLDoc <<< asks (BLU.toString . responseBody . httpResponse)
