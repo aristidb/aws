@@ -6,6 +6,7 @@ where
 import           AWS.SimpleDb.Info
 import           AWS.SimpleDb.Error
 import           AWS.SimpleDb.Model
+import           AWS.SimpleDb.Metadata
 import           AWS.Query
 import           AWS.Http
 import           AWS.Response
@@ -23,14 +24,13 @@ import           MonadLib.Compose
 
 data SdbResponse a
     = SdbResponse { 
-        fromSdbResponse :: a 
-      , requestId :: String
-      , boxUsage :: Maybe String
+        fromSdbResponse :: a
+      , sdbResponseMetadata :: SdbMetadata
       }
     deriving (Show)
 
 instance Functor SdbResponse where
-    fmap f (SdbResponse a id bu) = SdbResponse (f a) id bu
+    fmap f (SdbResponse a m) = SdbResponse (f a) m
 
 instance SdbFromResponse a => FromResponse (SdbResponse a) Error where
     fromResponse = do
@@ -40,11 +40,12 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) Error where
               fromXml status = do
                      requestId <- strContent <<< findElementNameUI "RequestID"
                      boxUsage <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
+                     let metadata = SdbMetadata requestId boxUsage
                      innerTry <- try $ fromXmlInner status
                      inner <- case innerTry of
-                       Left err -> raise (WithRequestId err requestId boxUsage)
+                       Left err -> raise $ WithMetadata err metadata
                        Right response -> return response
-                     return $ SdbResponse inner requestId boxUsage
+                     return $ SdbResponse inner metadata
               fromXmlInner :: SdbFromResponse a => Int -> Xml Error XL.Element a
               fromXmlInner status = do
                      xmlError <- tryMaybe $ findElementNameUI "Error"

@@ -1,9 +1,10 @@
 module AWS.SimpleDb.Error
 where
 
+import           AWS.SimpleDb.Metadata
 import           Text.XML.Monad
 import           Data.Maybe
-import qualified Data.Map       as M
+import qualified Data.Map              as M
 
 data Error
     = SdbError {
@@ -11,11 +12,12 @@ data Error
       , sdbErrorCode :: ErrorCode
       , sdbErrorMessage :: String
       }
-    | SdbXmlError { fromSdbXmlError :: XmlError }
-    | WithRequestId {
-        innerError :: Error
-      , errorRequestId :: String
-      , errorBoxUsage :: Maybe String
+    | SdbXmlError { 
+        fromSdbXmlError :: XmlError 
+      }
+    | WithMetadata {
+        fromWithMetdata :: Error
+      , errorMetadata :: SdbMetadata
       }
     deriving (Show)
 
