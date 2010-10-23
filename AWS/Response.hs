@@ -25,5 +25,8 @@ data Response
 class FromResponse a where
     fromResponse :: Xml XmlError Response a
 
+instance FromResponse Response where
+    fromResponse = ask
+
 parseXmlResponse :: Xml XmlError Response XL.Element
 parseXmlResponse = parseXMLDoc <<< asks (BLU.toString . responseBody . httpResponse)

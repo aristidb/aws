@@ -31,6 +31,9 @@ data Query
       , body :: L.ByteString  
       }
     deriving (Show)
+
+instance AsQuery Query () where
+    asQuery _ = id
              
 addQuery :: [(String, String)] -> Query -> Query
 addQuery xs q = q { query = xs ++ query q }

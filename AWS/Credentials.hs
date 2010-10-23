@@ -105,5 +105,10 @@ signPreparedQuery :: Credentials -> Query -> Query
 signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
     where sig = Base64.encode $ hmac_sha1 (Utf8.encode secretAccessKey) (Utf8.encode . stringToSign $ q)
                            
-signQuery :: AbsoluteTimeInfo -> Credentials -> Query -> Query
-signQuery ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
+signQueryAbsolute :: AbsoluteTimeInfo -> Credentials -> Query -> Query
+signQueryAbsolute ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
+
+signQuery :: TimeInfo -> Credentials -> Query -> IO Query
+signQuery ti cr q = do
+  ti' <- makeAbsoluteTimeInfo ti
+  return $ signQueryAbsolute ti' cr q

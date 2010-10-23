@@ -53,6 +53,7 @@ Library
                        AWS.Query,
                        AWS.Response,
                        AWS.SimpleDb,
+                       AWS.Transaction,
                        AWS.Util
   
   -- Packages needed in order to build this package.

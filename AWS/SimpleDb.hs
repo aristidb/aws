@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances #-}
 
 module AWS.SimpleDb
 where
@@ -6,6 +6,7 @@ where
 import           AWS.Query
 import           AWS.Http
 import           AWS.Response
+import           AWS.Transaction
 import           Control.Applicative
 import           Data.Maybe
 import qualified Data.Map                   as M
@@ -256,6 +257,8 @@ instance AsQuery CreateDomain SdbInfo where
 
 instance SdbFromResponse CreateDomainResponse where
     sdbFromResponse = CreateDomainResponse <$ testElementNameUI "CreateDomainResponse"
+
+instance Transaction CreateDomain SdbInfo (SdbResponse CreateDomainResponse)
              
 data DeleteDomain
     = DeleteDomain {
