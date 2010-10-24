@@ -48,6 +48,7 @@ Cabal-version:       >=1.8
 Library
   -- Modules exported by the library.
   Exposed-modules:
+                       AWS.Aws,
                        AWS.Credentials,
                        AWS.Http,
                        AWS.Query,
