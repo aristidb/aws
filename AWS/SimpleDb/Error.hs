@@ -6,7 +6,7 @@ import           Text.XML.Monad
 import           Data.Maybe
 import qualified Data.Map              as M
 
-data Error
+data SdbError
     = SdbError {
         sdbStatusCode :: Int
       , sdbErrorCode :: ErrorCode
@@ -16,12 +16,12 @@ data Error
         fromSdbXmlError :: XmlError 
       }
     | WithMetadata {
-        fromWithMetdata :: Error
+        fromWithMetdata :: SdbError
       , errorMetadata :: SdbMetadata
       }
     deriving (Show)
 
-instance FromXmlError Error where
+instance FromXmlError SdbError where
     fromXmlError = SdbXmlError
 
 data ErrorCode
