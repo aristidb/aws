@@ -1,12 +1,13 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances, FlexibleContexts #-}
 module AWS.Aws
 where
 
 import AWS.Credentials
 import AWS.Http
 import AWS.Transaction
+import AWS.SimpleDb.Info
+import AWS.SimpleDb.Error
 import Control.Applicative
-import Data.Maybe
 import MonadLib
 import MonadLib.Derive
 
@@ -15,9 +16,17 @@ data Configuration
         http :: (HttpRequest -> IO HttpResponse)
       , timeInfo :: TimeInfo
       , credentials :: Credentials
+      , sdbInfo :: SdbInfo
       }
 
-baseConfiguration http = Configuration http Timestamp . fromJust <$> loadCredentialsDefault
+baseConfiguration http = do
+  Just cr <- loadCredentialsDefault
+  return $ Configuration {
+               http = http
+             , timeInfo = Timestamp
+             , credentials = cr
+             , sdbInfo = sdbHttpsPost sdbUsEast
+             }
 -- TODO: better error handling when credentials cannot be loaded
 
 curlConfiguration curlOpt = baseConfiguration (curlRequest curlOpt)
@@ -45,3 +54,8 @@ aws :: (Transaction request info response error) => info -> request -> Aws (Eith
 aws info request = do
   cfg <- configuration
   inBase $ transact (http cfg) (timeInfo cfg) (credentials cfg) info request
+
+sdb :: (Transaction request SdbInfo response SdbError) => request -> Aws (Either SdbError response)
+sdb request = do
+  cfg <- configuration
+  aws (sdbInfo cfg) request
