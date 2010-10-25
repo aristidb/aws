@@ -2,8 +2,8 @@ module Aws.SimpleDb.Error
 where
 
 import           Aws.SimpleDb.Metadata
-import           Text.XML.Monad
 import           Data.Maybe
+import           Text.XML.Monad
 import qualified Data.Map              as M
 
 data SdbError

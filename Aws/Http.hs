@@ -9,9 +9,9 @@ import           Control.Monad
 import           Data.Time
 import           Data.Time.Clock.POSIX
 import           Network.Curl
-import qualified Network.HTTP               as HTTP
 import           Network.URI
 import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Network.HTTP               as HTTP
   
 data Protocol
     = HTTP

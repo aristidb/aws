@@ -9,12 +9,12 @@ import           Control.Monad
 import           Control.Shortcircuit
 import           Data.Char
 import           Data.Function
-import qualified Data.ByteString.Lazy      as L
-import qualified Data.ByteString.Lazy.UTF8 as BLU
-import           Text.XML.Monad
-import qualified Text.XML.Light            as XL
 import           MonadLib
 import           MonadLib.Compose
+import           Text.XML.Monad
+import qualified Data.ByteString.Lazy      as L
+import qualified Data.ByteString.Lazy.UTF8 as BLU
+import qualified Text.XML.Light            as XL
 
 data Response
     = Response {

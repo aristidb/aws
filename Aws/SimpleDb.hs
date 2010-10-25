@@ -3,24 +3,24 @@
 module Aws.SimpleDb
 where
 
-import           Aws.SimpleDb.Info
-import           Aws.SimpleDb.Error
-import           Aws.SimpleDb.Model
-import           Aws.SimpleDb.Metadata
-import           Aws.Query
 import           Aws.Http
+import           Aws.Query
 import           Aws.Response
+import           Aws.SimpleDb.Error
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
+import           Aws.SimpleDb.Model
 import           Aws.Transaction
 import           Control.Applicative
 import           Data.Maybe
-import qualified Network.HTTP               as HTTP
-import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.Time
 import           Data.Time.Clock.POSIX
-import           Text.XML.Monad
-import qualified Text.XML.Light             as XL
 import           MonadLib
 import           MonadLib.Compose
+import           Text.XML.Monad
+import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Network.HTTP               as HTTP
+import qualified Text.XML.Light             as XL
 
 data SdbResponse a
     = SdbResponse { 

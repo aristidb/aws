@@ -7,9 +7,9 @@ import           Aws.Http
 import           Control.Arrow
 import           Control.Monad
 import           Data.Time
-import qualified Network.HTTP               as HTTP
 import           Network.URI                (nullURI, URI(..), URIAuth(..))
 import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Network.HTTP               as HTTP
 
 class AsQuery d i | d -> i where
     asQuery :: i -> d -> Query

@@ -9,15 +9,15 @@ import           Control.Applicative
 import           Control.Monad
 import           Control.Shortcircuit     (orM)
 import           Data.Function
+import           Data.HMAC
 import           Data.List
 import           Data.Time
-import qualified Network.HTTP             as HTTP
-import qualified Codec.Binary.UTF8.String as Utf8
-import           Data.HMAC
-import qualified Codec.Binary.Base64      as Base64
 import           System.Directory
 import           System.Environment
 import           System.FilePath
+import qualified Codec.Binary.Base64      as Base64
+import qualified Codec.Binary.UTF8.String as Utf8
+import qualified Network.HTTP             as HTTP
 
 data Credentials
     = Credentials {

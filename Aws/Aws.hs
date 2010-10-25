@@ -4,9 +4,9 @@ where
 
 import Aws.Credentials
 import Aws.Http
-import Aws.Transaction
-import Aws.SimpleDb.Info
 import Aws.SimpleDb.Error
+import Aws.SimpleDb.Info
+import Aws.Transaction
 import Control.Applicative
 import MonadLib
 import MonadLib.Derive

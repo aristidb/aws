@@ -2,10 +2,10 @@
 module Aws.Transaction
 where
   
-import Aws.Query
-import Aws.Response
 import Aws.Credentials
 import Aws.Http
+import Aws.Query
+import Aws.Response
 import Text.XML.Monad
 
 class (AsQuery request info, FromResponse response error) 

@@ -2,10 +2,10 @@
 module Aws.SimpleDb.Info
 where
 
-import           Aws.Query
 import           Aws.Http
-import qualified Network.HTTP               as HTTP
+import           Aws.Query
 import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Network.HTTP               as HTTP
 
 data SdbInfo
     = SdbInfo {
