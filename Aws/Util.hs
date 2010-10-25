@@ -1,4 +1,4 @@
-module AWS.Util
+module Aws.Util
 where
   
 import Data.Maybe

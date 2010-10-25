@@ -48,18 +48,18 @@ Cabal-version:       >=1.8
 Library
   -- Modules exported by the library.
   Exposed-modules:
-                       AWS.Aws,
-                       AWS.Credentials,
-                       AWS.Http,
-                       AWS.Query,
-                       AWS.Response,
-                       AWS.SimpleDb,
-                       AWS.SimpleDb.Error,
-                       AWS.SimpleDb.Info,
-                       AWS.SimpleDb.Metadata,
-                       AWS.SimpleDb.Model,
-                       AWS.Transaction,
-                       AWS.Util
+                       Aws.Aws,
+                       Aws.Credentials,
+                       Aws.Http,
+                       Aws.Query,
+                       Aws.Response,
+                       Aws.SimpleDb,
+                       Aws.SimpleDb.Error,
+                       Aws.SimpleDb.Info,
+                       Aws.SimpleDb.Metadata,
+                       Aws.SimpleDb.Model,
+                       Aws.Transaction,
+                       Aws.Util
   
   -- Packages needed in order to build this package.
   Build-depends:

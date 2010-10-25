@@ -1,9 +1,9 @@
 {-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FunctionalDependencies #-}
 
-module AWS.Query
+module Aws.Query
 where
 
-import           AWS.Http
+import           Aws.Http
 import           Control.Arrow
 import           Control.Monad
 import           Data.Time

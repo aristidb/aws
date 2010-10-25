@@ -1,9 +1,9 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 
-module AWS.Response
+module Aws.Response
 where
   
-import           AWS.Http
+import           Aws.Http
 import           Control.Applicative
 import           Control.Monad
 import           Control.Shortcircuit

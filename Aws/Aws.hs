@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances, FlexibleContexts #-}
-module AWS.Aws
+module Aws.Aws
 where
 
-import AWS.Credentials
-import AWS.Http
-import AWS.Transaction
-import AWS.SimpleDb.Info
-import AWS.SimpleDb.Error
+import Aws.Credentials
+import Aws.Http
+import Aws.Transaction
+import Aws.SimpleDb.Info
+import Aws.SimpleDb.Error
 import Control.Applicative
 import MonadLib
 import MonadLib.Derive

@@ -1,7 +1,7 @@
-module AWS.SimpleDb.Model
+module Aws.SimpleDb.Model
 where
   
-import AWS.Query
+import Aws.Query
 
 data Attribute a
     = ForAttribute { attributeName :: String, attributeData :: a }

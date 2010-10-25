@@ -1,16 +1,16 @@
 {-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances #-}
 
-module AWS.SimpleDb
+module Aws.SimpleDb
 where
 
-import           AWS.SimpleDb.Info
-import           AWS.SimpleDb.Error
-import           AWS.SimpleDb.Model
-import           AWS.SimpleDb.Metadata
-import           AWS.Query
-import           AWS.Http
-import           AWS.Response
-import           AWS.Transaction
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Error
+import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Metadata
+import           Aws.Query
+import           Aws.Http
+import           Aws.Response
+import           Aws.Transaction
 import           Control.Applicative
 import           Data.Maybe
 import qualified Network.HTTP               as HTTP

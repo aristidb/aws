@@ -1,11 +1,11 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
-module AWS.Transaction
+module Aws.Transaction
 where
   
-import AWS.Query
-import AWS.Response
-import AWS.Credentials
-import AWS.Http
+import Aws.Query
+import Aws.Response
+import Aws.Credentials
+import Aws.Http
 import Text.XML.Monad
 
 class (AsQuery request info, FromResponse response error) 

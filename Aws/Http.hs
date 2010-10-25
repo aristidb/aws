@@ -1,9 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module AWS.Http
+module Aws.Http
 where
   
-import           AWS.Util
+import           Aws.Util
 import           Control.Applicative
 import           Control.Monad
 import           Data.Time

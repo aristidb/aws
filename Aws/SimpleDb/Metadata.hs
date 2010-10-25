@@ -1,4 +1,4 @@
-module AWS.SimpleDb.Metadata
+module Aws.SimpleDb.Metadata
 where
   
 data SdbMetadata

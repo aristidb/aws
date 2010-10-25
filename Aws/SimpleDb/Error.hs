@@ -1,7 +1,7 @@
-module AWS.SimpleDb.Error
+module Aws.SimpleDb.Error
 where
 
-import           AWS.SimpleDb.Metadata
+import           Aws.SimpleDb.Metadata
 import           Text.XML.Monad
 import           Data.Maybe
 import qualified Data.Map              as M

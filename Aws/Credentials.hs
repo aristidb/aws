@@ -1,10 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module AWS.Credentials
+module Aws.Credentials
 where
   
-import           AWS.Query
-import           AWS.Util
+import           Aws.Query
+import           Aws.Util
 import           Control.Applicative
 import           Control.Monad
 import           Control.Shortcircuit     (orM)

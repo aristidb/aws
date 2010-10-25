@@ -1,9 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
-module AWS.SimpleDb.Info
+module Aws.SimpleDb.Info
 where
 
-import           AWS.Query
-import           AWS.Http
+import           Aws.Query
+import           Aws.Http
 import qualified Network.HTTP               as HTTP
 import qualified Data.ByteString.Lazy.Char8 as L
 
