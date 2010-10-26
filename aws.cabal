@@ -58,6 +58,7 @@ Library
                        Aws.SimpleDb.Info,
                        Aws.SimpleDb.Metadata,
                        Aws.SimpleDb.Model,
+                       Aws.SimpleDb.Response,
                        Aws.Transaction,
                        Aws.Util
   
