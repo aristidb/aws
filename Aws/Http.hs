@@ -52,7 +52,8 @@ curlRequest otherOptions HttpRequest{..} = parse <$> curlGetResponse_ uriString 
     where uriString = show requestUri
           options = (case requestMethod of
                       HTTP.GET -> [CurlHttpGet True]
-                      HTTP.POST -> [CurlPostFields requestPostQuery]) ++
+                      HTTP.POST -> [CurlPostFields requestPostQuery]
+                      _ -> error "HTTP methods other than GET and POST not currently supported") ++
                     (case requestDate of
                        Just d -> [CurlTimeValue . round . utcTimeToPOSIXSeconds $ d]
                        Nothing -> []) ++

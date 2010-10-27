@@ -10,7 +10,6 @@ import Aws.SimpleDb.Model
 import Aws.SimpleDb.Response
 import Aws.Transaction
 import Control.Applicative
-import MonadLib.Compose
 import Text.XML.Monad
 
 data BatchPutAttributes

@@ -7,9 +7,9 @@ import Aws.Http
 import Aws.SimpleDb.Error
 import Aws.SimpleDb.Info
 import Aws.Transaction
-import Control.Applicative
 import MonadLib
 import MonadLib.Derive
+import Network.Curl.Opts
 
 data Configuration
     = Configuration {
@@ -19,22 +19,26 @@ data Configuration
       , sdbInfo :: SdbInfo
       }
 
-baseConfiguration http = do
+baseConfiguration :: (HttpRequest -> IO HttpResponse) -> IO Configuration
+baseConfiguration http' = do
   Just cr <- loadCredentialsDefault
   return $ Configuration {
-               http = http
+               http = http'
              , timeInfo = Timestamp
              , credentials = cr
              , sdbInfo = sdbHttpsPost sdbUsEast
              }
 -- TODO: better error handling when credentials cannot be loaded
 
+curlConfiguration :: [CurlOption] -> IO Configuration
 curlConfiguration curlOpt = baseConfiguration (curlRequest curlOpt)
 
 newtype Aws a = MkAws { fromAws :: ReaderT Configuration IO a }
 
+isoAws :: Iso (ReaderT Configuration IO) Aws
 isoAws = Iso MkAws fromAws
 
+runAws :: Configuration -> Aws a -> IO a
 runAws c = runReaderT c . fromAws
 
 instance Monad Aws where

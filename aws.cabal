@@ -90,6 +90,8 @@ Library
                        utf8-string ==0.3.*,
                        xml ==1.3.*,
                        xml-monad ==0.2.*
+
+  GHC-Options: -Wall
   
   -- Modules not exported by this package.
   -- Other-modules:       

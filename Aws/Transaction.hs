@@ -6,6 +6,7 @@ import Aws.Credentials
 import Aws.Http
 import Aws.Query
 import Aws.Response
+import Control.Applicative
 import Text.XML.Monad
 
 class (AsQuery request info, FromResponse response error) 
@@ -16,7 +17,6 @@ transact :: (Transaction request info response error)
 transact http ti cr i r = do
   q <- signQuery ti cr $ asQuery i r
   let httpRequest = queryToRequest q
-  httpResponse <- http httpRequest
-  let rsp = Response httpResponse
+  rsp <- Response <$> http httpRequest
   return $ runXml rsp fromResponse
   

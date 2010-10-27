@@ -28,9 +28,9 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) SdbError where
           parseXmlResponse >>> fromXml status
         where fromXml :: SdbFromResponse a => Int -> Xml SdbError XL.Element (SdbResponse a)
               fromXml status = do
-                     requestId <- strContent <<< findElementNameUI "RequestID"
-                     boxUsage <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
-                     let metadata = SdbMetadata requestId boxUsage
+                     requestId' <- strContent <<< findElementNameUI "RequestID"
+                     boxUsage' <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
+                     let metadata = SdbMetadata requestId' boxUsage'
                      innerTry <- try $ fromXmlInner status
                      inner <- case innerTry of
                        Left err -> raise $ WithMetadata err metadata

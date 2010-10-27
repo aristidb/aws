@@ -1,7 +1,6 @@
 module Aws.Util
 where
   
-import Data.Maybe
 import Data.Time
 import System.Locale
 

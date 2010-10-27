@@ -6,7 +6,6 @@ where
 import Aws.Query
 import Aws.SimpleDb.Error
 import Aws.SimpleDb.Info
-import Aws.SimpleDb.Model
 import Aws.SimpleDb.Response
 import Aws.Transaction
 import Control.Applicative
