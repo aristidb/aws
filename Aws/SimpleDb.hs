@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances #-}
-
 module Aws.SimpleDb
 (
   module Aws.SimpleDb.BatchPutAttributes
