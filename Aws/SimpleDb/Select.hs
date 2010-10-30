@@ -43,13 +43,13 @@ instance SdbFromResponse SelectResponse where
       items <- inList readItem <<< findElementsNameUI "Item"
       nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
       return $ SelectResponse items nextToken
-          where readItem = do
-                        name <- strContent <<< findElementNameUI "Name"
-                        attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
-                        return $ Item name attributes
-                readAttribute = do
-                             name <- strContent <<< findElementNameUI "Name"
-                             value <- strContent <<< findElementNameUI "Value"
-                             return $ ForAttribute name value
+        where readItem = do
+                name <- strContent <<< findElementNameUI "Name"
+                attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
+                return $ Item name attributes
+              readAttribute = do
+                name <- strContent <<< findElementNameUI "Name"
+                value <- strContent <<< findElementNameUI "Value"
+                return $ ForAttribute name value
 
 instance Transaction Select SdbInfo (SdbResponse SelectResponse) SdbError
