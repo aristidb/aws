@@ -7,6 +7,7 @@ import           Aws.Util
 import           Control.Applicative
 import           Control.Monad
 import           Data.IORef
+import           Data.Maybe
 import           Data.Time
 import           Data.Time.Clock.POSIX
 import           Network.Curl
@@ -106,10 +107,24 @@ curlCallbackReadBS next = do
       update :: IORef (Maybe B.ByteString) -> IO ()
       update rest = do
         r <- normalise <$> readIORef rest
-        r' <- maybe next (return . Just) r
-        writeIORef rest r'
+        when (isNothing r) $ writeIORef rest =<< next
       
       normalise :: Maybe B.ByteString -> Maybe B.ByteString
       normalise Nothing = Nothing
       normalise (Just bs) | B.null bs = Nothing
                           | otherwise = Just bs
+
+curlCallbackReadBSL :: IO (Maybe L.ByteString) -> IO ReadFunction
+curlCallbackReadBSL f = curlCallbackReadBS =<< f'
+    where f' = do
+            chunks <- newIORef []
+            return $ do
+                 update chunks
+                 c <- readIORef chunks
+                 case c of
+                   [] -> return Nothing
+                   (x:xs) -> writeIORef chunks xs >> return (Just x)
+          update :: IORef [B.ByteString] -> IO ()
+          update chunks = do
+            c <- readIORef chunks
+            when (null c) $ writeIORef chunks . maybe [] L.toChunks =<< f
