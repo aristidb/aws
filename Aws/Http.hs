@@ -106,9 +106,7 @@ curlCallbackReadBS next = do
       update :: IORef (Maybe B.ByteString) -> IO ()
       update rest = do
         r <- normalise <$> readIORef rest
-        r' <- case r of
-          Nothing -> next
-          x -> return x
+        r' <- maybe next (return . Just) r
         writeIORef rest r'
       
       normalise :: Maybe B.ByteString -> Maybe B.ByteString
