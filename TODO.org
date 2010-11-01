@@ -1,3 +1,4 @@
 TODO
 
 * consider http-enumerator
+** in dependencies: switch away from monadLib?
