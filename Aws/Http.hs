@@ -88,43 +88,51 @@ curlCallbackWriteBS f = gatherOutput_ (B.packCStringLen >=> f)
 curlCallbackWriteBSL :: (L.ByteString -> IO ()) -> WriteFunction
 curlCallbackWriteBSL f = curlCallbackWriteBS (f . L.fromChunks . return)
 
-curlCallbackReadBS :: IO (Maybe B.ByteString) -> IO ReadFunction
+curlCallbackReadBS :: IO (Maybe [B.ByteString]) -> IO ReadFunction
 curlCallbackReadBS next = do
-      rest <- newIORef Nothing
-      return $ \ptr width count _ -> do
-                                 let sz = fromIntegral $ width * count
-                                 update rest
-                                 r <- readIORef rest
-                                 case r of
-                                   Nothing -> return Nothing
-                                   Just bs -> let (a, b) = B.splitAt sz bs
-                                                  l = B.length a
-                                              in do
-                                                BU.unsafeUseAsCString a (\src -> FMA.copyArray ptr src l)
-                                                writeIORef rest (Just b)
-                                                return (Just $ fromIntegral l)
+  chunks <- newIORef Nothing
+  return $ \ptr width count _ -> do
+      let sz = fromIntegral $ width * count
+      update chunks
+      r <- readIORef chunks
+      case r of
+        Nothing       -> return Nothing
+        Just []       -> return $ Just 0
+        Just (x : xs) -> let (a, b) = B.splitAt sz x
+                             l = B.length a
+                         in do
+                           BU.unsafeUseAsCString a (\src -> FMA.copyArray ptr src l)
+                           writeIORef chunks (Just $ cons' b xs)
+                           return (Just $ fromIntegral l)
     where
-      update :: IORef (Maybe B.ByteString) -> IO ()
-      update rest = do
-        r <- normalise <$> readIORef rest
-        when (isNothing r) $ writeIORef rest =<< next
-      
-      normalise :: Maybe B.ByteString -> Maybe B.ByteString
-      normalise Nothing = Nothing
-      normalise (Just bs) | B.null bs = Nothing
-                          | otherwise = Just bs
+      update :: IORef (Maybe [B.ByteString]) -> IO ()
+      update chunks = do
+        r <- normalise <$> readIORef chunks
+        when (isNothing r) $ writeIORef chunks =<< next
 
-curlCallbackReadBSL :: IO (Maybe L.ByteString) -> IO ReadFunction
-curlCallbackReadBSL f = curlCallbackReadBS =<< f'
-    where f' = do
-            chunks <- newIORef []
-            return $ do
-                 update chunks
-                 c <- readIORef chunks
-                 case c of
-                   [] -> return Nothing
-                   (x:xs) -> writeIORef chunks xs >> return (Just x)
-          update :: IORef [B.ByteString] -> IO ()
-          update chunks = do
-            c <- readIORef chunks
-            when (null c) $ writeIORef chunks . maybe [] L.toChunks =<< f
+      cons' :: B.ByteString -> [B.ByteString] -> [B.ByteString]
+      cons' x xs | B.null x  = xs
+                 | otherwise = x : xs
+
+      normalise :: Maybe [B.ByteString] -> Maybe [B.ByteString]
+      normalise Nothing        = Nothing
+      normalise (Just [])      = Nothing
+      normalise x@(Just (_:_)) = x
+
+curlCallbackReadBSL :: IO (Maybe [L.ByteString]) -> IO ReadFunction
+curlCallbackReadBSL f = curlCallbackReadBS $ concatMap L.toChunks .: f
+    where (.:) = fmap . fmap
+
+fixedReader :: [a] -> IO (IO (Maybe [a]))
+fixedReader xs = do
+  r <- newIORef xs
+  return $ do
+    d <- readIORef r
+    writeIORef r []
+    return $ Just d
+
+curlCallbackReadBSFixed :: [B.ByteString] -> IO ReadFunction
+curlCallbackReadBSFixed = curlCallbackReadBS <=< fixedReader
+
+curlCallbackReadBSLFixed :: [L.ByteString] -> IO ReadFunction
+curlCallbackReadBSLFixed = curlCallbackReadBSL <=< fixedReader
