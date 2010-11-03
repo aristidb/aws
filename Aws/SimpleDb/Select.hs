@@ -9,7 +9,7 @@ import Aws.SimpleDb.Info
 import Aws.SimpleDb.Model
 import Aws.SimpleDb.Response
 import Aws.Transaction
-import MonadLib.Compose
+import Control.Monad.Compose.Class
 import Text.XML.Monad
 
 data Select

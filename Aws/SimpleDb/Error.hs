@@ -2,9 +2,10 @@ module Aws.SimpleDb.Error
 where
 
 import           Aws.SimpleDb.Metadata
+import           Control.Monad.Error.Class
 import           Data.Maybe
 import           Text.XML.Monad
-import qualified Data.Map              as M
+import qualified Data.Map                  as M
 
 data SdbError
     = SdbError {
@@ -23,6 +24,10 @@ data SdbError
 
 instance FromXmlError SdbError where
     fromXmlError = SdbXmlError
+
+instance Error SdbError where
+    noMsg = fromXmlError noMsg
+    strMsg = fromXmlError . strMsg
 
 data ErrorCode
     = AccessFailure

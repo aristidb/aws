@@ -7,10 +7,10 @@ import           Aws.Response
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Metadata
 import           Control.Applicative
-import           MonadLib
-import           MonadLib.Compose
+import           Control.Monad.Compose.Class
+import           Control.Monad.Reader.Class
 import           Text.XML.Monad
-import qualified Text.XML.Light        as XL
+import qualified Text.XML.Light              as XL
 
 data SdbResponse a
     = SdbResponse { 

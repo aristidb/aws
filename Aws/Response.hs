@@ -4,11 +4,12 @@ module Aws.Response
 where
   
 import           Aws.Http
-import           MonadLib
-import           MonadLib.Compose
+import           Control.Monad.Compose.Class
+import           Control.Monad.Error.Class
+import           Control.Monad.Reader.Class
 import           Text.XML.Monad
-import qualified Data.ByteString.Lazy.UTF8 as BLU
-import qualified Text.XML.Light            as XL
+import qualified Data.ByteString.Lazy.UTF8   as BLU
+import qualified Text.XML.Light              as XL
 
 data Response
     = Response {
@@ -22,5 +23,5 @@ class FromXmlError e => FromResponse a e | a -> e where
 instance FromResponse Response XmlError where
     fromResponse = ask
 
-parseXmlResponse :: FromXmlError e => Xml e Response XL.Element
+parseXmlResponse :: (FromXmlError e, Error e) => Xml e Response XL.Element
 parseXmlResponse = parseXMLDoc <<< asks (BLU.toString . responseBody . httpResponse)

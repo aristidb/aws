@@ -7,8 +7,7 @@ import Aws.Http
 import Aws.SimpleDb.Error
 import Aws.SimpleDb.Info
 import Aws.Transaction
-import MonadLib
-import MonadLib.Derive
+import Control.Monad.Reader
 import Network.Curl.Opts
 
 data Configuration
@@ -35,21 +34,15 @@ curlConfiguration curlOpt = baseConfiguration (curlRequest curlOpt)
 
 newtype Aws a = MkAws { fromAws :: ReaderT Configuration IO a }
 
-isoAws :: Iso (ReaderT Configuration IO) Aws
-isoAws = Iso MkAws fromAws
-
-runAws :: Configuration -> Aws a -> IO a
-runAws c = runReaderT c . fromAws
+runAws :: Aws a -> Configuration -> IO a
+runAws = runReaderT . fromAws
 
 instance Monad Aws where
-    return = derive_return isoAws
-    (>>=) = derive_bind isoAws
+    return = MkAws . return
+    m >>= k = MkAws $ fromAws m >>= fromAws . k
 
-instance RunM Aws a (Configuration -> IO a) where
-    runM = derive_runM isoAws
-
-instance BaseM Aws IO where
-    inBase = derive_inBase isoAws
+instance MonadIO Aws where
+    liftIO = MkAws . liftIO
 
 configuration :: Aws Configuration
 configuration = MkAws ask
@@ -57,7 +50,7 @@ configuration = MkAws ask
 aws :: (Transaction request info response error) => info -> request -> Aws (Either error response)
 aws info request = do
   cfg <- configuration
-  inBase $ transact (http cfg) (timeInfo cfg) (credentials cfg) info request
+  transact (liftIO . http cfg) (timeInfo cfg) (credentials cfg) info request
 
 sdb :: (Transaction request SdbInfo response SdbError) => request -> Aws (Either SdbError response)
 sdb request = do

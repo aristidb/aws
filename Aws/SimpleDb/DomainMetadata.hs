@@ -9,9 +9,9 @@ import Aws.SimpleDb.Info
 import Aws.SimpleDb.Response
 import Aws.Transaction
 import Control.Applicative
+import Control.Monad.Compose.Class
 import Data.Time
 import Data.Time.Clock.POSIX
-import MonadLib.Compose
 import Text.XML.Monad
 
 data DomainMetadata
