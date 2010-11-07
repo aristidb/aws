@@ -5,12 +5,11 @@ where
 import           Aws.Http
 import           Aws.Query
 import qualified Data.ByteString.Lazy.Char8 as L
-import qualified Network.HTTP               as HTTP
 
 data SdbInfo
     = SdbInfo {
         sdbiProtocol :: Protocol
-      , sdbiHttpMethod :: HTTP.RequestMethod
+      , sdbiHttpMethod :: Method
       , sdbiHost :: String
       , sdbiPort :: Int
       }
@@ -29,16 +28,16 @@ sdbApSoutheast :: String
 sdbApSoutheast = "sdb.ap-southeast-1.amazonaws.com"
              
 sdbHttpGet :: String -> SdbInfo
-sdbHttpGet endpoint = SdbInfo HTTP HTTP.GET endpoint (defaultPort HTTP)
+sdbHttpGet endpoint = SdbInfo HTTP GET endpoint (defaultPort HTTP)
                           
 sdbHttpPost :: String -> SdbInfo
-sdbHttpPost endpoint = SdbInfo HTTP HTTP.POST endpoint (defaultPort HTTP)
+sdbHttpPost endpoint = SdbInfo HTTP POST endpoint (defaultPort HTTP)
               
 sdbHttpsGet :: String -> SdbInfo
-sdbHttpsGet endpoint = SdbInfo HTTPS HTTP.GET endpoint (defaultPort HTTPS)
+sdbHttpsGet endpoint = SdbInfo HTTPS GET endpoint (defaultPort HTTPS)
              
 sdbHttpsPost :: String -> SdbInfo
-sdbHttpsPost endpoint = SdbInfo HTTPS HTTP.POST endpoint (defaultPort HTTPS)
+sdbHttpsPost endpoint = SdbInfo HTTPS POST endpoint (defaultPort HTTPS)
 
 sdbiBaseQuery :: SdbInfo -> Query
 sdbiBaseQuery SdbInfo{..} = Query { 

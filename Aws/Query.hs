@@ -4,24 +4,24 @@ module Aws.Query
 where
 
 import           Aws.Http
+import           Aws.Util
 import           Control.Arrow
 import           Control.Monad
 import           Data.Time
 import           Network.URI          (nullURI, URI(..), URIAuth(..))
 import qualified Data.ByteString.Lazy as L
-import qualified Network.HTTP         as HTTP
 
 class AsQuery d i | d -> i where
     asQuery :: i -> d -> Query
   
-data API
+data Api
     = SimpleDB
     deriving (Show)
 
 data Query 
     = Query {
-        api :: API
-      , method :: HTTP.RequestMethod
+        api :: Api
+      , method :: Method
       , protocol :: Protocol
       , host :: String
       , port :: Int
@@ -84,12 +84,12 @@ queryToRequest Query{..}
                                             , uriPort = if port == defaultPort protocol then "" else ':' : show port
                                             })
                      , uriPath = path
-                     , uriQuery = guard isGet >> ('?' : HTTP.urlEncodeVars query)
+                     , uriQuery = guard isGet >> ('?' : urlEncodeVars query)
                      }
       , requestDate = date
       , requestPostQuery = guard isPost >> map urlEncodeSingleVar query
       , requestBody = L.empty
       }
-    where isGet = method == HTTP.GET
-          isPost = method == HTTP.POST
-          urlEncodeSingleVar (a, b) = HTTP.urlEncode a ++ '=' : HTTP.urlEncode b
+    where isGet = method == GET
+          isPost = method == POST
+          urlEncodeSingleVar (a, b) = urlEncode a ++ '=' : urlEncode b

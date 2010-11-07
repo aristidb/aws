@@ -18,7 +18,6 @@ import           System.Environment
 import           System.FilePath
 import qualified Codec.Binary.Base64      as Base64
 import qualified Codec.Binary.UTF8.String as Utf8
-import qualified Network.HTTP             as HTTP
 
 data Credentials
     = Credentials {
@@ -99,7 +98,7 @@ stringToSign Query{..}
         SimpleDB -> show method ++ "\n" ++
                     host ++ "\n" ++
                     path ++ "\n" ++
-                    HTTP.urlEncodeVars sortedQuery
+                    urlEncodeVars sortedQuery
     where sortedQuery = sortBy (compare `on` Utf8.encode . fst) query
                                                
 signPreparedQuery :: Credentials -> Query -> Query

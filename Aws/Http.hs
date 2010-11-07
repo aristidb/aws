@@ -16,7 +16,6 @@ import qualified Data.ByteString        as B
 import qualified Data.ByteString.Lazy   as L
 import qualified Data.ByteString.Unsafe as BU
 import qualified Foreign.Marshal.Array  as FMA
-import qualified Network.HTTP           as HTTP
   
 data Protocol
     = HTTP
@@ -27,11 +26,16 @@ defaultPort :: Protocol -> Int
 defaultPort HTTP = 80
 defaultPort HTTPS = 443
 
+data Method
+    = GET
+    | POST
+    deriving (Show, Eq)
+
 -- Note/TODO: Large data: just use files
   
 data HttpRequest
     = HttpRequest {
-        requestMethod :: HTTP.RequestMethod
+        requestMethod :: Method
       , requestDate :: Maybe UTCTime
       , requestUri :: URI
       , requestPostQuery :: [String]
@@ -56,9 +60,8 @@ curlRequest :: [CurlOption] -> HttpRequest -> IO HttpResponse
 curlRequest otherOptions HttpRequest{..} = parse <$> curlGetResponse_ uriString options
     where uriString = show requestUri
           options = (case requestMethod of
-                      HTTP.GET -> [CurlHttpGet True]
-                      HTTP.POST -> [CurlPostFields requestPostQuery]
-                      _ -> error "HTTP methods other than GET and POST not currently supported") ++
+                      GET -> [CurlHttpGet True]
+                      POST -> [CurlPostFields requestPostQuery]) ++
                     (case requestDate of
                        Just d -> [CurlTimeValue . round . utcTimeToPOSIXSeconds $ d]
                        Nothing -> []) ++
@@ -121,7 +124,6 @@ curlCallbackReadBS next = do
 
 curlCallbackReadBSL :: IO (Maybe [L.ByteString]) -> IO ReadFunction
 curlCallbackReadBSL f = curlCallbackReadBS $ concatMap L.toChunks .: f
-    where (.:) = fmap . fmap
 
 fixedReader :: [a] -> IO (IO (Maybe [a]))
 fixedReader xs = do

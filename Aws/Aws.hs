@@ -4,10 +4,8 @@ where
 
 import Aws.Credentials
 import Aws.Http
-import Aws.SimpleDb.Error
 import Aws.SimpleDb.Info
 import Aws.Transaction
-import Aws.Util
 import Control.Monad.Reader
 import Network.Curl.Opts
 
