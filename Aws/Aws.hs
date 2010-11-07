@@ -39,22 +39,30 @@ baseConfiguration http' = do
 curlConfiguration :: [CurlOption] -> IO Configuration
 curlConfiguration curlOpt = baseConfiguration (curlRequest curlOpt)
 
-newtype Aws a = MkAws { fromAws :: ReaderT Configuration IO a }
+newtype AwsT m a = AwsT { fromAwsT :: ReaderT Configuration m a }
+
+type Aws = AwsT IO
+
+runAwsT :: AwsT m a -> Configuration -> m a
+runAwsT = runReaderT . fromAwsT
 
 runAws :: Aws a -> Configuration -> IO a
-runAws = runReaderT . fromAws
+runAws = runAwsT
 
-instance Monad Aws where
-    return = MkAws . return
-    m >>= k = MkAws $ fromAws m >>= fromAws . k
+instance Monad m => Monad (AwsT m) where
+    return = AwsT . return
+    m >>= k = AwsT $ fromAwsT m >>= fromAwsT . k
 
-instance MonadIO Aws where
-    liftIO = MkAws . liftIO
+instance MonadIO m => MonadIO (AwsT m) where
+    liftIO = AwsT . liftIO
 
-configuration :: Aws Configuration
-configuration = MkAws ask
+class MonadIO aws => MonadAws aws where
+    configuration :: MonadAws aws => aws Configuration
 
-aws :: (Transaction request info response error, ConfigurationFetch info) => request -> Aws (Either error response)
+instance MonadIO m => MonadAws (AwsT m) where
+    configuration = AwsT ask
+
+aws :: (Transaction request info response error, ConfigurationFetch info, MonadAws aws) => request -> aws (Either error response)
 aws request = do
   cfg <- configuration
   liftM4 transact http timeInfo credentials configurationFetch cfg request
