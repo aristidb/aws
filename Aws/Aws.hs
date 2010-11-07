@@ -7,16 +7,23 @@ import Aws.Http
 import Aws.SimpleDb.Error
 import Aws.SimpleDb.Info
 import Aws.Transaction
+import Aws.Util
 import Control.Monad.Reader
 import Network.Curl.Opts
 
 data Configuration
     = Configuration {
-        http :: (HttpRequest -> IO HttpResponse)
+        http :: HttpRequest -> IO HttpResponse
       , timeInfo :: TimeInfo
       , credentials :: Credentials
       , sdbInfo :: SdbInfo
       }
+
+class ConfigurationFetch a where
+    configurationFetch :: Configuration -> a
+
+instance ConfigurationFetch SdbInfo where
+    configurationFetch = sdbInfo
 
 baseConfiguration :: (HttpRequest -> IO HttpResponse) -> IO Configuration
 baseConfiguration http' = do
@@ -47,12 +54,7 @@ instance MonadIO Aws where
 configuration :: Aws Configuration
 configuration = MkAws ask
 
-aws :: (Transaction request info response error) => info -> request -> Aws (Either error response)
-aws info request = do
+aws :: (Transaction request info response error, ConfigurationFetch info) => request -> Aws (Either error response)
+aws request = do
   cfg <- configuration
-  transact (liftIO . http cfg) (timeInfo cfg) (credentials cfg) info request
-
-sdb :: (Transaction request SdbInfo response SdbError) => request -> Aws (Either SdbError response)
-sdb request = do
-  cfg <- configuration
-  aws (sdbInfo cfg) request
+  liftM4 transact http timeInfo credentials configurationFetch cfg request

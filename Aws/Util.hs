@@ -4,6 +4,10 @@ where
 import Data.Time
 import System.Locale
 
+(.:) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
+(.:) = fmap . fmap
+infixr 5 .:
+
 fmtTime :: String -> UTCTime -> String
 fmtTime = formatTime defaultTimeLocale
 
