@@ -1,10 +1,13 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Aws.SimpleDb.Error
 where
 
 import           Aws.SimpleDb.Metadata
 import           Control.Monad.Error.Class
 import           Data.Maybe
+import           Data.Typeable
 import           Text.XML.Monad
+import qualified Control.Exception         as C
 import qualified Data.Map                  as M
 
 data SdbError
@@ -20,7 +23,7 @@ data SdbError
         fromWithMetdata :: SdbError
       , errorMetadata :: SdbMetadata
       }
-    deriving (Show)
+    deriving (Show, Typeable)
 
 instance FromXmlError SdbError where
     fromXmlError = SdbXmlError
@@ -28,6 +31,8 @@ instance FromXmlError SdbError where
 instance Error SdbError where
     noMsg = fromXmlError noMsg
     strMsg = fromXmlError . strMsg
+
+instance C.Exception SdbError
 
 data ErrorCode
     = AccessFailure

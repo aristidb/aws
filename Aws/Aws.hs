@@ -66,7 +66,8 @@ instance C.MonadCatchIO m => C.MonadCatchIO (AwsT m) where
     block = AwsT . C.block . fromAwsT
     unblock = AwsT . C.unblock . fromAwsT
 
-aws :: (Transaction request info response error, ConfigurationFetch info, MonadAws aws) => request -> aws (Either error response)
+aws :: (Transaction request info response error, ConfigurationFetch info, MonadAws aws) 
+       => request -> aws response
 aws request = do
   cfg <- configuration
   liftM4 transact http timeInfo credentials configurationFetch cfg request
