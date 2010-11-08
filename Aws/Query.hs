@@ -78,11 +78,11 @@ queryToRequest Query{..}
                        uriScheme = case protocol of
                                      HTTP -> "http:"
                                      HTTPS -> "https:"
-                     , uriAuthority = Just (URIAuth {
-                                              uriUserInfo = ""
-                                            , uriRegName = host
-                                            , uriPort = if port == defaultPort protocol then "" else ':' : show port
-                                            })
+                     , uriAuthority = Just URIAuth {
+                                        uriUserInfo = ""
+                                      , uriRegName = host
+                                      , uriPort = if port == defaultPort protocol then "" else ':' : show port
+                                      }
                      , uriPath = path
                      , uriQuery = guard isGet >> ('?' : urlEncodeVars query)
                      }

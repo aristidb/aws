@@ -156,12 +156,10 @@ errorCodeToName (UnrecognizedErrorCode x) = x
 errorCodeToName x = fromJust $ M.lookup x errorCodeToNameMap
 
 nameToErrorCode :: String -> ErrorCode
-nameToErrorCode x = case M.lookup x nameToErrorCodeMap of
-                      Just c -> c
-                      Nothing -> UnrecognizedErrorCode x
+nameToErrorCode x = fromMaybe (UnrecognizedErrorCode x) (M.lookup x nameToErrorCodeMap)
 
 instance Show ErrorCode where
-    show x = errorCodeToName x
+    show = errorCodeToName
 
 instance Read ErrorCode where
     readsPrec _ = readParen False (\x -> [(nameToErrorCode x, "")])

@@ -12,6 +12,7 @@ import           Control.Shortcircuit     (orM)
 import           Data.Function
 import           Data.HMAC
 import           Data.List
+import           Data.Ord
 import           Data.Time
 import           System.Directory
 import           System.Environment
@@ -99,7 +100,7 @@ stringToSign Query{..}
                     host ++ "\n" ++
                     path ++ "\n" ++
                     urlEncodeVars sortedQuery
-    where sortedQuery = sortBy (compare `on` Utf8.encode . fst) query
+    where sortedQuery = sortBy (comparing $ Utf8.encode . fst) query
                                                
 signPreparedQuery :: Credentials -> Query -> Query
 signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }

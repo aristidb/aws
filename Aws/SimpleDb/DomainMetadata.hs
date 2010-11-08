@@ -48,6 +48,6 @@ instance SdbFromResponse DomainMetadataResponse where
       dmrItemNamesSizeBytes <- readContent <<< findElementNameUI "ItemNamesSizeBytes"
       dmrAttributeValuesSizeBytes <- readContent <<< findElementNameUI "AttributeValuesSizeBytes"
       dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
-      return $ DomainMetadataResponse{..}
+      return DomainMetadataResponse{..}
 
 instance Transaction DomainMetadata SdbInfo (SdbResponse DomainMetadataResponse) SdbError

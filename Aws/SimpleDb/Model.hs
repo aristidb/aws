@@ -22,7 +22,7 @@ replaceAttribute name value = ForAttribute name (SetAttribute value True)
              
 setAttributeQuery :: SetAttribute -> [(String, String)]
 setAttributeQuery (SetAttribute value replace)
-    = ("Value", value) : (if replace then [("Replace", awsTrue)] else [])
+    = ("Value", value) : [("Replace", awsTrue) | replace]
              
 data ExpectedAttribute
     = ExpectedValue { expectedAttributeValue :: String }

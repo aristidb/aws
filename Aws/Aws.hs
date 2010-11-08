@@ -27,7 +27,7 @@ instance ConfigurationFetch SdbInfo where
 baseConfiguration :: (HttpRequest -> IO HttpResponse) -> IO Configuration
 baseConfiguration http' = do
   Just cr <- loadCredentialsDefault
-  return $ Configuration {
+  return Configuration {
                http = http'
              , timeInfo = Timestamp
              , credentials = cr

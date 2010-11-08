@@ -100,7 +100,7 @@ urlEncode (ch:t)
 
      eightBs :: [Int]  -> Int -> [Int]
      eightBs acc x
-      | x <= 0xff = (x:acc)
+      | x <= 0xff = x:acc
       | otherwise = eightBs ((x `mod` 256) : acc) (x `div` 256)
 
 -- Encode form variables, useable in either the
@@ -110,7 +110,7 @@ urlEncode (ch:t)
 urlEncodeVars :: [(String,String)] -> String
 urlEncodeVars ((n,v):t) =
     let (same,diff) = partition ((==n) . fst) t
-    in urlEncode n ++ '=' : foldl (\x y -> x ++ ',' : urlEncode y) (urlEncode $ v) (map snd same)
+    in urlEncode n ++ '=' : foldl (\x y -> x ++ ',' : urlEncode y) (urlEncode v) (map snd same)
        ++ urlEncodeRest diff
        where urlEncodeRest [] = []
              urlEncodeRest diff = '&' : urlEncodeVars diff
