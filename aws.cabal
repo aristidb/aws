@@ -74,6 +74,7 @@ Library
   -- Packages needed in order to build this package.
   Build-depends:
                        Crypto ==4.2.*,
+                       MonadCatchIO-transformers ==0.2.*,
                        base ==4.*,
                        bytestring ==0.9.*,
                        containers ==0.3.*,
