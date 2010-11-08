@@ -4,10 +4,12 @@ where
 
 import           Aws.Credentials
 import           Aws.Http
+import           Aws.Query
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
 import           Control.Monad.Reader
 import           Network.Curl.Opts
+import           Network.URI           (URI)
 import qualified Control.Monad.CatchIO as C
 
 data Configuration
@@ -71,3 +73,14 @@ aws :: (Transaction request info response error, ConfigurationFetch info, MonadA
 aws request = do
   cfg <- configuration
   liftM4 transact http timeInfo credentials configurationFetch cfg request
+
+awsUri :: (AsQuery request info, ConfigurationFetch info, MonadAws aws) => request -> aws URI
+awsUri request = do
+  cfg <- configuration
+  let ti = timeInfo cfg
+      cr = credentials cfg
+      info = configurationFetch cfg
+  let uq = asQuery info request
+      uq' = uq { method = GET }
+  q <- signQuery ti cr uq'
+  return $ queryToUri q
