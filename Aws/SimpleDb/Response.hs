@@ -3,9 +3,9 @@ module Aws.SimpleDb.Response
 where
 
 import           Aws.Http
+import           Aws.Metadata
 import           Aws.Response
 import           Aws.SimpleDb.Error
-import           Aws.SimpleDb.Metadata
 import           Control.Applicative
 import           Control.Monad.Compose.Class
 import           Control.Monad.Reader.Class
@@ -33,7 +33,7 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) SdbError where
                      let metadata = SdbMetadata requestId' boxUsage'
                      innerTry <- try $ fromXmlInner status
                      inner <- case innerTry of
-                       Left err -> raise $ WithMetadata err metadata
+                       Left err -> raise $ setMetadata' metadata err
                        Right response -> return response
                      return $ SdbResponse inner metadata
               fromXmlInner :: SdbFromResponse a => Int -> Xml SdbError XL.Element a
@@ -46,7 +46,7 @@ instance SdbFromResponse a => FromResponse (SdbResponse a) SdbError where
               fromError status = do
                      errCode <- nameToErrorCode <$> strContent <<< findElementNameUI "Code"
                      errMessage <- strContent <<< findElementNameUI "Message"
-                     raise $ SdbError status errCode errMessage
+                     raise $ SdbError status errCode errMessage NoMetadata
 
 class SdbFromResponse a where
     sdbFromResponse :: Xml SdbError XL.Element a
