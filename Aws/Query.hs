@@ -113,6 +113,7 @@ queryToHttpRequest Query{..}
                              GET -> map (B8.pack *** B8.pack) query
                              POST -> []
       , HTTP.requestHeaders = [("Date", B8.pack $ fmtRfc822Time d) | Just d <- [date]]
+                              ++ [("Content-Type", "application/x-www-form-urlencoded") | method == POST]
       , HTTP.requestBody = case method of
                              GET -> L.empty
                              POST -> L8.pack $ urlEncodeVars query
