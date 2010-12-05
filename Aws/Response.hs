@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
 
 module Aws.Response
 where
@@ -17,10 +17,10 @@ data Response
       }
     deriving (Show)
 
-class FromXmlError e => FromResponse a e | a -> e where
+class FromXmlError e => FromResponse a e where
     fromResponse :: Xml e Response a
 
-instance FromResponse Response XmlError where
+instance (FromXmlError e, Error e) => FromResponse Response e where
     fromResponse = ask
 
 parseXmlResponse :: (FromXmlError e, Error e) => Xml e Response XL.Element
