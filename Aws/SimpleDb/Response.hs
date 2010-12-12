@@ -2,7 +2,6 @@
 module Aws.SimpleDb.Response
 where
 
-import           Aws.Http
 import           Aws.Metadata
 import           Aws.Response
 import           Aws.SimpleDb.Error
@@ -10,6 +9,7 @@ import           Control.Applicative
 import           Control.Monad.Compose.Class
 import           Control.Monad.Reader.Class
 import           Text.XML.Monad
+import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
 data SdbResponse a
@@ -24,7 +24,7 @@ instance Functor SdbResponse where
 
 instance SdbFromResponse a => FromResponse (SdbResponse a) SdbError where
     fromResponse = fromResponseXml $ do
-          status <- asks (responseStatus . httpResponse)
+          status <- asks HTTP.statusCode
           parseXmlResponse >>> fromXml status
         where fromXml :: SdbFromResponse a => Int -> Xml SdbError XL.Element (SdbResponse a)
               fromXml status = do

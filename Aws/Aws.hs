@@ -8,14 +8,14 @@ import           Aws.Query
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
 import           Control.Monad.Reader
-import           Network.Curl.Opts
-import           Network.URI           (URI)
-import qualified Control.Monad.CatchIO as C
+import           Network.URI             (URI)
+import qualified Control.Failure         as F
+import qualified Control.Monad.CatchIO   as C
+import qualified Network.HTTP.Enumerator as HTTP
 
 data Configuration
     = Configuration {
-        http :: HttpRequest -> IO HttpResponse
-      , timeInfo :: TimeInfo
+       timeInfo :: TimeInfo
       , credentials :: Credentials
       , sdbInfo :: SdbInfo
       }
@@ -26,19 +26,15 @@ class ConfigurationFetch a where
 instance ConfigurationFetch SdbInfo where
     configurationFetch = sdbInfo
 
-baseConfiguration :: (HttpRequest -> IO HttpResponse) -> IO Configuration
-baseConfiguration http' = do
+baseConfiguration :: IO Configuration
+baseConfiguration = do
   Just cr <- loadCredentialsDefault
   return Configuration {
-               http = http'
-             , timeInfo = Timestamp
+               timeInfo = Timestamp
              , credentials = cr
              , sdbInfo = sdbHttpsPost sdbUsEast
              }
 -- TODO: better error handling when credentials cannot be loaded
-
-curlConfiguration :: [CurlOption] -> IO Configuration
-curlConfiguration curlOpt = baseConfiguration (curlRequest curlOpt)
 
 newtype AwsT m a = AwsT { fromAwsT :: ReaderT Configuration m a }
 
@@ -68,13 +64,23 @@ instance C.MonadCatchIO m => C.MonadCatchIO (AwsT m) where
     block = AwsT . C.block . fromAwsT
     unblock = AwsT . C.unblock . fromAwsT
 
-aws :: (Transaction request info response error, ConfigurationFetch info, MonadAws aws) 
-       => request -> aws response
+instance (C.Exception e, MonadIO m) => F.Failure e (AwsT m) where
+    failure = C.throw
+
+aws :: (Transaction request info response error
+       , ConfigurationFetch info
+       , MonadAws aws
+       , F.Failure HTTP.HttpException aws
+       , F.Failure error aws) 
+      => request -> aws response
 aws request = do
   cfg <- configuration
-  liftM4 transact http timeInfo credentials configurationFetch cfg request
+  liftM3 transact timeInfo credentials configurationFetch cfg request
 
-awsUri :: (AsQuery request info, ConfigurationFetch info, MonadAws aws) => request -> aws URI
+awsUri :: (AsQuery request info
+          , ConfigurationFetch info
+          , MonadAws aws)
+         => request -> aws URI
 awsUri request = do
   cfg <- configuration
   let ti = timeInfo cfg

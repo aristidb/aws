@@ -9,7 +9,6 @@ import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Shortcircuit     (orM)
-import           Data.Function
 import           Data.HMAC
 import           Data.List
 import           Data.Ord

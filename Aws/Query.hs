@@ -6,7 +6,6 @@ where
 import           Aws.Http
 import           Aws.Util
 import           Control.Arrow
-import           Control.Monad
 import           Data.Time
 import           Network.URI                (nullURI, URI(..), URIAuth(..))
 import qualified Data.ByteString.Char8      as B8
@@ -72,30 +71,6 @@ awsTrue = awsBool True
 
 awsFalse :: String
 awsFalse = awsBool False
-
-queryToRequest :: Query -> HttpRequest
-queryToRequest Query{..}
-    = HttpRequest { 
-        requestMethod = method
-      , requestUri = nullURI {
-                       uriScheme = case protocol of
-                                     HTTP -> "http:"
-                                     HTTPS -> "https:"
-                     , uriAuthority = Just URIAuth {
-                                        uriUserInfo = ""
-                                      , uriRegName = host
-                                      , uriPort = if port == defaultPort protocol then "" else ':' : show port
-                                      }
-                     , uriPath = path
-                     , uriQuery = guard isGet >> ('?' : urlEncodeVars query)
-                     }
-      , requestDate = date
-      , requestPostQuery = guard isPost >> map urlEncodeSingleVar query
-      , requestBody = L.empty
-      }
-    where isGet = method == GET
-          isPost = method == POST
-          urlEncodeSingleVar (a, b) = urlEncode a ++ '=' : urlEncode b
 
 queryToHttpRequest :: Query -> HTTP.Request
 queryToHttpRequest Query{..}
