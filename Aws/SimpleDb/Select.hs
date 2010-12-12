@@ -1,16 +1,17 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 
 module Aws.SimpleDb.Select
 where
 
-import Aws.Query
-import Aws.SimpleDb.Error
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Model
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Monad.Compose.Class
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Error
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Monad.Compose.Class
+import           Text.XML.Monad
+import qualified Control.Failure             as F
 
 data Select
     = Select {
@@ -52,4 +53,4 @@ instance SdbFromResponse SelectResponse where
                 value <- strContent <<< findElementNameUI "Value"
                 return $ ForAttribute name value
 
-instance Transaction Select SdbInfo (SdbResponse SelectResponse) SdbError
+instance (Monad m, F.Failure SdbError m) => Transaction Select SdbInfo SdbError m (SdbResponse SelectResponse)

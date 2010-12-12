@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 module Aws.SimpleDb.Response
 where
 
@@ -9,6 +9,7 @@ import           Control.Applicative
 import           Control.Monad.Compose.Class
 import           Control.Monad.Reader.Class
 import           Text.XML.Monad
+import qualified Control.Failure             as F
 import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
@@ -22,8 +23,8 @@ data SdbResponse a
 instance Functor SdbResponse where
     fmap f (SdbResponse a m) = SdbResponse (f a) m
 
-instance SdbFromResponse a => FromResponse (SdbResponse a) SdbError where
-    fromResponse = fromResponseXml $ do
+instance (SdbFromResponse a, Monad m, F.Failure SdbError m) => ResponseIteratee SdbError m (SdbResponse a) where
+    responseIteratee = xmlResponseIteratee $ do
           status <- asks HTTP.statusCode
           parseXmlResponse >>> fromXml status
         where fromXml :: SdbFromResponse a => Int -> Xml SdbError XL.Element (SdbResponse a)

@@ -1,16 +1,17 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 
 module Aws.SimpleDb.GetAttributes
 where
 
-import Aws.Query
-import Aws.SimpleDb.Error
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Model
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Monad.Compose.Class
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Error
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Monad.Compose.Class
+import           Text.XML.Monad
+import qualified Control.Failure             as F
 
 data GetAttributes
     = GetAttributes {
@@ -48,4 +49,4 @@ instance SdbFromResponse GetAttributesResponse where
                         value <- strContent <<< findElementNameUI "Value"
                         return $ ForAttribute name value
 
-instance Transaction GetAttributes SdbInfo (SdbResponse GetAttributesResponse) SdbError
+instance (Monad m, F.Failure SdbError m) => Transaction GetAttributes SdbInfo SdbError m (SdbResponse GetAttributesResponse)

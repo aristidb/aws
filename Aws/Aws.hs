@@ -7,6 +7,7 @@ import           Aws.Http
 import           Aws.Query
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
+import           Aws.Response
 import           Control.Monad.Reader
 import           Network.URI             (URI)
 import qualified Control.Failure         as F
@@ -67,7 +68,7 @@ instance C.MonadCatchIO m => C.MonadCatchIO (AwsT m) where
 instance (C.Exception e, MonadIO m) => F.Failure e (AwsT m) where
     failure = C.throw
 
-aws :: (Transaction request info response error
+aws :: (Transaction request info error aws response
        , ConfigurationFetch info
        , MonadAws aws
        , F.Failure HTTP.HttpException aws

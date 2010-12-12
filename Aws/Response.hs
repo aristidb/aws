@@ -1,24 +1,45 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, EmptyDataDecls, DeriveDataTypeable #-}
 
 module Aws.Response
 where
   
+import           Control.Exception
 import           Control.Monad.Compose.Class
 import           Control.Monad.Error.Class
+import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
+import           Data.Typeable
 import           Text.XML.Monad
+import qualified Control.Failure             as F
+import qualified Data.ByteString             as B
+import qualified Data.ByteString.Lazy        as BL
 import qualified Data.ByteString.Lazy.UTF8   as BLU
+import qualified Data.Enumerator             as En
 import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
-class FromResponse a e where
-    fromResponse :: HTTP.Response -> Either e a
+data InfallibleException
+    deriving (Typeable)
 
-instance FromResponse HTTP.Response e where
-    fromResponse = Right
+instance Show InfallibleException where
+    show = undefined
 
-fromResponseXml :: Xml e HTTP.Response a -> HTTP.Response -> Either e a
-fromResponseXml = runXml
+instance Exception InfallibleException where
+    toException = SomeException
+    fromException _ = Nothing
+
+class Monad m => ResponseIteratee e m a | m a -> e where
+    responseIteratee :: Int -> HTTP.Headers -> En.Iteratee B.ByteString m a
+    
+instance Monad m => ResponseIteratee InfallibleException m HTTP.Response where
+    responseIteratee statusCode headers = HTTP.lbsIter statusCode headers
+
+xmlResponseIteratee :: (Monad m, F.Failure e m) => Xml e HTTP.Response a -> Int -> HTTP.Headers -> En.Iteratee B.ByteString m a
+xmlResponseIteratee xml statusCode headers = do
+  body <- HTTP.lbsIter statusCode headers
+  case runXml xml body of
+    Left e -> En.Iteratee $ F.failure e
+    Right a -> return a
 
 parseXmlResponse :: (FromXmlError e, Error e) => Xml e HTTP.Response XL.Element
 parseXmlResponse = parseXMLDoc <<< asks (BLU.toString . HTTP.responseBody)

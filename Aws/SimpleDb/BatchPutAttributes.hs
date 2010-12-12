@@ -1,16 +1,17 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 
 module Aws.SimpleDb.BatchPutAttributes
 where
 
-import Aws.Query
-import Aws.SimpleDb.Error
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Model
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Applicative
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Error
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Applicative
+import           Text.XML.Monad
+import qualified Control.Failure       as F
 
 data BatchPutAttributes
     = BatchPutAttributes {
@@ -35,4 +36,4 @@ instance AsQuery BatchPutAttributes SdbInfo where
 instance SdbFromResponse BatchPutAttributesResponse where
     sdbFromResponse = BatchPutAttributesResponse <$ testElementNameUI "BatchPutAttributesResponse"
 
-instance Transaction BatchPutAttributes SdbInfo (SdbResponse BatchPutAttributesResponse) SdbError
+instance (Monad m, F.Failure SdbError m) => Transaction BatchPutAttributes SdbInfo SdbError m (SdbResponse BatchPutAttributesResponse)

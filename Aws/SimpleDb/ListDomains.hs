@@ -1,15 +1,16 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 
 module Aws.SimpleDb.ListDomains
 where
 
-import Aws.Query
-import Aws.SimpleDb.Error
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Monad.Compose.Class
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Error
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Monad.Compose.Class
+import           Text.XML.Monad
+import qualified Control.Failure             as F
 
 data ListDomains
     = ListDomains {
@@ -41,4 +42,4 @@ instance SdbFromResponse ListDomainsResponse where
       nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
       return $ ListDomainsResponse names nextToken
 
-instance Transaction ListDomains SdbInfo (SdbResponse ListDomainsResponse) SdbError
+instance (Monad m, F.Failure SdbError m) => Transaction ListDomains SdbInfo SdbError m (SdbResponse ListDomainsResponse)

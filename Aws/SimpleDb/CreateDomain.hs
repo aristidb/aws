@@ -1,15 +1,16 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 
 module Aws.SimpleDb.CreateDomain
 where
 
-import Aws.Query
-import Aws.SimpleDb.Error
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Applicative
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Error
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Applicative
+import           Text.XML.Monad
+import qualified Control.Failure       as F
 
 data CreateDomain
     = CreateDomain {
@@ -30,4 +31,4 @@ instance AsQuery CreateDomain SdbInfo where
 instance SdbFromResponse CreateDomainResponse where
     sdbFromResponse = CreateDomainResponse <$ testElementNameUI "CreateDomainResponse"
 
-instance Transaction CreateDomain SdbInfo (SdbResponse CreateDomainResponse) SdbError
+instance (Monad m, F.Failure SdbError m) => Transaction CreateDomain SdbInfo SdbError m (SdbResponse CreateDomainResponse)
