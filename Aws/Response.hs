@@ -17,11 +17,11 @@ data Response
       }
     deriving (Show)
 
-class FromXmlError e => FromResponse a e where
-    fromResponse :: Xml e Response a
+class FromXmlError e => FromXmlResponse a e where
+    fromXmlResponse :: Xml e Response a
 
-instance (FromXmlError e, Error e) => FromResponse Response e where
-    fromResponse = ask
+instance (FromXmlError e, Error e) => FromXmlResponse Response e where
+    fromXmlResponse = ask
 
 parseXmlResponse :: (FromXmlError e, Error e) => Xml e Response XL.Element
 parseXmlResponse = parseXMLDoc <<< asks (BLU.toString . responseBody . httpResponse)

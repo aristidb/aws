@@ -22,8 +22,8 @@ data SdbResponse a
 instance Functor SdbResponse where
     fmap f (SdbResponse a m) = SdbResponse (f a) m
 
-instance SdbFromResponse a => FromResponse (SdbResponse a) SdbError where
-    fromResponse = do
+instance SdbFromResponse a => FromXmlResponse (SdbResponse a) SdbError where
+    fromXmlResponse = do
           status <- asks (responseStatus . httpResponse)
           parseXmlResponse >>> fromXml status
         where fromXml :: SdbFromResponse a => Int -> Xml SdbError XL.Element (SdbResponse a)
