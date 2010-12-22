@@ -31,4 +31,4 @@ instance AsQuery CreateDomain SdbInfo where
 instance SdbFromResponse CreateDomainResponse where
     sdbFromResponse = CreateDomainResponse <$ testElementNameUI "CreateDomainResponse"
 
-instance (Monad m, F.Failure SdbError m) => Transaction CreateDomain SdbInfo m (SdbResponse CreateDomainResponse)
+instance Transaction CreateDomain SdbInfo (SdbResponse CreateDomainResponse)

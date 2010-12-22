@@ -18,10 +18,10 @@ import qualified Data.Enumerator             as En
 import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
-class Monad m => ResponseIteratee m a where
-    responseIteratee :: Int -> HTTP.Headers -> En.Iteratee B.ByteString m a
+class ResponseIteratee a where
+    responseIteratee :: Int -> HTTP.Headers -> En.Iteratee B.ByteString IO a
     
-instance Monad m => ResponseIteratee m HTTP.Response where
+instance ResponseIteratee HTTP.Response where
     responseIteratee statusCode headers = HTTP.lbsIter statusCode headers
 
 xmlResponseIteratee :: (Monad m, F.Failure e m) => Xml e HTTP.Response a -> Int -> HTTP.Headers -> En.Iteratee B.ByteString m a

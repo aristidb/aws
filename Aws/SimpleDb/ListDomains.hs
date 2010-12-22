@@ -42,4 +42,4 @@ instance SdbFromResponse ListDomainsResponse where
       nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
       return $ ListDomainsResponse names nextToken
 
-instance (Monad m, F.Failure SdbError m) => Transaction ListDomains SdbInfo m (SdbResponse ListDomainsResponse)
+instance Transaction ListDomains SdbInfo (SdbResponse ListDomainsResponse)

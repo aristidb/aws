@@ -53,4 +53,4 @@ instance SdbFromResponse SelectResponse where
                 value <- strContent <<< findElementNameUI "Value"
                 return $ ForAttribute name value
 
-instance (Monad m, F.Failure SdbError m) => Transaction Select SdbInfo m (SdbResponse SelectResponse)
+instance Transaction Select SdbInfo (SdbResponse SelectResponse)

@@ -51,4 +51,4 @@ instance SdbFromResponse DomainMetadataResponse where
       dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
       return DomainMetadataResponse{..}
 
-instance (Monad m, F.Failure SdbError m) => Transaction DomainMetadata SdbInfo m (SdbResponse DomainMetadataResponse)
+instance Transaction DomainMetadata SdbInfo (SdbResponse DomainMetadataResponse)
