@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
 
 module Aws.SimpleDb.ListDomains
 where
@@ -29,7 +29,8 @@ data ListDomainsResponse
 listDomains :: ListDomains
 listDomains = ListDomains { ldMaxNumberOfDomains = Nothing, ldNextToken = Nothing }
              
-instance AsQuery ListDomains SdbInfo where
+instance AsQuery ListDomains where
+    type Info ListDomains = SdbInfo
     asQuery i ListDomains{..} = addQuery [("Action", "ListDomains")]
                                 . addQueryMaybe show ("MaxNumberOfDomains", ldMaxNumberOfDomains)
                                 . addQueryMaybe id ("NextToken", ldNextToken)
@@ -42,4 +43,4 @@ instance SdbFromResponse ListDomainsResponse where
       nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
       return $ ListDomainsResponse names nextToken
 
-instance Transaction ListDomains SdbInfo (SdbResponse ListDomainsResponse)
+instance Transaction ListDomains (SdbResponse ListDomainsResponse)

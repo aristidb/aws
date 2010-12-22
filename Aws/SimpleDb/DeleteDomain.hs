@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
 
 module Aws.SimpleDb.DeleteDomain
 where
@@ -25,10 +25,11 @@ data DeleteDomainResponse
 deleteDomain :: String -> DeleteDomain
 deleteDomain name = DeleteDomain { ddDomainName = name }
              
-instance AsQuery DeleteDomain SdbInfo where
+instance AsQuery DeleteDomain where
+    type Info DeleteDomain = SdbInfo
     asQuery i DeleteDomain{..} = addQuery [("Action", "DeleteDomain"), ("DomainName", ddDomainName)] (sdbiBaseQuery i)
 
 instance SdbFromResponse DeleteDomainResponse where
     sdbFromResponse = DeleteDomainResponse <$ testElementNameUI "DeleteDomainResponse"
 
-instance Transaction DeleteDomain SdbInfo (SdbResponse DeleteDomainResponse)
+instance Transaction DeleteDomain (SdbResponse DeleteDomainResponse)

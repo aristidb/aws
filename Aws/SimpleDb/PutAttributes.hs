@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
 
 module Aws.SimpleDb.PutAttributes
 where
@@ -34,7 +34,8 @@ putAttributes item attributes domain = PutAttributes {
                                        , paDomainName = domain 
                                        }
                                        
-instance AsQuery PutAttributes SdbInfo where
+instance AsQuery PutAttributes where
+    type Info PutAttributes = SdbInfo
     asQuery i PutAttributes{..}
         = addQuery [("Action", "PutAttributes"), ("ItemName", paItemName), ("DomainName", paDomainName)]
           . addQueryList (attributeQuery setAttributeQuery) "Attribute" paAttributes
@@ -44,4 +45,4 @@ instance AsQuery PutAttributes SdbInfo where
 instance SdbFromResponse PutAttributesResponse where
     sdbFromResponse = PutAttributesResponse <$ testElementNameUI "PutAttributesResponse"
 
-instance Transaction PutAttributes SdbInfo (SdbResponse PutAttributesResponse)
+instance Transaction PutAttributes (SdbResponse PutAttributesResponse)

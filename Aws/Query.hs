@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FunctionalDependencies, OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, TypeFamilies, OverloadedStrings #-}
 
 module Aws.Query
 where
@@ -13,8 +13,9 @@ import qualified Data.ByteString.Lazy       as L
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Network.HTTP.Enumerator    as HTTP
 
-class AsQuery d i | d -> i where
-    asQuery :: i -> d -> Query
+class AsQuery r where
+    type Info r :: *
+    asQuery :: Info r -> r -> Query
   
 data Api
     = SimpleDB
@@ -34,7 +35,8 @@ data Query
       }
     deriving (Show)
 
-instance AsQuery Query () where
+instance AsQuery Query where
+    type Info Query = ()
     asQuery _ = id
              
 addQuery :: [(String, String)] -> Query -> Query

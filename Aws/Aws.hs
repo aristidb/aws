@@ -68,16 +68,16 @@ instance C.MonadCatchIO m => C.MonadCatchIO (AwsT m) where
 instance (C.Exception e, MonadIO m) => F.Failure e (AwsT m) where
     failure = C.throw
 
-aws :: (Transaction request info response
-       , ConfigurationFetch info
+aws :: (Transaction request response
+       , ConfigurationFetch (Info request)
        , MonadAws aws) 
       => request -> aws response
 aws request = do
   cfg <- configuration
   liftIO $ liftM3 transact timeInfo credentials configurationFetch cfg request
 
-awsUri :: (AsQuery request info
-          , ConfigurationFetch info
+awsUri :: (AsQuery request
+          , ConfigurationFetch (Info request)
           , MonadAws aws)
          => request -> aws URI
 awsUri request = do

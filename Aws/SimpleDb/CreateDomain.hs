@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
 
 module Aws.SimpleDb.CreateDomain
 where
@@ -25,10 +25,11 @@ data CreateDomainResponse
 createDomain :: String -> CreateDomain
 createDomain name = CreateDomain { cdDomainName = name }
              
-instance AsQuery CreateDomain SdbInfo where
+instance AsQuery CreateDomain where
+    type Info CreateDomain = SdbInfo
     asQuery i CreateDomain{..} = addQuery [("Action", "CreateDomain"), ("DomainName", cdDomainName)] (sdbiBaseQuery i)
 
 instance SdbFromResponse CreateDomainResponse where
     sdbFromResponse = CreateDomainResponse <$ testElementNameUI "CreateDomainResponse"
 
-instance Transaction CreateDomain SdbInfo (SdbResponse CreateDomainResponse)
+instance Transaction CreateDomain (SdbResponse CreateDomainResponse)

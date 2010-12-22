@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
 
 module Aws.SimpleDb.GetAttributes
 where
@@ -31,7 +31,8 @@ data GetAttributesResponse
 getAttributes :: String -> String -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
 
-instance AsQuery GetAttributes SdbInfo where
+instance AsQuery GetAttributes where
+    type Info GetAttributes = SdbInfo
     asQuery i GetAttributes{..}
         = addQuery [("Action", "GetAttributes"), ("ItemName", gaItemName), ("DomainName", gaDomainName)]
           . addQueryMaybe id ("AttributeName", gaAttributeName)
@@ -49,4 +50,4 @@ instance SdbFromResponse GetAttributesResponse where
                         value <- strContent <<< findElementNameUI "Value"
                         return $ ForAttribute name value
 
-instance Transaction GetAttributes SdbInfo (SdbResponse GetAttributesResponse)
+instance Transaction GetAttributes (SdbResponse GetAttributesResponse)

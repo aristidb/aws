@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
 
 module Aws.SimpleDb.Select
 where
@@ -31,7 +31,8 @@ data SelectResponse
 select :: String -> Select
 select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextToken = "" }
 
-instance AsQuery Select SdbInfo where
+instance AsQuery Select where
+    type Info Select = SdbInfo
     asQuery i Select{..}
         = addQuery [("Action", "Select"), ("SelectExpression", sSelectExpression)]
           . addQueryIf sConsistentRead [("ConsistentRead", awsTrue)]
@@ -53,4 +54,4 @@ instance SdbFromResponse SelectResponse where
                 value <- strContent <<< findElementNameUI "Value"
                 return $ ForAttribute name value
 
-instance Transaction Select SdbInfo (SdbResponse SelectResponse)
+instance Transaction Select (SdbResponse SelectResponse)

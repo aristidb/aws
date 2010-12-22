@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
 
 module Aws.SimpleDb.DomainMetadata
 where
@@ -36,7 +36,8 @@ data DomainMetadataResponse
 domainMetadata :: String -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
-instance AsQuery DomainMetadata SdbInfo where
+instance AsQuery DomainMetadata where
+    type Info DomainMetadata = SdbInfo
     asQuery i DomainMetadata{..} = addQuery [("Action", "DomainMetadata"), ("DomainName", dmDomainName)] (sdbiBaseQuery i)
 
 instance SdbFromResponse DomainMetadataResponse where
@@ -51,4 +52,4 @@ instance SdbFromResponse DomainMetadataResponse where
       dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
       return DomainMetadataResponse{..}
 
-instance Transaction DomainMetadata SdbInfo (SdbResponse DomainMetadataResponse)
+instance Transaction DomainMetadata (SdbResponse DomainMetadataResponse)
