@@ -49,4 +49,4 @@ instance SdbFromResponse GetAttributesResponse where
                         value <- strContent <<< findElementNameUI "Value"
                         return $ ForAttribute name value
 
-instance (Monad m, F.Failure SdbError m) => Transaction GetAttributes SdbInfo SdbError m (SdbResponse GetAttributesResponse)
+instance (Monad m, F.Failure SdbError m) => Transaction GetAttributes SdbInfo m (SdbResponse GetAttributesResponse)

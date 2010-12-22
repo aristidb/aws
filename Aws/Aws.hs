@@ -68,11 +68,10 @@ instance C.MonadCatchIO m => C.MonadCatchIO (AwsT m) where
 instance (C.Exception e, MonadIO m) => F.Failure e (AwsT m) where
     failure = C.throw
 
-aws :: (Transaction request info error aws response
+aws :: (Transaction request info aws response
        , ConfigurationFetch info
        , MonadAws aws
-       , F.Failure HTTP.HttpException aws
-       , F.Failure error aws) 
+       , F.Failure HTTP.HttpException aws) 
       => request -> aws response
 aws request = do
   cfg <- configuration

@@ -18,20 +18,10 @@ import qualified Data.Enumerator             as En
 import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
-data InfallibleException
-    deriving (Typeable)
-
-instance Show InfallibleException where
-    show = undefined
-
-instance Exception InfallibleException where
-    toException = SomeException
-    fromException _ = Nothing
-
-class Monad m => ResponseIteratee e m a | m a -> e where
+class Monad m => ResponseIteratee m a where
     responseIteratee :: Int -> HTTP.Headers -> En.Iteratee B.ByteString m a
     
-instance Monad m => ResponseIteratee InfallibleException m HTTP.Response where
+instance Monad m => ResponseIteratee m HTTP.Response where
     responseIteratee statusCode headers = HTTP.lbsIter statusCode headers
 
 xmlResponseIteratee :: (Monad m, F.Failure e m) => Xml e HTTP.Response a -> Int -> HTTP.Headers -> En.Iteratee B.ByteString m a

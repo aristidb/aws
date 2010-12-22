@@ -36,4 +36,4 @@ instance AsQuery BatchPutAttributes SdbInfo where
 instance SdbFromResponse BatchPutAttributesResponse where
     sdbFromResponse = BatchPutAttributesResponse <$ testElementNameUI "BatchPutAttributesResponse"
 
-instance (Monad m, F.Failure SdbError m) => Transaction BatchPutAttributes SdbInfo SdbError m (SdbResponse BatchPutAttributesResponse)
+instance (Monad m, F.Failure SdbError m) => Transaction BatchPutAttributes SdbInfo m (SdbResponse BatchPutAttributesResponse)

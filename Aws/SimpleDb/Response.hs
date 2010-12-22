@@ -23,7 +23,7 @@ data SdbResponse a
 instance Functor SdbResponse where
     fmap f (SdbResponse a m) = SdbResponse (f a) m
 
-instance (SdbFromResponse a, Monad m, F.Failure SdbError m) => ResponseIteratee SdbError m (SdbResponse a) where
+instance (SdbFromResponse a, Monad m, F.Failure SdbError m) => ResponseIteratee m (SdbResponse a) where
     responseIteratee = xmlResponseIteratee $ do
           status <- asks HTTP.statusCode
           parseXmlResponse >>> fromXml status

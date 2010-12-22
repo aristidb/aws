@@ -31,4 +31,4 @@ instance AsQuery DeleteDomain SdbInfo where
 instance SdbFromResponse DeleteDomainResponse where
     sdbFromResponse = DeleteDomainResponse <$ testElementNameUI "DeleteDomainResponse"
 
-instance (Monad m, F.Failure SdbError m) => Transaction DeleteDomain SdbInfo SdbError m (SdbResponse DeleteDomainResponse)
+instance (Monad m, F.Failure SdbError m) => Transaction DeleteDomain SdbInfo m (SdbResponse DeleteDomainResponse)

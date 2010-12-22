@@ -44,4 +44,4 @@ instance AsQuery PutAttributes SdbInfo where
 instance SdbFromResponse PutAttributesResponse where
     sdbFromResponse = PutAttributesResponse <$ testElementNameUI "PutAttributesResponse"
 
-instance (Monad m, F.Failure SdbError m) => Transaction PutAttributes SdbInfo SdbError m (SdbResponse PutAttributesResponse)
+instance (Monad m, F.Failure SdbError m) => Transaction PutAttributes SdbInfo m (SdbResponse PutAttributesResponse)
