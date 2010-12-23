@@ -26,7 +26,7 @@ instance Functor SdbResponse where
 instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
     responseIteratee = xmlResponseIteratee $ do
           status <- asks HTTP.statusCode
-          parseXmlResponse >>> fromXml status
+          fromXml status <<< parseXmlResponse
         where fromXml :: SdbFromResponse a => Int -> Xml SdbError XL.Element (SdbResponse a)
               fromXml status = do
                      requestId' <- strContent <<< findElementNameUI "RequestID"
