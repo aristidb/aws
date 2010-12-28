@@ -86,6 +86,6 @@ awsUri request = do
       cr = credentials cfg
       info = configurationFetch cfg
   let uq = asQuery info request
-      uq' = uq { method = GET }
+      uq' = uq { method = Get }
   q <- signQuery ti cr uq'
   return $ queryToUri q

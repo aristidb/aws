@@ -13,6 +13,6 @@ defaultPort HTTP = 80
 defaultPort HTTPS = 443
 
 data Method
-    = GET
-    | POST
+    = Get
+    | PostQuery
     deriving (Show, Eq)

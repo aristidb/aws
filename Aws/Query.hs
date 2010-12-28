@@ -19,6 +19,7 @@ class AsQuery r where
   
 data Api
     = SimpleDB
+    | S3
     deriving (Show)
 
 data Query 
@@ -31,6 +32,7 @@ data Query
       , path :: String
       , query :: [(String, String)]
       , date :: Maybe UTCTime
+      , contentType :: Maybe String
       , body :: L.ByteString  
       }
     deriving (Show)
@@ -78,8 +80,8 @@ queryToHttpRequest :: Query -> HTTP.Request
 queryToHttpRequest Query{..}
     = HTTP.Request {
         HTTP.method = case method of
-                        GET -> "GET"
-                        POST -> "POST"
+                        Get -> "GET"
+                        PostQuery -> "POST"
       , HTTP.secure = case protocol of
                         HTTP -> False
                         HTTPS -> True
@@ -87,14 +89,17 @@ queryToHttpRequest Query{..}
       , HTTP.port = port
       , HTTP.path = B8.pack path -- TODO: use ByteString
       , HTTP.queryString = case method of
-                             GET -> map (B8.pack *** B8.pack) query
-                             POST -> []
+                             Get -> map (B8.pack *** B8.pack) query
+                             PostQuery -> []
       , HTTP.requestHeaders = [("Date", B8.pack $ fmtRfc822Time d) | Just d <- [date]]
-                              ++ [("Content-Type", "application/x-www-form-urlencoded") | method == POST]
+                              ++ [("Content-Type", B8.pack c) | Just c <- [contentType']]
       , HTTP.requestBody = case method of
-                             GET -> L.empty
-                             POST -> L8.pack $ urlEncodeVars query
+                             Get -> L.empty
+                             PostQuery -> L8.pack $ urlEncodeVars query
       }
+    where contentType' = case method of
+                           PostQuery -> Just "application/x-www-form-urlencoded"
+                           _ -> contentType
 
 queryToUri :: Query -> URI
 queryToUri Query{..} 
@@ -108,5 +113,5 @@ queryToUri Query{..}
                        , uriPort = if port == defaultPort protocol then "" else ':' : show port
                        }
       , uriPath = path
-      , uriQuery = '?' : urlEncodeVars query
+      , uriQuery = urlEncodeVars query
       }

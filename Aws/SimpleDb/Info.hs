@@ -28,16 +28,16 @@ sdbApSoutheast :: String
 sdbApSoutheast = "sdb.ap-southeast-1.amazonaws.com"
              
 sdbHttpGet :: String -> SdbInfo
-sdbHttpGet endpoint = SdbInfo HTTP GET endpoint (defaultPort HTTP)
+sdbHttpGet endpoint = SdbInfo HTTP Get endpoint (defaultPort HTTP)
                           
 sdbHttpPost :: String -> SdbInfo
-sdbHttpPost endpoint = SdbInfo HTTP POST endpoint (defaultPort HTTP)
+sdbHttpPost endpoint = SdbInfo HTTP PostQuery endpoint (defaultPort HTTP)
               
 sdbHttpsGet :: String -> SdbInfo
-sdbHttpsGet endpoint = SdbInfo HTTPS GET endpoint (defaultPort HTTPS)
+sdbHttpsGet endpoint = SdbInfo HTTPS Get endpoint (defaultPort HTTPS)
              
 sdbHttpsPost :: String -> SdbInfo
-sdbHttpsPost endpoint = SdbInfo HTTPS POST endpoint (defaultPort HTTPS)
+sdbHttpsPost endpoint = SdbInfo HTTPS PostQuery endpoint (defaultPort HTTPS)
 
 sdbiBaseQuery :: SdbInfo -> Query
 sdbiBaseQuery SdbInfo{..} = Query { 
@@ -49,5 +49,6 @@ sdbiBaseQuery SdbInfo{..} = Query {
                             , path = "/"
                             , query = [("Version", "2009-04-15")]
                             , date = Nothing
+                            , contentType = Nothing
                             , body = L.empty
                             }
