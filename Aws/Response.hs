@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, EmptyDataDecls, DeriveDataTypeable #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DeriveDataTypeable #-}
 
 module Aws.Response
 where
@@ -18,7 +18,7 @@ class ResponseIteratee a where
     responseIteratee :: Int -> HTTP.Headers -> En.Iteratee B.ByteString IO a
     
 instance ResponseIteratee HTTP.Response where
-    responseIteratee statusCode headers = HTTP.lbsIter statusCode headers
+    responseIteratee = HTTP.lbsIter
 
 xmlResponseIteratee :: (Monad m, F.Failure e m) => Xml e HTTP.Response a -> Int -> HTTP.Headers -> En.Iteratee B.ByteString m a
 xmlResponseIteratee xml statusCode headers = do
