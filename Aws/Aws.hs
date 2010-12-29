@@ -25,7 +25,7 @@ class ConfigurationFetch a where
 instance ConfigurationFetch SdbInfo where
     configurationFetch = sdbInfo
 
-baseConfiguration :: IO Configuration
+baseConfiguration :: MonadIO io => io Configuration
 baseConfiguration = do
   Just cr <- loadCredentialsDefault
   return Configuration {
@@ -39,11 +39,11 @@ newtype AwsT m a = AwsT { fromAwsT :: ReaderT Configuration m a }
 
 type Aws = AwsT IO
 
-runAwsT :: AwsT m a -> Configuration -> m a
-runAwsT = runReaderT . fromAwsT
+runAws :: AwsT m a -> Configuration -> m a
+runAws = runReaderT . fromAwsT
 
-runAws :: Aws a -> Configuration -> IO a
-runAws = runAwsT
+runAws' :: MonadIO io => AwsT io a -> io a
+runAws' aws = baseConfiguration >>= runAws aws
 
 instance Monad m => Monad (AwsT m) where
     return = AwsT . return
