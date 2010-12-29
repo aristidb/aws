@@ -11,6 +11,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Shortcircuit     (orM)
 import           Data.List
+import           Data.Maybe
 import           Data.Ord
 import           Data.Time
 import           System.Directory
@@ -102,7 +103,12 @@ stringToSign Query{..}
                               host, "\n",
                               path, "\n",
                               B8.pack $ urlEncodeVars sortedQuery]
-        S3 -> error "TODO: S3 credentials not implemented yet" -- TODO XXX
+        S3 -> B.concat [httpMethod method, "\n",
+                        "", "\n", -- Content-MD5
+                        B8.pack $ fromMaybe "" contentType, "\n",
+                        B8.pack . fromMaybe "" $ fmtAmzTime `fmap` date, "\n",
+                        "", -- canonicalized AMZ headers
+                        path] -- canonicalized resource (TODO: canonical)
     where sortedQuery = sortBy (comparing $ Utf8.encode . fst) query
                                                
 signPreparedQuery :: Credentials -> Query -> Query
