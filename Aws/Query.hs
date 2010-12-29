@@ -30,11 +30,12 @@ data Query
       , host :: B8.ByteString
       , port :: Int
       , path :: B8.ByteString
+      , canonicalizedResource :: B8.ByteString
       , query :: [(String, String)]
       , date :: Maybe UTCTime
       , contentType :: Maybe String
       , contentMd5 :: Maybe String
-      , body :: L.ByteString  
+      , body :: L.ByteString
       }
     deriving (Show)
 

@@ -48,6 +48,7 @@ sdbiBaseQuery SdbInfo{..} = Query {
                             , host = sdbiHost
                             , port = sdbiPort 
                             , path = "/"
+                            , canonicalizedResource = ""
                             , query = [("Version", "2009-04-15")]
                             , date = Nothing
                             , contentType = Nothing
