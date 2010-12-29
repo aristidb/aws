@@ -1,10 +1,11 @@
 module Aws.Util
 where
   
-import Data.Char
-import Data.List
-import Data.Time
-import System.Locale
+import           Data.Char
+import           Data.List
+import           Data.Time
+import           System.Locale
+import qualified Data.ByteString.Char8 as B8
 
 (.:) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
 (.:) = fmap . fmap
@@ -18,6 +19,9 @@ fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"
 
 fmtAmzTime :: UTCTime -> String
 fmtAmzTime = fmtTime "%Y-%m-%dT%H:%M:%S"
+
+urlEncodeVarsBS :: [(String,String)] -> B8.ByteString
+urlEncodeVarsBS = B8.pack . urlEncodeVars
 
 {-
 Copyright (c) 2002, Warrick Gray

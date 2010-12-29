@@ -6,6 +6,7 @@ where
 import           Aws.Http
 import           Aws.Util
 import           Control.Arrow
+import           Data.Maybe
 import           Data.Time
 import           Network.URI                (nullURI, URI(..), URIAuth(..))
 import qualified Data.ByteString.Char8      as B8
@@ -27,9 +28,9 @@ data Query
         api :: Api
       , method :: Method
       , protocol :: Protocol
-      , host :: String
+      , host :: B8.ByteString
       , port :: Int
-      , path :: String
+      , path :: B8.ByteString
       , query :: [(String, String)]
       , date :: Maybe UTCTime
       , contentType :: Maybe String
@@ -79,23 +80,21 @@ awsFalse = awsBool False
 queryToHttpRequest :: Query -> HTTP.Request
 queryToHttpRequest Query{..}
     = HTTP.Request {
-        HTTP.method = case method of
-                        Get -> "GET"
-                        PostQuery -> "POST"
+        HTTP.method = httpMethod method
       , HTTP.secure = case protocol of
                         HTTP -> False
                         HTTPS -> True
-      , HTTP.host = B8.pack host -- TODO: use ByteString in Query too
+      , HTTP.host = host
       , HTTP.port = port
-      , HTTP.path = B8.pack path -- TODO: use ByteString
-      , HTTP.queryString = case method of
-                             Get -> map (B8.pack *** B8.pack) query
-                             PostQuery -> []
-      , HTTP.requestHeaders = [("Date", B8.pack $ fmtRfc822Time d) | Just d <- [date]]
-                              ++ [("Content-Type", B8.pack c) | Just c <- [contentType']]
+      , HTTP.path = B8.concat $ path : case method of 
+                                         Get -> ["?", urlEncodeVarsBS query]
+                                         PostQuery -> []
+      , HTTP.queryString = [] -- not used for safety reasons
+      , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", B8.pack $ fmtRfc822Time d)) date
+                                        , fmap (\c -> ("Content-Type", B8.pack c)) contentType']
       , HTTP.requestBody = case method of
                              Get -> L.empty
-                             PostQuery -> L8.pack $ urlEncodeVars query
+                             PostQuery -> L.fromChunks [urlEncodeVarsBS query]
       }
     where contentType' = case method of
                            PostQuery -> Just "application/x-www-form-urlencoded"
@@ -109,9 +108,9 @@ queryToUri Query{..}
                       HTTPS -> "https:"
       , uriAuthority = Just URIAuth {
                          uriUserInfo = ""
-                       , uriRegName = host
+                       , uriRegName = B8.unpack host
                        , uriPort = if port == defaultPort protocol then "" else ':' : show port
                        }
-      , uriPath = path
-      , uriQuery = urlEncodeVars query
+      , uriPath = B8.unpack path
+      , uriQuery = '?' : urlEncodeVars query
       }

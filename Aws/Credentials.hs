@@ -1,15 +1,15 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 
 module Aws.Credentials
 where
   
+import           Aws.Http
 import           Aws.Query
 import           Aws.Util
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Shortcircuit     (orM)
-import           Data.HMAC
 import           Data.List
 import           Data.Ord
 import           Data.Time
@@ -18,6 +18,9 @@ import           System.Environment
 import           System.FilePath
 import qualified Codec.Binary.Base64      as Base64
 import qualified Codec.Binary.UTF8.String as Utf8
+import qualified Data.ByteString          as B
+import qualified Data.ByteString.Char8    as B8
+import qualified Data.HMAC                as HMAC
 
 data Credentials
     = Credentials {
@@ -92,18 +95,18 @@ addSignatureData Credentials{..} q@Query{..}
                 ++ query
       }
 
-stringToSign :: Query -> String
+stringToSign :: Query -> B.ByteString
 stringToSign Query{..} 
     = case api of 
-        SimpleDB -> show method ++ "\n" ++
-                    host ++ "\n" ++
-                    path ++ "\n" ++
-                    urlEncodeVars sortedQuery
+        SimpleDB -> B.concat [httpMethod method, "\n",
+                              host, "\n",
+                              path, "\n",
+                              B8.pack $ urlEncodeVars sortedQuery]
     where sortedQuery = sortBy (comparing $ Utf8.encode . fst) query
                                                
 signPreparedQuery :: Credentials -> Query -> Query
 signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
-    where sig = Base64.encode $ hmac_sha1 (Utf8.encode secretAccessKey) (Utf8.encode . stringToSign $ q)
+    where sig = Base64.encode $ HMAC.hmac_sha1 (Utf8.encode secretAccessKey) (B.unpack $ stringToSign q)
                            
 signQueryAbsolute :: AbsoluteTimeInfo -> Credentials -> Query -> Query
 signQueryAbsolute ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
