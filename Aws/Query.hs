@@ -11,7 +11,6 @@ import           Data.Time
 import           Network.URI                (nullURI, URI(..), URIAuth(..))
 import qualified Data.ByteString.Char8      as B8
 import qualified Data.ByteString.Lazy       as L
-import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Network.HTTP.Enumerator    as HTTP
 
 class AsQuery r where

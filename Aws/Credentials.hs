@@ -102,6 +102,7 @@ stringToSign Query{..}
                               host, "\n",
                               path, "\n",
                               B8.pack $ urlEncodeVars sortedQuery]
+        S3 -> error "TODO: S3 credentials not implemented yet" -- TODO XXX
     where sortedQuery = sortBy (comparing $ Utf8.encode . fst) query
                                                
 signPreparedQuery :: Credentials -> Query -> Query

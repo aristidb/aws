@@ -3,14 +3,12 @@
 module Aws.SimpleDb.DeleteDomain
 where
 
-import           Aws.Query
-import           Aws.SimpleDb.Error
-import           Aws.SimpleDb.Info
-import           Aws.SimpleDb.Response
-import           Aws.Transaction
-import           Control.Applicative
-import           Text.XML.Monad
-import qualified Control.Failure       as F
+import Aws.Query
+import Aws.SimpleDb.Info
+import Aws.SimpleDb.Response
+import Aws.Transaction
+import Control.Applicative
+import Text.XML.Monad
 
 data DeleteDomain
     = DeleteDomain {

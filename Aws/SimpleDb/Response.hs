@@ -9,7 +9,6 @@ import           Control.Applicative
 import           Control.Monad.Compose.Class
 import           Control.Monad.Reader.Class
 import           Text.XML.Monad
-import qualified Control.Failure             as F
 import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 

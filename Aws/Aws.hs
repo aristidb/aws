@@ -7,12 +7,10 @@ import           Aws.Http
 import           Aws.Query
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
-import           Aws.Response
 import           Control.Monad.Reader
 import           Network.URI             (URI)
 import qualified Control.Failure         as F
 import qualified Control.Monad.CatchIO   as C
-import qualified Network.HTTP.Enumerator as HTTP
 
 data Configuration
     = Configuration {

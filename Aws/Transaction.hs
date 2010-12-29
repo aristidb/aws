@@ -5,9 +5,6 @@ where
 import           Aws.Credentials
 import           Aws.Query
 import           Aws.Response
-import           Control.Monad.IO.Class
-import qualified Control.Failure         as F
-import qualified Control.Monad.CatchIO   as C
 import qualified Network.HTTP.Enumerator as HTTP
 
 class (AsQuery r, ResponseIteratee a)

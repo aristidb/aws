@@ -3,16 +3,12 @@
 module Aws.Response
 where
   
-import           Control.Exception
 import           Control.Monad.Compose.Class
 import           Control.Monad.Error.Class
-import           Control.Monad.IO.Class
 import           Control.Monad.Reader.Class
-import           Data.Typeable
 import           Text.XML.Monad
 import qualified Control.Failure             as F
 import qualified Data.ByteString             as B
-import qualified Data.ByteString.Lazy        as BL
 import qualified Data.ByteString.Lazy.UTF8   as BLU
 import qualified Data.Enumerator             as En
 import qualified Network.HTTP.Enumerator     as HTTP

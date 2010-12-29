@@ -3,17 +3,15 @@
 module Aws.SimpleDb.DomainMetadata
 where
 
-import           Aws.Query
-import           Aws.SimpleDb.Error
-import           Aws.SimpleDb.Info
-import           Aws.SimpleDb.Response
-import           Aws.Transaction
-import           Control.Applicative
-import           Control.Monad.Compose.Class
-import           Data.Time
-import           Data.Time.Clock.POSIX
-import           Text.XML.Monad
-import qualified Control.Failure             as F
+import Aws.Query
+import Aws.SimpleDb.Info
+import Aws.SimpleDb.Response
+import Aws.Transaction
+import Control.Applicative
+import Control.Monad.Compose.Class
+import Data.Time
+import Data.Time.Clock.POSIX
+import Text.XML.Monad
 
 data DomainMetadata
     = DomainMetadata {
