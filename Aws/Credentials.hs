@@ -99,17 +99,18 @@ addSignatureData Credentials{..} q@Query{..}
 stringToSign :: Query -> B.ByteString
 stringToSign Query{..} 
     = case api of 
-        SimpleDB -> B.concat [httpMethod method, "\n",
-                              host, "\n",
-                              path, "\n",
-                              B8.pack $ urlEncodeVars sortedQuery]
-        S3 -> B.concat [httpMethod method, "\n",
-                        "", "\n", -- Content-MD5
-                        B8.pack $ fromMaybe "" contentType, "\n",
-                        B8.pack . fromMaybe "" $ fmtAmzTime `fmap` date, "\n",
-                        "", -- canonicalized AMZ headers
-                        path] -- canonicalized resource (TODO: canonical)
+        SimpleDB -> B.intercalate "\n" [httpMethod method
+                                       , host
+                                       , path
+                                       , urlEncodeVarsBS sortedQuery]
+        S3 -> B.intercalate "\n" [httpMethod method,
+                                  pack $ contentMd5, -- Content-MD5
+                                  pack $ contentType,
+                                  pack $ fmtAmzTime `fmap` date,
+                                  "", -- canonicalized AMZ headers
+                                  path] -- canonicalized resource (TODO: canonical)
     where sortedQuery = sortBy (comparing $ Utf8.encode . fst) query
+          pack = B8.pack . fromMaybe ""
                                                
 signPreparedQuery :: Credentials -> Query -> Query
 signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }

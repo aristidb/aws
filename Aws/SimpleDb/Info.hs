@@ -51,5 +51,6 @@ sdbiBaseQuery SdbInfo{..} = Query {
                             , query = [("Version", "2009-04-15")]
                             , date = Nothing
                             , contentType = Nothing
+                            , contentMd5 = Nothing
                             , body = L.empty
                             }

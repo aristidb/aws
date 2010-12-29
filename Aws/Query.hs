@@ -33,6 +33,7 @@ data Query
       , query :: [(String, String)]
       , date :: Maybe UTCTime
       , contentType :: Maybe String
+      , contentMd5 :: Maybe String
       , body :: L.ByteString  
       }
     deriving (Show)
@@ -90,7 +91,8 @@ queryToHttpRequest Query{..}
                                          PostQuery -> []
       , HTTP.queryString = [] -- not used for safety reasons
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", B8.pack $ fmtRfc822Time d)) date
-                                        , fmap (\c -> ("Content-Type", B8.pack c)) contentType']
+                                        , fmap (\c -> ("Content-Type", B8.pack c)) contentType'
+                                        , fmap (\md5 -> ("Content-MD5", B8.pack md5)) contentMd5]
       , HTTP.requestBody = case method of
                              Get -> L.empty
                              PostQuery -> L.fromChunks [urlEncodeVarsBS query]
