@@ -80,6 +80,7 @@ Library
                        containers ==0.3.*,
                        dataenc ==0.13.*,
                        directory ==1.0.*,
+                       enumerator ==0.4.*,
                        filepath ==1.1.*,
                        failure ==0.1.*,
                        http-enumerator >=0.2.1.5 && < 0.3,
