@@ -1,15 +1,16 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies, OverloadedStrings #-}
 
 module Aws.SimpleDb.Select
 where
 
-import Aws.Query
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Model
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Monad.Compose.Class
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Monad.Compose.Class
+import           Text.XML.Monad
+import qualified Data.ByteString.UTF8        as BU
 
 data Select
     = Select {
@@ -32,9 +33,9 @@ select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextT
 instance AsQuery Select where
     type Info Select = SdbInfo
     asQuery i Select{..}
-        = addQuery [("Action", "Select"), ("SelectExpression", sSelectExpression)]
+        = addQuery [("Action", "Select"), ("SelectExpression", BU.fromString sSelectExpression)]
           . addQueryIf sConsistentRead [("ConsistentRead", awsTrue)]
-          . addQueryUnless (null sNextToken) [("NextToken", sNextToken)]
+          . addQueryUnless (null sNextToken) [("NextToken", BU.fromString sNextToken)]
           $ sdbiBaseQuery i
 
 instance SdbFromResponse SelectResponse where

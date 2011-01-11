@@ -1,15 +1,16 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies, OverloadedStrings #-}
 
 module Aws.SimpleDb.GetAttributes
 where
 
-import Aws.Query
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Model
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Monad.Compose.Class
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Monad.Compose.Class
+import           Text.XML.Monad
+import qualified Data.ByteString.UTF8        as BU
 
 data GetAttributes
     = GetAttributes {
@@ -32,8 +33,8 @@ getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName =
 instance AsQuery GetAttributes where
     type Info GetAttributes = SdbInfo
     asQuery i GetAttributes{..}
-        = addQuery [("Action", "GetAttributes"), ("ItemName", gaItemName), ("DomainName", gaDomainName)]
-          . addQueryMaybe id ("AttributeName", gaAttributeName)
+        = addQuery [("Action", "GetAttributes"), ("ItemName", BU.fromString gaItemName), ("DomainName", BU.fromString gaDomainName)]
+          . addQueryMaybe id ("AttributeName", fmap BU.fromString gaAttributeName)
           . addQueryIf gaConsistentRead [("ConsistentRead", awsTrue)]
           $ sdbiBaseQuery i
 

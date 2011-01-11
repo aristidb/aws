@@ -1,15 +1,16 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies, OverloadedStrings #-}
 
 module Aws.SimpleDb.BatchPutAttributes
 where
 
-import Aws.Query
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Model
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Applicative
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Applicative
+import           Text.XML.Monad
+import qualified Data.ByteString.UTF8  as BU
 
 data BatchPutAttributes
     = BatchPutAttributes {
@@ -28,7 +29,7 @@ batchPutAttributes items domain = BatchPutAttributes { bpaItems = items, bpaDoma
 instance AsQuery BatchPutAttributes where
     type Info BatchPutAttributes = SdbInfo
     asQuery i BatchPutAttributes{..}
-        = addQuery [("Action", "BatchPutAttributes"), ("DomainName", bpaDomainName)]
+        = addQuery [("Action", "BatchPutAttributes"), ("DomainName", BU.fromString bpaDomainName)]
           . addQueryList (itemQuery $ queryList (attributeQuery setAttributeQuery) "Attribute") "Item" bpaItems
           $ sdbiBaseQuery i
 

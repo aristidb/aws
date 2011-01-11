@@ -35,6 +35,9 @@ baseConfiguration = do
              }
 -- TODO: better error handling when credentials cannot be loaded
 
+debugConfiguration :: MonadIO io => io Configuration
+debugConfiguration = liftM (\c -> c { sdbInfo = sdbHttpPost sdbUsEast }) baseConfiguration
+
 newtype AwsT m a = AwsT { fromAwsT :: ReaderT Configuration m a }
 
 type Aws = AwsT IO
@@ -44,6 +47,9 @@ runAws = runReaderT . fromAwsT
 
 runAws' :: MonadIO io => AwsT io a -> io a
 runAws' a = baseConfiguration >>= runAws a
+
+runAwsDebug :: MonadIO io => AwsT io a -> io a
+runAwsDebug a = debugConfiguration >>= runAws a
 
 instance Monad m => Monad (AwsT m) where
     return = AwsT . return

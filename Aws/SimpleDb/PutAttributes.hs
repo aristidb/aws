@@ -1,15 +1,16 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, TypeFamilies, OverloadedStrings #-}
 
 module Aws.SimpleDb.PutAttributes
 where
 
-import Aws.Query
-import Aws.SimpleDb.Info
-import Aws.SimpleDb.Model
-import Aws.SimpleDb.Response
-import Aws.Transaction
-import Control.Applicative
-import Text.XML.Monad
+import           Aws.Query
+import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Response
+import           Aws.Transaction
+import           Control.Applicative
+import           Text.XML.Monad
+import qualified Data.ByteString.UTF8  as BU
 
 data PutAttributes
     = PutAttributes {
@@ -35,7 +36,7 @@ putAttributes item attributes domain = PutAttributes {
 instance AsQuery PutAttributes where
     type Info PutAttributes = SdbInfo
     asQuery i PutAttributes{..}
-        = addQuery [("Action", "PutAttributes"), ("ItemName", paItemName), ("DomainName", paDomainName)]
+        = addQuery [("Action", "PutAttributes"), ("ItemName", BU.fromString paItemName), ("DomainName", BU.fromString paDomainName)]
           . addQueryList (attributeQuery setAttributeQuery) "Attribute" paAttributes
           . addQueryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
           $ sdbiBaseQuery i

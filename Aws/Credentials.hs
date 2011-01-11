@@ -17,16 +17,15 @@ import           Data.Time
 import           System.Directory
 import           System.Environment
 import           System.FilePath
-import qualified Codec.Binary.Base64      as Base64
-import qualified Codec.Binary.UTF8.String as Utf8
 import qualified Data.ByteString          as B
-import qualified Data.ByteString.Char8    as B8
+import qualified Data.ByteString.Base64   as Base64
+import qualified Data.ByteString.UTF8     as BU
 import qualified Data.HMAC                as HMAC
 
 data Credentials
     = Credentials {
-        accessKeyID :: String
-      , secretAccessKey :: String
+        accessKeyID :: B.ByteString
+      , secretAccessKey :: B.ByteString
       }
     deriving (Show)
 
@@ -52,7 +51,7 @@ loadCredentialsFromFile file key = liftIO $ do
   contents <- map words . lines <$> readFile file
   return $ do 
     [_key, keyID, secret] <- find (hasKey key) contents
-    return Credentials { accessKeyID = keyID, secretAccessKey = secret }
+    return Credentials { accessKeyID = BU.fromString keyID, secretAccessKey = BU.fromString secret }
       where
         hasKey _ [] = False
         hasKey k (k2 : _) = k == k2
@@ -63,7 +62,7 @@ loadCredentialsFromEnv = liftIO $ do
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
-  return (Credentials <$> keyID <*> secret)
+  return (Credentials <$> (BU.fromString <$> keyID) <*> (BU.fromString <$> secret))
   
 loadCredentialsFromEnvOrFile :: MonadIO io => FilePath -> String -> io (Maybe Credentials)
 loadCredentialsFromEnvOrFile file key = loadCredentialsFromEnv `orM` loadCredentialsFromFile file key
@@ -81,12 +80,12 @@ makeAbsoluteTimeInfo (ExpiresIn s) = (AbsoluteExpires . addUTCTime s) `liftM` li
 addTimeInfo :: AbsoluteTimeInfo -> Query -> Query
 addTimeInfo (AbsoluteTimestamp time) q@Query{..} 
     = q {
-        query = ("Timestamp", fmtAmzTime time) : query
+        query = ("Timestamp", BU.fromString $ fmtAmzTime time) : query
       , date = Just time
       }
 addTimeInfo (AbsoluteExpires time) q@Query{..} 
     = q {
-        query = ("Expires", fmtAmzTime time) : query
+        query = ("Expires", BU.fromString $ fmtAmzTime time) : query
       }
 
 addSignatureData :: Credentials -> Query -> Query
@@ -102,19 +101,19 @@ stringToSign Query{..}
         SimpleDB -> B.intercalate "\n" [httpMethod method
                                        , host
                                        , path
-                                       , urlEncodeVarsBS sortedQuery]
+                                       , urlEncodeVarsBS' False Nothing sortedQuery]
         S3 -> B.intercalate "\n" [httpMethod method,
                                   pack contentMd5,
                                   pack contentType,
                                   pack $ fmtAmzTime `fmap` date,
                                   "", -- canonicalized AMZ headers
                                   canonicalizedResource]
-    where sortedQuery = sortBy (comparing $ Utf8.encode . fst) query
-          pack = B8.pack . fromMaybe ""
+    where sortedQuery = sortBy (comparing fst) query
+          pack = BU.fromString . fromMaybe ""
                                                
 signPreparedQuery :: Credentials -> Query -> Query
 signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
-    where sig = Base64.encode $ HMAC.hmac_sha1 (Utf8.encode secretAccessKey) (B.unpack $ stringToSign q)
+    where sig = Base64.encode . B.pack $ HMAC.hmac_sha1 (B.unpack secretAccessKey) (B.unpack $ stringToSign q)
                            
 signQueryAbsolute :: AbsoluteTimeInfo -> Credentials -> Query -> Query
 signQueryAbsolute ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
