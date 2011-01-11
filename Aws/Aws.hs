@@ -43,7 +43,7 @@ runAws :: AwsT m a -> Configuration -> m a
 runAws = runReaderT . fromAwsT
 
 runAws' :: MonadIO io => AwsT io a -> io a
-runAws' aws = baseConfiguration >>= runAws aws
+runAws' a = baseConfiguration >>= runAws a
 
 instance Monad m => Monad (AwsT m) where
     return = AwsT . return
