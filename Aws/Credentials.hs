@@ -104,12 +104,12 @@ stringToSign Query{..}
                                        , host
                                        , path
                                        , urlEncodeVarsBS False sortedQuery]
-        S3 -> B.intercalate "\n" [httpMethod method,
-                                  pack contentMd5,
-                                  pack contentType,
-                                  pack $ fmtAmzTime `fmap` date,
-                                  "", -- canonicalized AMZ headers
-                                  canonicalizedResource]
+        S3 -> B.intercalate "\n" [httpMethod method
+                                 , pack contentMd5
+                                 , pack contentType
+                                 , pack $ fmtAmzTime `fmap` date
+                                 , "" -- canonicalized AMZ headers
+                                 , canonicalizedResource]
     where sortedQuery = sortBy (comparing fst) query
           pack = BU.fromString . fromMaybe ""
                                                
