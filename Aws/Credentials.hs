@@ -101,7 +101,7 @@ stringToSign Query{..}
         SimpleDB -> B.intercalate "\n" [httpMethod method
                                        , host
                                        , path
-                                       , urlEncodeVarsBS' False Nothing sortedQuery]
+                                       , urlEncodeVarsBS False sortedQuery]
         S3 -> B.intercalate "\n" [httpMethod method,
                                   pack contentMd5,
                                   pack contentType,

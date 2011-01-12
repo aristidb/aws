@@ -89,7 +89,7 @@ queryToHttpRequest Query{..}
       , HTTP.host = host
       , HTTP.port = port
       , HTTP.path = B.concat $ path : case method of 
-                                         Get -> [urlEncodeVarsBS' True Nothing query]
+                                         Get -> [urlEncodeVarsBS True query]
                                          PostQuery -> []
       , HTTP.queryString = [] -- not used for safety reasons
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", BU.fromString $ fmtRfc822Time d)) date
@@ -97,7 +97,7 @@ queryToHttpRequest Query{..}
                                         , fmap (\md5 -> ("Content-MD5", BU.fromString md5)) contentMd5]
       , HTTP.requestBody = case method of
                              Get -> L.empty
-                             PostQuery -> L.fromChunks [urlEncodeVarsBS' False Nothing query]
+                             PostQuery -> L.fromChunks [urlEncodeVarsBS False query]
       }
     where contentType' = case method of
                            PostQuery -> Just "application/x-www-form-urlencoded"
@@ -115,5 +115,5 @@ queryToUri Query{..}
                        , uriPort = if port == defaultPort protocol then "" else ':' : show port
                        }
       , uriPath = BU.toString path
-      , uriQuery = BU.toString $ urlEncodeVarsBS' True Nothing query
+      , uriQuery = BU.toString $ urlEncodeVarsBS True query
       }
