@@ -9,7 +9,7 @@ import           Aws.Util
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Shortcircuit     (orM)
+import           Control.Shortcircuit   (orM)
 import           Data.List
 import           Data.Maybe
 import           Data.Ord
@@ -17,10 +17,12 @@ import           Data.Time
 import           System.Directory
 import           System.Environment
 import           System.FilePath
-import qualified Data.ByteString          as B
-import qualified Data.ByteString.Base64   as Base64
-import qualified Data.ByteString.UTF8     as BU
-import qualified Data.HMAC                as HMAC
+import qualified Crypto.HMAC            as HMAC
+import qualified Crypto.Hash.SHA1       as SHA1
+import qualified Data.ByteString        as B
+import qualified Data.ByteString.Base64 as Base64
+import qualified Data.ByteString.UTF8   as BU
+import qualified Data.Serialize         as Serialize
 
 data Credentials
     = Credentials {
@@ -113,7 +115,9 @@ stringToSign Query{..}
                                                
 signPreparedQuery :: Credentials -> Query -> Query
 signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
-    where sig = Base64.encode . B.pack $ HMAC.hmac_sha1 (B.unpack secretAccessKey) (B.unpack $ stringToSign q)
+    where sig = Base64.encode $ Serialize.encode (HMAC.hmac' key input :: SHA1.SHA1)
+          key = HMAC.MacKey secretAccessKey
+          input = stringToSign q
                            
 signQueryAbsolute :: AbsoluteTimeInfo -> Credentials -> Query -> Query
 signQueryAbsolute ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
