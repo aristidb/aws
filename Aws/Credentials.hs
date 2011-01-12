@@ -18,7 +18,7 @@ import           System.Directory
 import           System.Environment
 import           System.FilePath
 import qualified Crypto.HMAC            as HMAC
-import qualified Crypto.Hash.SHA1       as SHA1
+import qualified Crypto.Hash.SHA256     as SHA256
 import qualified Data.ByteString        as B
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.UTF8   as BU
@@ -93,7 +93,7 @@ addTimeInfo (AbsoluteExpires time) q@Query{..}
 addSignatureData :: Credentials -> Query -> Query
 addSignatureData Credentials{..} q@Query{..} 
     = q {
-        query = [("AWSAccessKeyId", accessKeyID), ("SignatureMethod", "HmacSHA1"), ("SignatureVersion", "2")]
+        query = [("AWSAccessKeyId", accessKeyID), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")]
                 ++ query
       }
 
@@ -115,7 +115,7 @@ stringToSign Query{..}
                                                
 signPreparedQuery :: Credentials -> Query -> Query
 signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
-    where sig = Base64.encode $ Serialize.encode (HMAC.hmac' key input :: SHA1.SHA1)
+    where sig = Base64.encode $ Serialize.encode (HMAC.hmac' key input :: SHA256.SHA256)
           key = HMAC.MacKey secretAccessKey
           input = stringToSign q
                            
