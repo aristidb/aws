@@ -9,7 +9,6 @@ import           Aws.Util
 import           Control.Applicative
 import           Control.Monad.Compose.Class
 import           Control.Monad.Reader.Class
-import           Control.Monad.Error.Class
 import           Data.Char
 import           Text.XML.Monad
 import qualified Codec.Binary.Base64         as Base64
