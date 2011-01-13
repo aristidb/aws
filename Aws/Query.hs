@@ -93,7 +93,7 @@ queryToHttpRequest Query{..}
                                          Get -> [urlEncodeVarsBS' True subresource query]
                                          PostQuery -> []
       , HTTP.queryString = [] -- not used for safety reasons
-      , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", BU.fromString $ fmtRfc822Time d)) date
+      , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) date
                                         , fmap (\c -> ("Content-Type", BU.fromString c)) contentType'
                                         , fmap (\md5 -> ("Content-MD5", BU.fromString md5)) contentMd5]
       , HTTP.requestBody = case method of

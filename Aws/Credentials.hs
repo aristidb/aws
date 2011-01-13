@@ -82,12 +82,12 @@ makeAbsoluteTimeInfo (ExpiresIn s) = (AbsoluteExpires . addUTCTime s) `liftM` li
 addTimeInfo :: AbsoluteTimeInfo -> Query -> Query
 addTimeInfo (AbsoluteTimestamp time) q@Query{..} 
     = q {
-        query = ("Timestamp", BU.fromString $ fmtAmzTime time) : query
+        query = ("Timestamp", fmtAmzTime time) : query
       , date = Just time
       }
 addTimeInfo (AbsoluteExpires time) q@Query{..} 
     = q {
-        query = ("Expires", BU.fromString $ fmtAmzTime time) : query
+        query = ("Expires", fmtAmzTime time) : query
       }
 
 addSignatureData :: Credentials -> Query -> Query
@@ -107,7 +107,7 @@ stringToSign Query{..}
         S3 -> B.intercalate "\n" [httpMethod method
                                  , pack contentMd5
                                  , pack contentType
-                                 , pack $ fmtAmzTime `fmap` date
+                                 , fromMaybe "" $ fmtAmzTime `fmap` date
                                  , "" -- canonicalized AMZ headers
                                  , canonicalizedResource]
     where sortedQuery = sortBy (comparing fst) query

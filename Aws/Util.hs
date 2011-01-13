@@ -10,19 +10,20 @@ import           Data.Time
 import           Data.Word
 import           System.Locale
 import qualified Data.ByteString       as B
+import qualified Data.ByteString.UTF8  as BU
 import qualified Data.Set              as S
 
 (.:) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
 (.:) = fmap . fmap
 infixr 5 .:
 
-fmtTime :: String -> UTCTime -> String
-fmtTime = formatTime defaultTimeLocale
+fmtTime :: String -> UTCTime -> B.ByteString
+fmtTime = BU.fromString .: formatTime defaultTimeLocale
 
-fmtRfc822Time :: UTCTime -> String
+fmtRfc822Time :: UTCTime -> B.ByteString
 fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"
 
-fmtAmzTime :: UTCTime -> String
+fmtAmzTime :: UTCTime -> B.ByteString
 fmtAmzTime = fmtTime "%Y-%m-%dT%H:%M:%S"
 
 urlEncodeBS :: B.ByteString -> B.ByteString
