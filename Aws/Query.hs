@@ -32,6 +32,7 @@ data Query
       , port :: Int
       , path :: B.ByteString
       , canonicalizedResource :: B.ByteString
+      , subresource :: Maybe B.ByteString
       , query :: [(B.ByteString, B.ByteString)]
       , date :: Maybe UTCTime
       , contentType :: Maybe String
@@ -89,7 +90,7 @@ queryToHttpRequest Query{..}
       , HTTP.host = host
       , HTTP.port = port
       , HTTP.path = B.concat $ path : case method of 
-                                         Get -> [urlEncodeVarsBS True query]
+                                         Get -> [urlEncodeVarsBS' True subresource query]
                                          PostQuery -> []
       , HTTP.queryString = [] -- not used for safety reasons
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", BU.fromString $ fmtRfc822Time d)) date
@@ -97,7 +98,7 @@ queryToHttpRequest Query{..}
                                         , fmap (\md5 -> ("Content-MD5", BU.fromString md5)) contentMd5]
       , HTTP.requestBody = case method of
                              Get -> L.empty
-                             PostQuery -> L.fromChunks [urlEncodeVarsBS False query]
+                             PostQuery -> L.fromChunks [urlEncodeVarsBS' False subresource query]
       }
     where contentType' = case method of
                            PostQuery -> Just "application/x-www-form-urlencoded"
@@ -115,5 +116,5 @@ queryToUri Query{..}
                        , uriPort = if port == defaultPort protocol then "" else ':' : show port
                        }
       , uriPath = BU.toString path
-      , uriQuery = BU.toString $ urlEncodeVarsBS True query
+      , uriQuery = BU.toString $ urlEncodeVarsBS' True subresource query
       }
