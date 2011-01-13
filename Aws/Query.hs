@@ -35,8 +35,8 @@ data Query
       , subresource :: Maybe B.ByteString
       , query :: [(B.ByteString, B.ByteString)]
       , date :: Maybe UTCTime
-      , contentType :: Maybe String
-      , contentMd5 :: Maybe String
+      , contentType :: Maybe B.ByteString
+      , contentMd5 :: Maybe B.ByteString
       , body :: L.ByteString
       }
     deriving (Show)
@@ -94,8 +94,8 @@ queryToHttpRequest Query{..}
                                          PostQuery -> []
       , HTTP.queryString = [] -- not used for safety reasons
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) date
-                                        , fmap (\c -> ("Content-Type", BU.fromString c)) contentType'
-                                        , fmap (\md5 -> ("Content-MD5", BU.fromString md5)) contentMd5]
+                                        , fmap (\c -> ("Content-Type", c)) contentType'
+                                        , fmap (\md5 -> ("Content-MD5", md5)) contentMd5]
       , HTTP.requestBody = case method of
                              Get -> L.empty
                              PostQuery -> L.fromChunks [urlEncodeVarsBS' False subresource query]

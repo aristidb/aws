@@ -105,13 +105,12 @@ stringToSign Query{..}
                                        , path
                                        , urlEncodeVarsBS False sortedQuery]
         S3 -> B.intercalate "\n" [httpMethod method
-                                 , pack contentMd5
-                                 , pack contentType
+                                 , fromMaybe "" contentMd5
+                                 , fromMaybe "" contentType
                                  , fromMaybe "" $ fmtAmzTime `fmap` date
                                  , "" -- canonicalized AMZ headers
                                  , canonicalizedResource]
     where sortedQuery = sortBy (comparing fst) query
-          pack = BU.fromString . fromMaybe ""
                                                
 signPreparedQuery :: Credentials -> Query -> Query
 signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
