@@ -62,5 +62,5 @@ decodeBase64 = do
   encoding <- tryMaybe $ findAttr (XL.unqual "encoding")
   case toLower .: encoding of
     Nothing -> return encoded
-    Just "base64" -> maybeRaise (fromXmlError $ OtherError "Invalid Base64 data") (fmap Utf8.decode $ Base64.decode encoded)
-    _ -> throwError . fromXmlError $ XmlError "Invalid value of encoding attribute"
+    Just "base64" -> maybeRaiseXml (EncodingError "Invalid Base64 data") (fmap Utf8.decode $ Base64.decode encoded)
+    Just actual -> raiseXml $ UnexpectedAttributeValueQ actual "base64"
