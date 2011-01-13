@@ -47,16 +47,16 @@ urlEncodeBS = B.concatMap (B.pack . encodeChar)
 
 urlEncodeVarsBS' :: Bool -> Maybe B.ByteString -> [(B.ByteString, B.ByteString)] -> B.ByteString
 urlEncodeVarsBS' useQuestionMark subresource queries = B.concat 
-                                                       . addQuestionMark useQuestionMark 
+                                                       . addQuestionMark
                                                        . intercalate ["&"] 
                                                        . addSubresource subresource 
                                                        . map showQueryItem 
                                                        $ queries
     where
-      addQuestionMark :: Bool -> [B.ByteString] -> [B.ByteString]
-      addQuestionMark True [] = []
-      addQuestionMark True xs = "?" : xs
-      addQuestionMark False xs = xs
+      addQuestionMark :: [B.ByteString] -> [B.ByteString]
+      addQuestionMark [] = []
+      addQuestionMark xs | useQuestionMark = "?" : xs
+                         | otherwise       = xs
       
       addSubresource :: Maybe B.ByteString -> [[B.ByteString]] -> [[B.ByteString]]
       addSubresource Nothing = id
