@@ -45,12 +45,12 @@ instance SdbFromResponse SelectResponse where
       nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
       return $ SelectResponse items nextToken
         where readItem = do
-                name <- strContent <<< findElementNameUI "Name"
+                name <- decodeBase64 <<< findElementNameUI "Name"
                 attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
                 return $ Item name attributes
               readAttribute = do
-                name <- strContent <<< findElementNameUI "Name"
-                value <- strContent <<< findElementNameUI "Value"
+                name <- decodeBase64 <<< findElementNameUI "Name"
+                value <- decodeBase64 <<< findElementNameUI "Value"
                 return $ ForAttribute name value
 
 instance Transaction Select (SdbResponse SelectResponse)

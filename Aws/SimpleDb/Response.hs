@@ -5,10 +5,15 @@ where
 import           Aws.Metadata
 import           Aws.Response
 import           Aws.SimpleDb.Error
+import           Aws.Util
 import           Control.Applicative
 import           Control.Monad.Compose.Class
 import           Control.Monad.Reader.Class
+import           Control.Monad.Error.Class
+import           Data.Char
 import           Text.XML.Monad
+import qualified Codec.Binary.Base64         as Base64
+import qualified Codec.Binary.UTF8.String    as Utf8
 import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
@@ -50,3 +55,12 @@ instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
 
 class SdbFromResponse a where
     sdbFromResponse :: Xml SdbError XL.Element a
+
+decodeBase64 :: Xml SdbError XL.Element String
+decodeBase64 = do
+  encoded <- strContent
+  encoding <- tryMaybe $ findAttr (XL.unqual "encoding")
+  case toLower .: encoding of
+    Nothing -> return encoded
+    Just "base64" -> maybeRaise (fromXmlError $ OtherError "Invalid Base64 data") (fmap Utf8.decode $ Base64.decode encoded)
+    _ -> throwError . fromXmlError $ XmlError "Invalid value of encoding attribute"

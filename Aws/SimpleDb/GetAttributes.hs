@@ -45,8 +45,8 @@ instance SdbFromResponse GetAttributesResponse where
       return $ GetAttributesResponse attributes
           where
             readAttribute = do
-                        name <- strContent <<< findElementNameUI "Name"
-                        value <- strContent <<< findElementNameUI "Value"
-                        return $ ForAttribute name value
+              name <- decodeBase64 <<< findElementNameUI "Name"
+              value <- decodeBase64 <<< findElementNameUI "Value"
+              return $ ForAttribute name value
 
 instance Transaction GetAttributes (SdbResponse GetAttributesResponse)
