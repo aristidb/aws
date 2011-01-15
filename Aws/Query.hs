@@ -23,9 +23,16 @@ data Api
     | S3
     deriving (Show)
 
+data AuthorizationMethod
+    = AuthorizationNone
+    | AuthorizationQuery
+    | AuthorizationHeader
+    deriving (Show)
+
 data Query 
     = Query {
         api :: Api
+      , authorizationMethod :: AuthorizationMethod
       , method :: Method
       , protocol :: Protocol
       , host :: B.ByteString
@@ -35,6 +42,7 @@ data Query
       , subresource :: Maybe B.ByteString
       , query :: [(B.ByteString, B.ByteString)]
       , date :: Maybe UTCTime
+      , authorization :: Maybe B.ByteString
       , contentType :: Maybe B.ByteString
       , contentMd5 :: Maybe B.ByteString
       , body :: L.ByteString

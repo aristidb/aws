@@ -43,6 +43,7 @@ sdbHttpsPost endpoint = SdbInfo HTTPS PostQuery endpoint (defaultPort HTTPS)
 sdbiBaseQuery :: SdbInfo -> Query
 sdbiBaseQuery SdbInfo{..} = Query { 
                               api = SimpleDB
+                            , authorizationMethod = AuthorizationQuery
                             , method = sdbiHttpMethod
                             , protocol = sdbiProtocol
                             , host = sdbiHost
@@ -52,6 +53,7 @@ sdbiBaseQuery SdbInfo{..} = Query {
                             , subresource = Nothing
                             , query = [("Version", "2009-04-15")]
                             , date = Nothing
+                            , authorization = Nothing
                             , contentType = Nothing
                             , contentMd5 = Nothing
                             , body = L.empty

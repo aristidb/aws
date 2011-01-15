@@ -74,28 +74,14 @@ loadCredentialsDefault = do
   file <- credentialsDefaultFile
   loadCredentialsFromEnvOrFile file credentialsDefaultKey
 
-makeAbsoluteTimeInfo :: MonadIO io => TimeInfo -> io AbsoluteTimeInfo
-makeAbsoluteTimeInfo Timestamp     = AbsoluteTimestamp `liftM` liftIO getCurrentTime
-makeAbsoluteTimeInfo (ExpiresAt t) = return $ AbsoluteExpires t
-makeAbsoluteTimeInfo (ExpiresIn s) = (AbsoluteExpires . addUTCTime s) `liftM` liftIO getCurrentTime
-
-addTimeInfo :: AbsoluteTimeInfo -> Query -> Query
-addTimeInfo (AbsoluteTimestamp time) q@Query{..} 
-    = q {
-        query = ("Timestamp", fmtAmzTime time) : query
-      , date = Just time
-      }
-addTimeInfo (AbsoluteExpires time) q@Query{..} 
-    = q {
-        query = ("Expires", fmtAmzTime time) : query
-      }
+makeAbsoluteTimeInfo :: TimeInfo -> UTCTime -> AbsoluteTimeInfo
+makeAbsoluteTimeInfo Timestamp     now = AbsoluteTimestamp now
+makeAbsoluteTimeInfo (ExpiresAt t) _   = AbsoluteExpires t
+makeAbsoluteTimeInfo (ExpiresIn s) now = AbsoluteExpires $ addUTCTime s now
 
 addSignatureData :: Credentials -> Query -> Query
-addSignatureData Credentials{..} q@Query{..} 
-    = q {
-        query = [("AWSAccessKeyId", accessKeyID), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")]
-                ++ query
-      }
+addSignatureData Credentials{..} q
+    = addQuery [("AWSAccessKeyId", accessKeyID), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")] q
 
 stringToSign :: Query -> B.ByteString
 stringToSign Query{..} 
@@ -111,17 +97,20 @@ stringToSign Query{..}
                                  , "" -- canonicalized AMZ headers
                                  , canonicalizedResource]
     where sortedQuery = sortBy (comparing fst) query
-                                               
-signPreparedQuery :: Credentials -> Query -> Query
-signPreparedQuery Credentials{..} q@Query{..} = q { query = ("Signature", sig) : query }
-    where sig = Base64.encode $ Serialize.encode (HMAC.hmac' key input :: SHA256.SHA256)
-          key = HMAC.MacKey secretAccessKey
+
+signature :: Credentials -> Query -> B.ByteString
+signature cr q = Base64.encode $ Serialize.encode (HMAC.hmac' key input :: SHA256.SHA256)
+    where key = HMAC.MacKey (secretAccessKey cr)
           input = stringToSign q
-                           
-signQueryAbsolute :: AbsoluteTimeInfo -> Credentials -> Query -> Query
-signQueryAbsolute ti cr = signPreparedQuery cr . addSignatureData cr . addTimeInfo ti
 
 signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
-signQuery ti cr q = do
-  ti' <- makeAbsoluteTimeInfo ti
-  return $ signQueryAbsolute ti' cr q
+signQuery rti cr q = do
+  now <- liftIO getCurrentTime
+  let ti = makeAbsoluteTimeInfo rti now
+  let withDate = q { date = Just now }
+  let withTi = ($ withDate) $ case ti of
+                                (AbsoluteTimestamp time) -> addQuery [("Timestamp", fmtAmzTime time)]
+                                (AbsoluteExpires time) -> addQuery [("Expires", fmtAmzTime time)]
+  let withSignatureData = addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")] withTi
+  let signedQuery = addQuery [("Signature", signature cr withSignatureData)] withSignatureData
+  return signedQuery
