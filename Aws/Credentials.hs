@@ -108,9 +108,9 @@ signQuery rti cr q = do
   now <- liftIO getCurrentTime
   let ti = makeAbsoluteTimeInfo rti now
   let withDate = q { date = Just now }
-  let withTi = ($ withDate) $ case ti of
-                                (AbsoluteTimestamp time) -> addQuery [("Timestamp", fmtAmzTime time)]
-                                (AbsoluteExpires time) -> addQuery [("Expires", fmtAmzTime time)]
+  let withTi = flip addQuery withDate $ case ti of
+                                          (AbsoluteTimestamp time) -> [("Timestamp", fmtAmzTime time)]
+                                          (AbsoluteExpires time) -> [("Expires", fmtAmzTime time)]
   let withSignatureData = addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")] withTi
   let signedQuery = addQuery [("Signature", signature cr withSignatureData)] withSignatureData
   return signedQuery
