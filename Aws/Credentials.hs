@@ -9,6 +9,7 @@ import           Aws.Util
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.State
 import           Control.Shortcircuit   (orM)
 import           Data.List
 import           Data.Maybe
@@ -104,13 +105,16 @@ signature cr q = Base64.encode $ Serialize.encode (HMAC.hmac' key input :: SHA25
           input = stringToSign q
 
 signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
-signQuery rti cr q = do
+signQuery rti cr query = flip execStateT query $ do
   now <- liftIO getCurrentTime
   let ti = makeAbsoluteTimeInfo rti now
-  let withDate = q { date = Just now }
-  let withTi = flip addQuery withDate $ case ti of
+  modify $ \q -> q { date = Just now }
+  get >>= \q -> case authorizationMethod q of
+                  AuthorizationNone -> return ()
+                  AuthorizationQuery -> do
+                    modify $ addQuery $ case ti of
                                           (AbsoluteTimestamp time) -> [("Timestamp", fmtAmzTime time)]
                                           (AbsoluteExpires time) -> [("Expires", fmtAmzTime time)]
-  let withSignatureData = addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")] withTi
-  let signedQuery = addQuery [("Signature", signature cr withSignatureData)] withSignatureData
-  return signedQuery
+                    modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")]
+                    modify $ \q -> addQuery [("Signature", signature cr q)] q
+
