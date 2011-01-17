@@ -29,10 +29,16 @@ data AuthorizationMethod
     | AuthorizationHeader
     deriving (Show)
 
+data AuthorizationHash
+    = HmacSHA1
+    | HmacSHA256
+    deriving (Show)
+
 data Query 
     = Query {
         api :: Api
       , authorizationMethod :: AuthorizationMethod
+      , authorizationHash :: AuthorizationHash
       , method :: Method
       , protocol :: Protocol
       , host :: B.ByteString
@@ -106,7 +112,8 @@ queryToHttpRequest Query{..}
       , HTTP.queryString = [] -- not used for safety reasons
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) date
                                         , fmap (\c -> ("Content-Type", c)) contentType'
-                                        , fmap (\md5 -> ("Content-MD5", md5)) contentMd5]
+                                        , fmap (\md5 -> ("Content-MD5", md5)) contentMd5
+                                        , fmap (\auth -> ("Authorization", auth)) authorization]
       , HTTP.requestBody = case method of
                              Get -> L.empty
                              PostQuery -> L.fromChunks [urlEncodeVarsBS' False subresource query]

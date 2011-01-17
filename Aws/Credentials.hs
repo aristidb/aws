@@ -10,7 +10,7 @@ import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.State
-import           Control.Shortcircuit   (orM)
+import           Control.Shortcircuit      (orM)
 import           Data.List
 import           Data.Maybe
 import           Data.Ord
@@ -18,12 +18,13 @@ import           Data.Time
 import           System.Directory
 import           System.Environment
 import           System.FilePath
-import qualified Crypto.HMAC            as HMAC
-import qualified Crypto.Hash.SHA256     as SHA256
-import qualified Data.ByteString        as B
-import qualified Data.ByteString.Base64 as Base64
-import qualified Data.ByteString.UTF8   as BU
-import qualified Data.Serialize         as Serialize
+import qualified Crypto.HMAC               as HMAC
+import qualified Crypto.Hash.SHA1          as SHA1
+import qualified Crypto.Hash.SHA256        as SHA256
+import qualified Data.ByteString           as B
+import qualified Data.ByteString.Base64    as Base64
+import qualified Data.ByteString.UTF8      as BU
+import qualified Data.Serialize            as Serialize
 
 data Credentials
     = Credentials {
@@ -36,6 +37,10 @@ data AbsoluteTimeInfo
     = AbsoluteTimestamp { fromAbsoluteTimestamp :: UTCTime }
     | AbsoluteExpires { fromAbsoluteExpires :: UTCTime }
     deriving (Show)
+
+fromAbsoluteTimeInfo :: AbsoluteTimeInfo -> UTCTime
+fromAbsoluteTimeInfo (AbsoluteTimestamp time) = time
+fromAbsoluteTimeInfo (AbsoluteExpires time) = time
 
 data TimeInfo
     = Timestamp
@@ -80,38 +85,55 @@ makeAbsoluteTimeInfo Timestamp     now = AbsoluteTimestamp now
 makeAbsoluteTimeInfo (ExpiresAt t) _   = AbsoluteExpires t
 makeAbsoluteTimeInfo (ExpiresIn s) now = AbsoluteExpires $ addUTCTime s now
 
-stringToSign :: Query -> B.ByteString
-stringToSign Query{..} 
+stringToSign :: AbsoluteTimeInfo -> Query -> B.ByteString
+stringToSign ti Query{..} 
     = case api of 
         SimpleDB -> B.intercalate "\n" [httpMethod method
                                        , host
                                        , path
                                        , urlEncodeVarsBS False sortedQuery]
-        S3 -> B.intercalate "\n" [httpMethod method
-                                 , fromMaybe "" contentMd5
-                                 , fromMaybe "" contentType
-                                 , fromMaybe "" $ fmtAmzTime `fmap` date
-                                 , "" -- canonicalized AMZ headers
-                                 , canonicalizedResource]
+        S3 -> B.intercalate "\n" $ concat [[httpMethod method]
+                                          , [fromMaybe "" contentMd5]
+                                          , [fromMaybe "" contentType]
+                                          , [fmtRfc822Time $ fromAbsoluteTimeInfo ti]
+                                          , [] -- canonicalized AMZ headers
+                                          , [canonicalizedResource]]
     where sortedQuery = sortBy (comparing fst) query
 
-signature :: Credentials -> Query -> B.ByteString
-signature cr q = Base64.encode $ Serialize.encode (HMAC.hmac' key input :: SHA256.SHA256)
-    where key = HMAC.MacKey (secretAccessKey cr)
-          input = stringToSign q
+signature :: AbsoluteTimeInfo -> Credentials -> Query -> B.ByteString
+signature ti cr q = Base64.encode sig
+    where
+      sig = case authorizationHash q of
+              HmacSHA1 -> computeSig (undefined :: SHA1.SHA1)
+              HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
+      computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
+      key = HMAC.MacKey (secretAccessKey cr)
+      input = stringToSign ti q
 
 signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
 signQuery rti cr query = flip execStateT query $ do
   now <- liftIO getCurrentTime
   let ti = makeAbsoluteTimeInfo rti now
   modify $ \q -> q { date = Just now }
-  am <- authorizationMethod `liftM` get
+  am <- gets authorizationMethod
+  ah <- gets authorizationHash
   case am of
     AuthorizationNone -> return ()
     AuthorizationQuery -> do
             modify $ addQuery $ case ti of
-                                  (AbsoluteTimestamp time) -> [("Timestamp", fmtAmzTime time)]
-                                  (AbsoluteExpires time) -> [("Expires", fmtAmzTime time)]
-            modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")]
-            modify $ \q -> addQueryItem "Signature" (signature cr q) q
-
+                                  AbsoluteTimestamp time -> [("Timestamp", fmtAmzTime time)]
+                                  AbsoluteExpires time -> [("Expires", fmtAmzTime time)]
+            modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureVersion", "2")]
+            modify $ addQueryItem "SignatureMethod" $ case ah of
+                                                        HmacSHA1 -> "HmacSHA1"
+                                                        HmacSHA256 -> "HmacSHA256"
+            sig <- gets $ signature ti cr
+            modify $ addQueryItem "Signature" sig
+    AuthorizationHeader -> do -- Throw error if ti is non-timestamp?
+            sig <- gets $ signature ti cr
+            modify $ \q -> q { authorization = Just $ B.concat [
+                                                "AWS "
+                                               , accessKeyID cr
+                                               , ":"
+                                               , sig
+                                               ] }
