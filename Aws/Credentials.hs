@@ -105,13 +105,13 @@ signQuery rti cr query = flip execStateT query $ do
   now <- liftIO getCurrentTime
   let ti = makeAbsoluteTimeInfo rti now
   modify $ \q -> q { date = Just now }
-  get >>= \q -> 
-      case authorizationMethod q of
-        AuthorizationNone -> return ()
-        AuthorizationQuery -> do
-          modify $ addQuery $ case ti of
-                                (AbsoluteTimestamp time) -> [("Timestamp", fmtAmzTime time)]
-                                (AbsoluteExpires time) -> [("Expires", fmtAmzTime time)]
-          modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")]
-          modify $ \q -> addQuery [("Signature", signature cr q)] q
+  am <- authorizationMethod `liftM` get
+  case am of
+    AuthorizationNone -> return ()
+    AuthorizationQuery -> do
+            modify $ addQuery $ case ti of
+                                  (AbsoluteTimestamp time) -> [("Timestamp", fmtAmzTime time)]
+                                  (AbsoluteExpires time) -> [("Expires", fmtAmzTime time)]
+            modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")]
+            modify $ \q -> addQuery [("Signature", signature cr q)] q
 
