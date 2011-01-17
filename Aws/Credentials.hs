@@ -95,7 +95,9 @@ stringToSign ti Query{..}
         S3 -> B.intercalate "\n" $ concat [[httpMethod method]
                                           , [fromMaybe "" contentMd5]
                                           , [fromMaybe "" contentType]
-                                          , [fmtRfc822Time $ fromAbsoluteTimeInfo ti]
+                                          , [case ti of
+                                               AbsoluteTimestamp time -> fmtRfc822Time time
+                                               AbsoluteExpires time -> fmtTimeEpochSeconds time]
                                           , [] -- canonicalized AMZ headers
                                           , [canonicalizedResource]]
     where sortedQuery = sortBy (comparing fst) query
@@ -117,12 +119,15 @@ signQuery rti cr query = flip execStateT query $ do
   modify $ \q -> q { date = Just now }
   am <- gets authorizationMethod
   ah <- gets authorizationHash
+  api' <- gets api
   case am of
     AuthorizationNone -> return ()
     AuthorizationQuery -> do
             modify $ addQuery $ case ti of
                                   AbsoluteTimestamp time -> [("Timestamp", fmtAmzTime time)]
-                                  AbsoluteExpires time -> [("Expires", fmtAmzTime time)]
+                                  AbsoluteExpires time -> [("Expires", case api' of
+                                                                         SimpleDB -> fmtAmzTime time
+                                                                         S3 -> fmtTimeEpochSeconds time)]
             modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureVersion", "2")]
             modify $ addQueryItem "SignatureMethod" $ case ah of
                                                         HmacSHA1 -> "HmacSHA1"

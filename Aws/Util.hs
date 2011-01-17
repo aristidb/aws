@@ -26,6 +26,9 @@ fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"
 fmtAmzTime :: UTCTime -> B.ByteString
 fmtAmzTime = fmtTime "%Y-%m-%dT%H:%M:%S"
 
+fmtTimeEpochSeconds :: UTCTime -> B.ByteString
+fmtTimeEpochSeconds = fmtTime "%s"
+
 urlEncodeBS :: B.ByteString -> B.ByteString
 urlEncodeBS = B.concatMap (B.pack . encodeChar)
     where
