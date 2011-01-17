@@ -113,5 +113,5 @@ signQuery rti cr query = flip execStateT query $ do
                                   (AbsoluteTimestamp time) -> [("Timestamp", fmtAmzTime time)]
                                   (AbsoluteExpires time) -> [("Expires", fmtAmzTime time)]
             modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureMethod", "HmacSHA256"), ("SignatureVersion", "2")]
-            modify $ \q -> addQuery [("Signature", signature cr q)] q
+            modify $ \q -> addQueryItem "Signature" (signature cr q) q
 

@@ -56,6 +56,9 @@ instance AsQuery Query where
 addQuery :: [(B.ByteString, B.ByteString)] -> Query -> Query
 addQuery xs q = q { query = xs ++ query q }
 
+addQueryItem :: B.ByteString -> B.ByteString -> Query -> Query
+addQueryItem name value = addQuery [(name, value)]
+
 addQueryIf :: Bool -> [(B.ByteString, B.ByteString)] -> Query -> Query
 addQueryIf True  = addQuery
 addQueryIf False = const id
