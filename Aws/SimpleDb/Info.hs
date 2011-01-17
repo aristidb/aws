@@ -43,8 +43,6 @@ sdbHttpsPost endpoint = SdbInfo HTTPS PostQuery endpoint (defaultPort HTTPS)
 sdbiBaseQuery :: SdbInfo -> Query
 sdbiBaseQuery SdbInfo{..} = Query { 
                               api = SimpleDB
-                            , authorizationMethod = AuthorizationQuery
-                            , authorizationHash = HmacSHA256
                             , method = sdbiHttpMethod
                             , protocol = sdbiProtocol
                             , host = sdbiHost

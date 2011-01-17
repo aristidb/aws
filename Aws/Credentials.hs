@@ -47,6 +47,17 @@ data TimeInfo
     | ExpiresAt { fromExpiresAt :: UTCTime }
     | ExpiresIn { fromExpiresIn :: NominalDiffTime }
     deriving (Show)
+
+data AuthorizationMethod
+    = AuthorizationNone
+    | AuthorizationQuery
+    | AuthorizationHeader
+    deriving (Show)
+
+data AuthorizationHash
+    = HmacSHA1
+    | HmacSHA256
+    deriving (Show)
              
 credentialsDefaultFile :: MonadIO io => io FilePath
 credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
@@ -102,10 +113,10 @@ stringToSign ti Query{..}
                                           , [canonicalizedResource]]
     where sortedQuery = sortBy (comparing fst) query
 
-signature :: AbsoluteTimeInfo -> Credentials -> Query -> B.ByteString
-signature ti cr q = Base64.encode sig
+signature :: AbsoluteTimeInfo -> Credentials -> AuthorizationHash -> Query -> B.ByteString
+signature ti cr ah q = Base64.encode sig
     where
-      sig = case authorizationHash q of
+      sig = case ah of
               HmacSHA1 -> computeSig (undefined :: SHA1.SHA1)
               HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
@@ -117,9 +128,14 @@ signQuery rti cr query = flip execStateT query $ do
   now <- liftIO getCurrentTime
   let ti = makeAbsoluteTimeInfo rti now
   modify $ \q -> q { date = Just now }
-  am <- gets authorizationMethod
-  ah <- gets authorizationHash
   api' <- gets api
+  let am = case (api', ti) of
+             (SimpleDB, _) -> AuthorizationQuery
+             (S3, AbsoluteTimestamp _) -> AuthorizationHeader
+             (S3, AbsoluteExpires _) -> AuthorizationQuery
+  let ah = case api' of
+             SimpleDB -> HmacSHA256
+             S3 -> HmacSHA1
   case am of
     AuthorizationNone -> return ()
     AuthorizationQuery -> do
@@ -132,10 +148,10 @@ signQuery rti cr query = flip execStateT query $ do
             modify $ addQueryItem "SignatureMethod" $ case ah of
                                                         HmacSHA1 -> "HmacSHA1"
                                                         HmacSHA256 -> "HmacSHA256"
-            sig <- gets $ signature ti cr
+            sig <- gets $ signature ti cr ah
             modify $ addQueryItem "Signature" sig
-    AuthorizationHeader -> do -- Throw error if ti is non-timestamp?
-            sig <- gets $ signature ti cr
+    AuthorizationHeader -> do
+            sig <- gets $ signature ti cr ah
             modify $ \q -> q { authorization = Just $ B.concat [
                                                 "AWS "
                                                , accessKeyID cr

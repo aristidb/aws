@@ -23,22 +23,9 @@ data Api
     | S3
     deriving (Show)
 
-data AuthorizationMethod
-    = AuthorizationNone
-    | AuthorizationQuery
-    | AuthorizationHeader
-    deriving (Show)
-
-data AuthorizationHash
-    = HmacSHA1
-    | HmacSHA256
-    deriving (Show)
-
 data Query 
     = Query {
         api :: Api
-      , authorizationMethod :: AuthorizationMethod
-      , authorizationHash :: AuthorizationHash
       , method :: Method
       , protocol :: Protocol
       , host :: B.ByteString
