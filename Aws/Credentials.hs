@@ -126,13 +126,17 @@ signQuery rti cr query = flip execStateT query $ do
                            let ah = case api' of
                                       SimpleDB -> HmacSHA256
                                       S3 -> HmacSHA1
-                           let am = case (api', ti) of
+                           let (authPrepare, authComplete) = case (api', ti) of
                                       (SimpleDB, _) -> authorizationQuery
                                       (S3, AbsoluteTimestamp _) -> authorizationHeader
                                       (S3, AbsoluteExpires _) -> authorizationQuery
-                           am ti cr ah
+                           
+                           authPrepare ti cr ah
+                           sig <- gets $ signature ti cr ah
+                           authComplete ti cr ah sig
     where
-      authorizationQuery ti cr ah = do
+      authorizationQuery = (authorizationQueryPrepare, authorizationQueryComplete)
+      authorizationQueryPrepare ti cr ah = do
         api' <- gets api
         modify $ addQuery $ case ti of
                               AbsoluteTimestamp time -> [("Timestamp", fmtAmzTime time)]
@@ -143,11 +147,12 @@ signQuery rti cr query = flip execStateT query $ do
         modify $ addQueryItem "SignatureMethod" $ case ah of
                                                     HmacSHA1 -> "HmacSHA1"
                                                     HmacSHA256 -> "HmacSHA256"
-        sig <- gets $ signature ti cr ah
-        modify $ addQueryItem "Signature" sig
 
-      authorizationHeader ti cr ah = do
-        sig <- gets $ signature ti cr ah
+      authorizationQueryComplete _ti _cr _ah sig = modify $ addQueryItem "Signature" sig
+
+      authorizationHeader = (authorizationHeaderPrepare, authorizationHeaderComplete)
+      authorizationHeaderPrepare _ti _cr _ah = return ()
+      authorizationHeaderComplete _ti cr _ah sig = do
         modify $ \q -> q { authorization = Just $ B.concat [
                                             "AWS "
                                            , accessKeyID cr
