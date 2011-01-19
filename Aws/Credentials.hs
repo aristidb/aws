@@ -141,23 +141,25 @@ signQuery rti cr query
         sig <- gets $ signature ti cr ah
         authComplete ti cr ah sig
     where
+      addQueryItemM n v = modify $ addQueryItem n v
+      
       authorizationQuery = (authorizationQueryPrepare, authorizationQueryComplete)
       authorizationQueryPrepare ti cr ah = do
         api' <- gets api
-        modify $ case ti of
-                   AbsoluteTimestamp time -> 
-                         addQueryItem "Timestamp" $ fmtAmzTime time
-                   AbsoluteExpires time -> 
-                         addQueryItem "Expires" $ case api' of
-                                                    SimpleDB -> fmtAmzTime time
-                                                    S3 -> fmtTimeEpochSeconds time
-        modify $ addQueryItem "AWSAccessKeyId" $ accessKeyID cr 
-        modify $ addQueryItem "SignatureMethod" $ amzHash ah
+        case ti of
+          AbsoluteTimestamp time -> 
+              addQueryItemM "Timestamp" $ fmtAmzTime time
+          AbsoluteExpires time -> 
+              addQueryItemM "Expires" $ case api' of
+                                          SimpleDB -> fmtAmzTime time
+                                          S3 -> fmtTimeEpochSeconds time
+        addQueryItemM "AWSAccessKeyId" $ accessKeyID cr 
+        addQueryItemM "SignatureMethod" $ amzHash ah
         case api' of
-          SimpleDB -> modify $ addQueryItem "SignatureVersion" "2"
+          SimpleDB -> addQueryItemM "SignatureVersion" "2"
           S3 -> return ()
       authorizationQueryComplete _ti _cr _ah sig = do
-        modify $ addQueryItem "Signature" sig
+        addQueryItemM "Signature" sig
       
       authorizationHeader = (authorizationHeaderPrepare, authorizationHeaderComplete)
       authorizationHeaderPrepare _ti _cr _ah = return ()
