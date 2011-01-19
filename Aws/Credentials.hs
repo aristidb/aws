@@ -48,12 +48,6 @@ data TimeInfo
     | ExpiresIn { fromExpiresIn :: NominalDiffTime }
     deriving (Show)
 
-data AuthorizationMethod
-    = AuthorizationNone
-    | AuthorizationQuery
-    | AuthorizationHeader
-    deriving (Show)
-
 data AuthorizationHash
     = HmacSHA1
     | HmacSHA256
@@ -125,36 +119,38 @@ signature ti cr ah q = Base64.encode sig
 
 signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
 signQuery rti cr query = flip execStateT query $ do
-  now <- liftIO getCurrentTime
-  let ti = makeAbsoluteTimeInfo rti now
-  modify $ \q -> q { date = Just now }
-  api' <- gets api
-  let am = case (api', ti) of
-             (SimpleDB, _) -> AuthorizationQuery
-             (S3, AbsoluteTimestamp _) -> AuthorizationHeader
-             (S3, AbsoluteExpires _) -> AuthorizationQuery
-  let ah = case api' of
-             SimpleDB -> HmacSHA256
-             S3 -> HmacSHA1
-  case am of
-    AuthorizationNone -> return ()
-    AuthorizationQuery -> do
-            modify $ addQuery $ case ti of
-                                  AbsoluteTimestamp time -> [("Timestamp", fmtAmzTime time)]
-                                  AbsoluteExpires time -> [("Expires", case api' of
-                                                                         SimpleDB -> fmtAmzTime time
-                                                                         S3 -> fmtTimeEpochSeconds time)]
-            modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureVersion", "2")]
-            modify $ addQueryItem "SignatureMethod" $ case ah of
-                                                        HmacSHA1 -> "HmacSHA1"
-                                                        HmacSHA256 -> "HmacSHA256"
-            sig <- gets $ signature ti cr ah
-            modify $ addQueryItem "Signature" sig
-    AuthorizationHeader -> do
-            sig <- gets $ signature ti cr ah
-            modify $ \q -> q { authorization = Just $ B.concat [
-                                                "AWS "
-                                               , accessKeyID cr
-                                               , ":"
-                                               , sig
-                                               ] }
+                           now <- liftIO getCurrentTime
+                           let ti = makeAbsoluteTimeInfo rti now
+                           modify $ \q -> q { date = Just now }
+                           api' <- gets api
+                           let ah = case api' of
+                                      SimpleDB -> HmacSHA256
+                                      S3 -> HmacSHA1
+                           let am = case (api', ti) of
+                                      (SimpleDB, _) -> authorizationQuery
+                                      (S3, AbsoluteTimestamp _) -> authorizationHeader
+                                      (S3, AbsoluteExpires _) -> authorizationQuery
+                           am ti cr ah
+    where
+      authorizationQuery ti cr ah = do
+        api' <- gets api
+        modify $ addQuery $ case ti of
+                              AbsoluteTimestamp time -> [("Timestamp", fmtAmzTime time)]
+                              AbsoluteExpires time -> [("Expires", case api' of
+                                                                     SimpleDB -> fmtAmzTime time
+                                                                     S3 -> fmtTimeEpochSeconds time)]
+        modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureVersion", "2")]
+        modify $ addQueryItem "SignatureMethod" $ case ah of
+                                                    HmacSHA1 -> "HmacSHA1"
+                                                    HmacSHA256 -> "HmacSHA256"
+        sig <- gets $ signature ti cr ah
+        modify $ addQueryItem "Signature" sig
+
+      authorizationHeader ti cr ah = do
+        sig <- gets $ signature ti cr ah
+        modify $ \q -> q { authorization = Just $ B.concat [
+                                            "AWS "
+                                           , accessKeyID cr
+                                           , ":"
+                                           , sig
+                                           ] }
