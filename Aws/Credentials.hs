@@ -52,6 +52,10 @@ data AuthorizationHash
     = HmacSHA1
     | HmacSHA256
     deriving (Show)
+
+amzHash :: AuthorizationHash -> B.ByteString
+amzHash HmacSHA1 = "HmacSHA1"
+amzHash HmacSHA256 = "HmacSHA256"
              
 credentialsDefaultFile :: MonadIO io => io FilePath
 credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
@@ -118,38 +122,43 @@ signature ti cr ah q = Base64.encode sig
       input = stringToSign ti q
 
 signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
-signQuery rti cr query = flip execStateT query $ do
-                           now <- liftIO getCurrentTime
-                           let ti = makeAbsoluteTimeInfo rti now
-                           modify $ \q -> q { date = Just now }
-                           api' <- gets api
-                           let ah = case api' of
-                                      SimpleDB -> HmacSHA256
-                                      S3 -> HmacSHA1
-                           let (authPrepare, authComplete) = case (api', ti) of
-                                      (SimpleDB, _) -> authorizationQuery
-                                      (S3, AbsoluteTimestamp _) -> authorizationHeader
-                                      (S3, AbsoluteExpires _) -> authorizationQuery
+signQuery rti cr query
+    = flip execStateT query $ do
+        now <- liftIO getCurrentTime
+        let ti = makeAbsoluteTimeInfo rti now
+        modify $ \q -> q { date = Just now }
+        api' <- gets api
+        let ah = case api' of
+                   SimpleDB -> HmacSHA256
+                   S3 -> HmacSHA1
+        let (authPrepare, authComplete) 
+                = case (api', ti) of
+                    (SimpleDB, _) -> authorizationQuery
+                    (S3, AbsoluteTimestamp _) -> authorizationHeader
+                    (S3, AbsoluteExpires _) -> authorizationQuery
                            
-                           authPrepare ti cr ah
-                           sig <- gets $ signature ti cr ah
-                           authComplete ti cr ah sig
+        authPrepare ti cr ah
+        sig <- gets $ signature ti cr ah
+        authComplete ti cr ah sig
     where
       authorizationQuery = (authorizationQueryPrepare, authorizationQueryComplete)
       authorizationQueryPrepare ti cr ah = do
         api' <- gets api
-        modify $ addQuery $ case ti of
-                              AbsoluteTimestamp time -> [("Timestamp", fmtAmzTime time)]
-                              AbsoluteExpires time -> [("Expires", case api' of
-                                                                     SimpleDB -> fmtAmzTime time
-                                                                     S3 -> fmtTimeEpochSeconds time)]
-        modify $ addQuery [("AWSAccessKeyId", accessKeyID cr), ("SignatureVersion", "2")]
-        modify $ addQueryItem "SignatureMethod" $ case ah of
-                                                    HmacSHA1 -> "HmacSHA1"
-                                                    HmacSHA256 -> "HmacSHA256"
-
-      authorizationQueryComplete _ti _cr _ah sig = modify $ addQueryItem "Signature" sig
-
+        modify $ case ti of
+                   AbsoluteTimestamp time -> 
+                         addQueryItem "Timestamp" $ fmtAmzTime time
+                   AbsoluteExpires time -> 
+                         addQueryItem "Expires" $ case api' of
+                                                    SimpleDB -> fmtAmzTime time
+                                                    S3 -> fmtTimeEpochSeconds time
+        modify $ addQueryItem "AWSAccessKeyId" $ accessKeyID cr 
+        modify $ addQueryItem "SignatureMethod" $ amzHash ah
+        case api' of
+          SimpleDB -> modify $ addQueryItem "SignatureVersion" "2"
+          S3 -> return ()
+      authorizationQueryComplete _ti _cr _ah sig = do
+        modify $ addQueryItem "Signature" sig
+      
       authorizationHeader = (authorizationHeaderPrepare, authorizationHeaderComplete)
       authorizationHeaderPrepare _ti _cr _ah = return ()
       authorizationHeaderComplete _ti cr _ah sig = do
