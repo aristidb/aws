@@ -121,31 +121,30 @@ signature ti cr ah q = Base64.encode sig
       key = HMAC.MacKey (secretAccessKey cr)
       input = stringToSign ti q
 
-signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
-signQuery rti cr query
-    = flip execStateT query $ do
-        now <- liftIO getCurrentTime
-        let ti = makeAbsoluteTimeInfo rti now
+signQuery' :: AbsoluteTimeInfo -> UTCTime -> Credentials -> Query -> Query
+signQuery' ti now cr query
+    = flip execState query $ do
         modify $ \q -> q { date = Just now }
-        api' <- gets api
-        let ah = case api' of
-                   SimpleDB -> HmacSHA256
-                   S3 -> HmacSHA1
         let (authPrepare, authComplete) 
                 = case (api', ti) of
                     (SimpleDB, _) -> authorizationQuery
                     (S3, AbsoluteTimestamp _) -> authorizationHeader
                     (S3, AbsoluteExpires _) -> authorizationQuery
                            
-        authPrepare ti cr ah
+        authPrepare
         sig <- gets $ signature ti cr ah
-        authComplete ti cr ah sig
+        authComplete sig
     where
+      api' = api query
+
+      ah = case api' of
+             SimpleDB -> HmacSHA256
+             S3 -> HmacSHA1
+        
       addQueryItemM n v = modify $ addQueryItem n v
       
       authorizationQuery = (authorizationQueryPrepare, authorizationQueryComplete)
-      authorizationQueryPrepare ti cr ah = do
-        api' <- gets api
+      authorizationQueryPrepare = do
         case ti of
           AbsoluteTimestamp time -> 
               addQueryItemM "Timestamp" $ fmtAmzTime time
@@ -158,15 +157,21 @@ signQuery rti cr query
         case api' of
           SimpleDB -> addQueryItemM "SignatureVersion" "2"
           S3 -> return ()
-      authorizationQueryComplete _ti _cr _ah sig = do
+      authorizationQueryComplete sig = do
         addQueryItemM "Signature" sig
       
       authorizationHeader = (authorizationHeaderPrepare, authorizationHeaderComplete)
-      authorizationHeaderPrepare _ti _cr _ah = return ()
-      authorizationHeaderComplete _ti cr _ah sig = do
+      authorizationHeaderPrepare = return ()
+      authorizationHeaderComplete sig = do
         modify $ \q -> q { authorization = Just $ B.concat [
                                             "AWS "
                                            , accessKeyID cr
                                            , ":"
                                            , sig
                                            ] }
+
+signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
+signQuery rti cr query = do
+  now <- liftIO getCurrentTime
+  let ti = makeAbsoluteTimeInfo rti now
+  return $ signQuery' ti now cr query
