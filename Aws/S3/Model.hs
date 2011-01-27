@@ -21,7 +21,8 @@ locationConstraintToId lc
 idToLocationConstraint :: B.ByteString -> Maybe LocationConstraint
 idToLocationConstraint id
     = case id of
-        "EU" -> EU
-        "us-west-1" -> UsWest1
-        "ap-southeast-1" -> ApSouthEast1
-        "" -> UsClassic
+        "EU" -> Just EU
+        "us-west-1" -> Just UsWest1
+        "ap-southeast-1" -> Just ApSouthEast1
+        "" -> Just UsClassic
+        _ -> Nothing
