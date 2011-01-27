@@ -43,10 +43,5 @@ instance SdbFromResponse GetAttributesResponse where
       testElementNameUI "GetAttributesResponse"
       attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
       return $ GetAttributesResponse attributes
-          where
-            readAttribute = do
-              name <- decodeBase64 <<< findElementNameUI "Name"
-              value <- decodeBase64 <<< findElementNameUI "Value"
-              return $ ForAttribute name value
 
 instance Transaction GetAttributes (SdbResponse GetAttributesResponse)
