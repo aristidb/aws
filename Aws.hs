@@ -6,6 +6,7 @@ module Aws
 , module Aws.Metadata
 , module Aws.Query
 , module Aws.Response
+, module Aws.S3
 , module Aws.SimpleDb
 , module Aws.Transaction
 , module Aws.Util

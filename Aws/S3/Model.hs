@@ -2,7 +2,8 @@
 module Aws.S3.Model
 where
   
-import qualified Data.ByteString as B
+import           Data.ByteString.Char8 ({- IsString -})
+import qualified Data.ByteString       as B
 
 type Bucket = B.ByteString
 
@@ -19,8 +20,8 @@ locationConstraintToId lc
         UsClassic -> ""
 
 idToLocationConstraint :: B.ByteString -> Maybe LocationConstraint
-idToLocationConstraint id
-    = case id of
+idToLocationConstraint i    
+    = case i of
         "EU" -> Just EU
         "us-west-1" -> Just UsWest1
         "ap-southeast-1" -> Just ApSouthEast1
