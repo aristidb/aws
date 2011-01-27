@@ -18,6 +18,7 @@ import Aws.Http
 import Aws.Metadata
 import Aws.Query
 import Aws.Response
+import Aws.S3
 import Aws.SimpleDb
 import Aws.Transaction
 import Aws.Util
