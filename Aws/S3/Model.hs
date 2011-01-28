@@ -1,11 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Aws.S3.Model
 where
-  
+
 import           Data.ByteString.Char8 ({- IsString -})
+import           Data.Time
 import qualified Data.ByteString       as B
 
+type CanonicalUserId = B.ByteString
+
 type Bucket = B.ByteString
+
+data BucketInfo
+    = BucketInfo {
+        bucketName :: Bucket
+      , bucketCreationDate :: UTCTime
+      }
 
 data LocationConstraint 
     = EU | UsWest1 | ApSouthEast1 | UsClassic
