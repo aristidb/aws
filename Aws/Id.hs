@@ -11,14 +11,14 @@ import           Data.Ord
 import           Language.Haskell.TH
 import qualified Data.Map            as M
 
-makeId :: String -> Q Exp -> [(String, String)] -> Q [Dec]
-makeId name handler xs = do
+makeId :: String -> Q Exp -> [(String, String)] -> [ConQ] -> Q [Dec]
+makeId name handler xs otherCon = do
   let (ctors, ids) = unzip xs
   
   let [idName, idFromId, idToId] = map mkName [name, "from" ++ name, "to" ++ name]
   [idListA, idMapA, idListB, idMapB] <- mapM newName ["idListA", "idMapA", "idListB", "idMapB"]
 
-  data' <- dataD (cxt []) idName [] (map (flip normalC [] . mkName) ctors) [mkName "Eq", mkName "Ord", mkName "Show"]
+  data' <- dataD (cxt []) idName [] (map (flip normalC [] . mkName) ctors ++ otherCon) [mkName "Eq", mkName "Ord", mkName "Show"]
 
   let valDecl var body = valD (varP var) (normalB body) []
 
@@ -42,8 +42,8 @@ makeId name handler xs = do
 
   return [data', listAT, listA, mapAT, mapA, listBT, listB, mapBT, mapB, fromIdT, fromId, toIdT, toId]
 
-makeIdAuto :: String -> Q Exp -> (String -> String) -> [String] -> Q [Dec]
-makeIdAuto name handler f xs = makeId name handler xs'
+makeIdAuto :: String -> Q Exp -> (String -> String) -> [String] -> [ConQ] -> Q [Dec]
+makeIdAuto name handler f xs otherCon = makeId name handler xs' otherCon
     where xs' = map (\a -> (f a, a)) xs
 
 capitalise :: String -> String

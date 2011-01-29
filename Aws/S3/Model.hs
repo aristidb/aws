@@ -36,4 +36,5 @@ $(makeId "LocationConstraint" [|id|]
              , ("UsWest1", "us-west-1")
              , ("ApSouthEast1", "ap-southeast-1")
              , ("UsClassic", "")
-             ])
+             ]
+             [])
