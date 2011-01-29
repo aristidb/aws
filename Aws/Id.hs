@@ -18,19 +18,29 @@ makeId name handler xs = do
   let [idName, idFromId, idToId] = map mkName [name, "from" ++ name, "to" ++ name]
   [idListA, idMapA, idListB, idMapB] <- mapM newName ["idListA", "idMapA", "idListB", "idMapB"]
 
-  data' <- dataD (return []) (idName) [] (map (flip normalC [] . mkName) ctors) [mkName "Eq", mkName "Ord", mkName "Show"]
+  data' <- dataD (cxt []) idName [] (map (flip normalC [] . mkName) ctors) [mkName "Eq", mkName "Ord", mkName "Show"]
 
   let valDecl var body = valD (varP var) (normalB body) []
 
+  listAT <- sigD idListA [t| [($(conT idName), String)] |]
   listA <- valDecl idListA (listE $ map (\(c,i) -> tupE [conE $ mkName c, litE $ stringL i]) xs)
+
+  mapAT <- sigD idMapA [t| M.Map $(conT idName) String |]
   mapA <- valDecl idMapA [| M.fromList $(varE idListA) |]
+
+  listBT <- sigD idListB [t| [(String, $(conT idName))] |]
   listB <- valDecl idListB [| map (\(c,i) -> (i,c)) $(varE idListA) |]
+
+  mapBT <- sigD idMapB [t| M.Map String $(conT idName) |]
   mapB <- valDecl idMapB [| M.fromList $(varE idListB) |]
 
+  fromIdT <- sigD idFromId [t| $(conT idName) -> String |]
   fromId <- valDecl idFromId [| fromJust . flip M.lookup $(varE idMapA) |]
+
+  toIdT <- sigD idToId [t| String -> Maybe $(conT idName) |]
   toId <- valDecl idToId [| $handler . flip M.lookup $(varE idMapB) |]
 
-  return [data', listA, mapA, listB, mapB, fromId, toId]
+  return [data', listAT, listA, mapAT, mapA, listBT, listB, mapBT, mapB, fromIdT, fromId, toIdT, toId]
 
 makeIdAuto :: String -> Q Exp -> (String -> String) -> [String] -> Q [Dec]
 makeIdAuto name handler f xs = makeId name handler xs'
@@ -44,8 +54,8 @@ adjustReplace :: Eq a => ([a] -> [a]) -> [[a]] -> [a] -> [a]
 adjustReplace f = searchReplace . map (\s -> (s, f s))
 
 searchReplace :: Eq a => [([a], [a])] -> [a] -> [a]
-searchReplace abs xs = case bestSearch abs xs of
-                         Just (pre, b, post) -> pre ++ b ++ searchReplace abs post
+searchReplace rs xs = case bestSearch rs xs of
+                         Just (pre, b, post) -> pre ++ b ++ searchReplace rs post
                          Nothing -> xs
 
 bestSearch :: (Eq a) => [([a], b)] -> [a] -> Maybe ([a], b, [a])
