@@ -3,6 +3,7 @@ module Aws
   module Aws.Aws
 , module Aws.Credentials
 , module Aws.Http
+, module Aws.Id
 , module Aws.Metadata
 , module Aws.Query
 , module Aws.Response
@@ -16,6 +17,7 @@ where
 import Aws.Aws
 import Aws.Credentials
 import Aws.Http
+import Aws.Id
 import Aws.Metadata
 import Aws.Query
 import Aws.Response
