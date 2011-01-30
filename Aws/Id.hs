@@ -46,6 +46,9 @@ makeIdAuto :: String -> Q Exp -> (String -> String) -> [String] -> [ConQ] -> Q [
 makeIdAuto name handler f xs otherCon = makeId name handler xs' otherCon
     where xs' = map (\a -> (f a, a)) xs
 
+unknownC :: String -> [ConQ]
+unknownC unknownName = [normalC (mkName unknownName) [strictType notStrict $ conT ''String]]
+
 capitalise :: String -> String
 capitalise "" = ""
 capitalise (x:xs) = toUpper x : map toLower xs
