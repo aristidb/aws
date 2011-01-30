@@ -90,7 +90,6 @@ Library
                        filepath ==1.1.*,
                        http-enumerator >=0.3.1 && < 0.4,
                        mtl ==2.*,
-                       network >=2.2.1.10 && <2.4,
                        old-locale ==1.*,
                        shortcircuit ==0.1.*,
                        template-haskell >=2.4 && <2.6,

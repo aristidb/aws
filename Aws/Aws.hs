@@ -8,9 +8,9 @@ import           Aws.Query
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
 import           Control.Monad.Reader
-import           Network.URI             (URI)
-import qualified Control.Failure         as F
-import qualified Control.Monad.CatchIO   as C
+import qualified Control.Failure       as F
+import qualified Control.Monad.CatchIO as C
+import qualified Data.ByteString       as B
 
 data Configuration
     = Configuration {
@@ -83,7 +83,7 @@ aws request = do
 awsUri :: (AsQuery request
           , ConfigurationFetch (Info request)
           , MonadAws aws)
-         => request -> aws URI
+         => request -> aws B.ByteString
 awsUri request = do
   cfg <- configuration
   let ti = timeInfo cfg

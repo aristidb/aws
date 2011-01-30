@@ -8,7 +8,6 @@ import           Aws.Util
 import           Control.Arrow
 import           Data.Maybe
 import           Data.Time
-import           Network.URI             (nullURI, URI(..), URIAuth(..))
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as L
 import qualified Data.ByteString.UTF8    as BU
@@ -109,17 +108,14 @@ queryToHttpRequest Query{..}
                            PostQuery -> Just "application/x-www-form-urlencoded"
                            _ -> contentType
 
-queryToUri :: Query -> URI
+queryToUri :: Query -> B.ByteString
 queryToUri Query{..} 
-    = nullURI {
-        uriScheme = case protocol of
-                      HTTP -> "http:"
-                      HTTPS -> "https:"
-      , uriAuthority = Just URIAuth {
-                         uriUserInfo = ""
-                       , uriRegName = BU.toString host
-                       , uriPort = if port == defaultPort protocol then "" else ':' : show port
-                       }
-      , uriPath = BU.toString path
-      , uriQuery = BU.toString $ urlEncodeVarsBS' True subresource query
-      }
+    = B.concat [
+       case protocol of
+         HTTP -> "http://"
+         HTTPS -> "https://"
+      , host
+      , if port == defaultPort protocol then "" else BU.fromString $ ':' : show port
+      , path
+      , urlEncodeVarsBS' True subresource query
+      ]
