@@ -5,6 +5,7 @@ where
 import           Aws.Credentials
 import           Aws.Query
 import           Aws.Response
+import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
 
 class (AsQuery r, ResponseIteratee a)
@@ -15,4 +16,4 @@ transact :: (Transaction r a)
 transact ti cr i r = do
   q <- signQuery ti cr $ asQuery i r
   let httpRequest = queryToHttpRequest q
-  HTTP.httpRedirect responseIteratee httpRequest
+  En.run_ $ HTTP.httpRedirect httpRequest responseIteratee
