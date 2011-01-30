@@ -42,12 +42,18 @@ makeId name handler xs otherCon = do
 
   return [data', listAT, listA, mapAT, mapA, listBT, listB, mapBT, mapB, fromIdT, fromId, toIdT, toId]
 
-makeIdAuto :: String -> Q Exp -> (String -> String) -> [String] -> [ConQ] -> Q [Dec]
-makeIdAuto name handler f xs otherCon = makeId name handler xs' otherCon
-    where xs' = map (\a -> (f a, a)) xs
+unknownC :: Name -> [ConQ]
+unknownC unknownName = [normalC unknownName [strictType notStrict $ conT ''String]]
 
-unknownC :: String -> [ConQ]
-unknownC unknownName = [normalC (mkName unknownName) [strictType notStrict $ conT ''String]]
+makeIdUnknown :: String -> [(String, String)] -> String -> Q [Dec]
+makeIdUnknown name xs unknownNameS = makeId name (conE unknownName) xs (unknownC unknownName)
+    where unknownName = mkName unknownNameS
+
+autoTable :: (String -> String) -> [String] -> [(String, String)]
+autoTable f = map (\a -> (f a, a))
+
+autoCapitalise :: [String] -> [String] -> [(String, String)]
+autoCapitalise cap xs = autoTable (adjustReplace capitalise cap) xs
 
 capitalise :: String -> String
 capitalise "" = ""
