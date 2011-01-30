@@ -18,7 +18,7 @@ makeId name handler xs otherCon = do
   let [idName, idFromId, idToId] = map mkName [name, "from" ++ name, "to" ++ name]
   [idListA, idMapA, idListB, idMapB] <- mapM newName ["idListA", "idMapA", "idListB", "idMapB"]
 
-  data' <- dataD (cxt []) idName [] (map (flip normalC [] . mkName) ctors ++ otherCon) [mkName "Eq", mkName "Ord", mkName "Show"]
+  data' <- dataD (cxt []) idName [] (map (flip normalC [] . mkName) ctors ++ otherCon) [''Eq, ''Ord, ''Show]
 
   let valDecl var body = valD (varP var) (normalB body) []
 
