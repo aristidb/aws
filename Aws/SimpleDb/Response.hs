@@ -7,12 +7,13 @@ import           Aws.Response
 import           Aws.SimpleDb.Error
 import           Aws.Util
 import           Control.Applicative
+import           Control.Arrow               ((+++))
 import           Control.Monad.Compose.Class
 import           Control.Monad.Reader.Class
 import           Data.Char
 import           Text.XML.Monad
-import qualified Codec.Binary.Base64         as Base64
-import qualified Codec.Binary.UTF8.String    as Utf8
+import qualified Data.ByteString.Base64      as Base64
+import qualified Data.ByteString.UTF8        as BU
 import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
@@ -59,7 +60,7 @@ decodeBase64 :: Xml SdbError XL.Element String
 decodeBase64 = do
   encoded <- strContent
   encoding <- tryMaybe $ findAttr (XL.unqual "encoding")
-  case toLower .: encoding of
-    Nothing -> return encoded
-    Just "base64" -> maybeRaiseXml (EncodingError "Invalid Base64 data") (fmap Utf8.decode $ Base64.decode encoded)
-    Just actual -> raiseXml $ UnexpectedAttributeValueQ actual "base64"
+  raisesXml $ case toLower .: encoding of
+                Nothing -> Right encoded
+                Just "base64" -> (EncodingError . ("Invalid Base64 data: "++) +++ BU.toString) . Base64.decode . BU.fromString $ encoded
+                Just actual -> Left $ UnexpectedAttributeValueQ actual "base64"

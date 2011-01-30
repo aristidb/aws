@@ -82,7 +82,6 @@ Library
                        containers ==0.3.*,
                        crypto-api ==0.3.*,
                        cryptohash ==0.6.*,
-                       dataenc ==0.13.*,
                        directory ==1.0.*,
                        enumerator ==0.4.*,
                        filepath ==1.1.*,
