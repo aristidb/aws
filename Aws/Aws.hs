@@ -8,8 +8,6 @@ import           Aws.Query
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
 import           Control.Monad.Reader
-import qualified Control.Failure       as F
-import qualified Control.Monad.CatchIO as C
 import qualified Data.ByteString       as B
 
 data Configuration
@@ -63,14 +61,6 @@ class MonadIO aws => MonadAws aws where
 
 instance MonadIO m => MonadAws (AwsT m) where
     configuration = AwsT ask
-
-instance C.MonadCatchIO m => C.MonadCatchIO (AwsT m) where
-    m `catch` f = AwsT $ fromAwsT m `C.catch` (fromAwsT . f)
-    block = AwsT . C.block . fromAwsT
-    unblock = AwsT . C.unblock . fromAwsT
-
-instance (C.Exception e, MonadIO m) => F.Failure e (AwsT m) where
-    failure = C.throw
 
 aws :: (Transaction request response
        , ConfigurationFetch (Info request)

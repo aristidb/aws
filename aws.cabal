@@ -75,7 +75,6 @@ Library
   
   -- Packages needed in order to build this package.
   Build-depends:
-                       MonadCatchIO-transformers ==0.2.*,
                        base ==4.*,
                        base64-bytestring ==0.1.*,
                        bytestring ==0.9.*,
@@ -86,7 +85,6 @@ Library
                        dataenc ==0.13.*,
                        directory ==1.0.*,
                        enumerator ==0.4.*,
-                       failure ==0.1.*,
                        filepath ==1.1.*,
                        http-enumerator >=0.3.1 && < 0.4,
                        mtl ==2.*,

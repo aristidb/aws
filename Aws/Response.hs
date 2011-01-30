@@ -7,7 +7,7 @@ import           Control.Monad.Compose.Class
 import           Control.Monad.Error.Class
 import           Control.Monad.Reader.Class
 import           Text.XML.Monad
-import qualified Control.Failure             as F
+import qualified Control.Exception           as C
 import qualified Data.ByteString             as B
 import qualified Data.ByteString.Lazy.UTF8   as BLU
 import qualified Data.Enumerator             as En
@@ -21,11 +21,11 @@ class ResponseIteratee a where
 instance ResponseIteratee HTTP.Response where
     responseIteratee = HTTP.lbsIter
 
-xmlResponseIteratee :: (Monad m, F.Failure e m) => Xml e HTTP.Response a -> Wai.Status -> HTTP.Headers -> En.Iteratee B.ByteString m a
+xmlResponseIteratee :: C.Exception e => Xml e HTTP.Response a -> Wai.Status -> HTTP.Headers -> En.Iteratee B.ByteString IO a
 xmlResponseIteratee xml status headers = do
   body <- HTTP.lbsIter status headers
   case runXml xml body of
-    Left e -> En.Iteratee $ F.failure e
+    Left e -> En.Iteratee $ C.throw e
     Right a -> return a
 
 parseXmlResponse :: (FromXmlError e, Error e) => Xml e HTTP.Response XL.Element
