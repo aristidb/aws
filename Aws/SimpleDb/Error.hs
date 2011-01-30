@@ -5,11 +5,9 @@ where
 import           Aws.Id
 import           Aws.Metadata
 import           Control.Monad.Error.Class
-import           Data.Maybe
 import           Data.Typeable
 import           Text.XML.Monad
 import qualified Control.Exception         as C
-import qualified Data.Map                  as M
 
 $(makeIdUnknown "ErrorCode"
                     (autoCapitalise
