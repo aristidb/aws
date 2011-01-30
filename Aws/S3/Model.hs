@@ -30,7 +30,7 @@ data LocationConstraint
     deriving (Show)
 -}
 
-$(makeId "LocationConstraint" [|id|]
+$(makeId "LocationConstraint" [| flip const |]
              [
                ("EU", "EU")
              , ("UsWest1", "us-west-1")

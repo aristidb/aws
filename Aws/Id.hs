@@ -37,16 +37,16 @@ makeId name handler xs otherCon = do
   fromIdT <- sigD idFromId [t| $(conT idName) -> String |]
   fromId <- valDecl idFromId [| fromJust . flip M.lookup $(varE idMapA) |]
 
-  toIdT <- sigD idToId [t| String -> Maybe $(conT idName) |]
-  toId <- valDecl idToId [| $handler . flip M.lookup $(varE idMapB) |]
+  --toIdT <- sigD idToId [t| String -> Maybe $(conT idName) |]
+  toId <- valDecl idToId [| \s -> $handler s $ M.lookup s $(varE idMapB) |]
 
-  return [data', listAT, listA, mapAT, mapA, listBT, listB, mapBT, mapB, fromIdT, fromId, toIdT, toId]
+  return [data', listAT, listA, mapAT, mapA, listBT, listB, mapBT, mapB, fromIdT, fromId, {-toIdT,-} toId]
 
 unknownC :: Name -> [ConQ]
 unknownC unknownName = [normalC unknownName [strictType notStrict $ conT ''String]]
 
 makeIdUnknown :: String -> [(String, String)] -> String -> Q [Dec]
-makeIdUnknown name xs unknownNameS = makeId name (conE unknownName) xs (unknownC unknownName)
+makeIdUnknown name xs unknownNameS = makeId name [| fromMaybe . $(conE unknownName) |] xs (unknownC unknownName)
     where unknownName = mkName unknownNameS
 
 autoTable :: (String -> String) -> [String] -> [(String, String)]

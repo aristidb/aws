@@ -48,7 +48,7 @@ instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
                        Nothing -> sdbFromResponse
               fromError :: Int -> Xml SdbError XL.Element a
               fromError status = do
-                     errCode <- nameToErrorCode <$> strContent <<< findElementNameUI "Code"
+                     errCode <- toErrorCode <$> strContent <<< findElementNameUI "Code"
                      errMessage <- strContent <<< findElementNameUI "Message"
                      raise $ SdbError status errCode errMessage NoMetadata
 
