@@ -13,7 +13,6 @@ import           Control.Monad.Trans.State
 import           Control.Shortcircuit      (orM)
 import           Data.List
 import           Data.Maybe
-import           Data.Ord
 import           Data.Time
 import           System.Directory
 import           System.Environment
