@@ -56,4 +56,5 @@ sdbiBaseQuery SdbInfo{..} = Query {
                             , contentType = Nothing
                             , contentMd5 = Nothing
                             , body = L.empty
+                            , stringToSign = Nothing
                             }

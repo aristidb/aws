@@ -94,8 +94,8 @@ makeAbsoluteTimeInfo Timestamp     now = AbsoluteTimestamp now
 makeAbsoluteTimeInfo (ExpiresAt t) _   = AbsoluteExpires t
 makeAbsoluteTimeInfo (ExpiresIn s) now = AbsoluteExpires $ addUTCTime s now
 
-stringToSign :: AbsoluteTimeInfo -> Query -> B.ByteString
-stringToSign ti Query{..} 
+calculateStringToSign :: AbsoluteTimeInfo -> Query -> B.ByteString
+calculateStringToSign ti Query{..} 
     = case api of 
         SimpleDB -> B.intercalate "\n" [httpMethod method
                                        , host
@@ -109,17 +109,16 @@ stringToSign ti Query{..}
                                                AbsoluteExpires time -> fmtTimeEpochSeconds time]
                                           , [] -- canonicalized AMZ headers
                                           , [canonicalizedResource]]
-    where sortedQuery = sortBy (comparing fst) query
+    where sortedQuery = sort query
 
-signature :: AbsoluteTimeInfo -> Credentials -> AuthorizationHash -> Query -> B.ByteString
-signature ti cr ah q = Base64.encode sig
+signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
+signature cr ah input = Base64.encode sig
     where
       sig = case ah of
               HmacSHA1 -> computeSig (undefined :: SHA1.SHA1)
               HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key = HMAC.MacKey (secretAccessKey cr)
-      input = stringToSign ti q
 
 signQuery' :: AbsoluteTimeInfo -> UTCTime -> Credentials -> Query -> Query
 signQuery' ti now cr query
@@ -132,8 +131,9 @@ signQuery' ti now cr query
                     (S3, AbsoluteExpires _) -> authorizationQuery
                            
         authPrepare
-        sig <- gets $ signature ti cr ah
-        authComplete sig
+        sts <- gets $ calculateStringToSign ti
+        modify $ \q -> q { stringToSign = Just sts }
+        authComplete $ signature cr ah sts
     where
       api' = api query
 

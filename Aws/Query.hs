@@ -38,6 +38,7 @@ data Query
       , contentType :: Maybe B.ByteString
       , contentMd5 :: Maybe B.ByteString
       , body :: L.ByteString
+      , stringToSign :: Maybe B.ByteString
       }
     deriving (Show)
 
