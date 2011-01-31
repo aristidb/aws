@@ -1,10 +1,12 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, OverloadedStrings #-}
 module Aws.Transaction
 where
   
 import           Aws.Credentials
+import           Aws.Debug
 import           Aws.Query
 import           Aws.Response
+import           Data.Maybe
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
 
@@ -15,5 +17,6 @@ transact :: (Transaction r a)
             => TimeInfo -> Credentials -> Info r -> r -> IO a
 transact ti cr i r = do
   q <- signQuery ti cr $ asQuery i r
+  debugPrint "String to sign" $ fromMaybe "NOTHING" $ stringToSign q
   let httpRequest = queryToHttpRequest q
   En.run_ $ HTTP.httpRedirect httpRequest responseIteratee

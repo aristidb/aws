@@ -51,6 +51,7 @@ Library
                        Aws,
                        Aws.Aws,
                        Aws.Credentials,
+                       Aws.Debug,
                        Aws.Http,
                        Aws.Id,
                        Aws.Metadata,
