@@ -1,0 +1,79 @@
+<html>
+    <head>
+        <title>Amazon SimpleDB Scratchpad</title>
+        <link rel="stylesheet" type="text/css" href="css/scratchpad.css"/>
+    </head>
+    
+    <body marginheight="0" marginwidth="0" bottommargin="0" rightmargin="0" leftmargin="0" topmargin="0">
+        <table border="0" align="center" cellpadding="0" cellspacing="0" style="width: 100%">
+            <tr>
+                <td width="50%"><img height="1" src="images/spacer.gif" width="100"></td>
+                <td><img height="1" src="images/spacer.gif" width="700">
+                    <table width="100%">
+                        <tr>
+                            <td nowrap><a href="main.html" target="main"><font class="logo">Amazon  SimpleDB</font> <font class="logoweb">Scratchpad</font></a></td>
+                            <td align="right"><img src="images/poweredbyaws.png" hspace="5"></td>
+                        </tr>
+                    </table>
+                </td>
+                <td width="50%"><img height="1" src="images/spacer.gif" width="100"></td>
+            </tr>
+            <tr>
+                <td background="images/bg-nav.png" width="50%"><img height="1" src="images/spacer.gif" width="100"></td>
+                <td background="images/bg-nav.png" style="height: 38px">
+                    <table width="100%">
+                        <tr>
+                            <td nowrap><input 
+                                onblur="if (this.value == '') this.value='AWS Access Key ID'" 
+                                onclick="if (this.value == 'AWS Access Key ID') this.value=''" 
+                                style="border: 1px solid #6699cc; height: 20px; color:#006699;font-size: 13px; width: 135px" 
+                                value="AWS Access Key ID" 
+                                type="text"
+                                id="AWSAccessKeyId"
+                                name="AWSAccessKeyId"/>&nbsp;&nbsp;
+                                
+                                <input 
+                                    onblur="if (this.value == '') this.value='AWS Secret Access Key'" 
+                                    onclick="if (this.value == 'AWS Secret Access Key') this.value=''" 
+                                    style="border: 1px solid #6699cc; height: 20px; color:#006699;font-size: 13px; width: 160px" 
+                                    value="AWS Secret Access Key" 
+                                    type="text"
+                                    id="AWSSecretAccessKey"
+                                    name="AWSSecretAccessKey"/>
+                            </td>
+                            <td align="right"><strong>Explore API:</strong>&nbsp;&nbsp;&nbsp;
+                            <select 
+                             onchange="if (this.options[this.selectedIndex].value != '') window.open(this.options[this.selectedIndex].value + '.html','main');"
+                             style=" border: 1px solid #6699cc;  color:#006699; width: 155px; height: 18px; font-size: 13px" name="API">
+                                    <option value="" name="main">---- Select API ----</option>
+                        <option value="CreateDomain" name="CreateDomain">CreateDomain</Option>
+                        <option value="ListDomains" name="ListDomains">ListDomains</Option>
+                        <option value="DomainMetadata" name="DomainMetadata">DomainMetadata</Option>
+                        <option value="DeleteDomain" name="DeleteDomain">DeleteDomain</Option>
+                        <option value="PutAttributes" name="PutAttributes">PutAttributes</Option>
+                        <option value="BatchPutAttributes" name="BatchPutAttributes">BatchPutAttributes</Option>
+                        <option value="GetAttributes" name="GetAttributes">GetAttributes</Option>
+                        <option value="DeleteAttributes" name="DeleteAttributes">DeleteAttributes</Option>
+                        <option value="Select" name="Select">Select</Option>
+                                </select>
+	  
+                            </td>
+                        </tr>
+                    </table>
+                    
+                </td>
+                <td background="images/bg-nav.png" width="50%"><img height="1" src="images/spacer.gif" width="100"></td>
+            </tr>
+        </table>
+        <script>
+            function getAccessKeyId() {
+                return document.getElementById('AWSAccessKeyId').value;
+            
+            }
+            function getSecretAccessKey() {
+                return document.getElementById('AWSSecretAccessKey').value;
+            
+            }
+        </script>
+    </body>
+</html>
