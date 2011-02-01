@@ -29,7 +29,7 @@ baseConfiguration = do
   return Configuration {
                timeInfo = Timestamp
              , credentials = cr
-             , sdbInfo = sdbHttpsGet sdbUsEast -- POST does not work properly, https://github.com/aristidb/aws/issues/issue/1
+             , sdbInfo = sdbHttpsPost sdbUsEast
              }
 -- TODO: better error handling when credentials cannot be loaded
 

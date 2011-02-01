@@ -106,7 +106,7 @@ queryToHttpRequest Query{..}
                              PostQuery -> L.fromChunks [urlEncodeVarsBS' False subresource query]
       }
     where contentType' = case method of
-                           PostQuery -> Just "application/x-www-form-urlencoded"
+                           PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
                            _ -> contentType
 
 queryToUri :: Query -> B.ByteString
