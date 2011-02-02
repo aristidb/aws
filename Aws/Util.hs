@@ -13,12 +13,8 @@ import qualified Data.ByteString       as B
 import qualified Data.ByteString.UTF8  as BU
 import qualified Data.Set              as S
 
-(.:) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
-(.:) = fmap . fmap
-infixr 5 .:
-
 fmtTime :: String -> UTCTime -> B.ByteString
-fmtTime = BU.fromString .: formatTime defaultTimeLocale
+fmtTime s t = BU.fromString $ formatTime defaultTimeLocale s t
 
 fmtRfc822Time :: UTCTime -> B.ByteString
 fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"

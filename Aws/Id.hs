@@ -2,8 +2,7 @@
 module Aws.Id
 where
   
-import           Aws.Util
-import           Control.Applicative
+import           Control.Monad
 import           Data.Char
 import           Data.List
 import           Data.Maybe
@@ -68,8 +67,16 @@ searchReplace rs xs = case bestSearch rs xs of
                          Nothing -> xs
 
 bestSearch :: (Eq a) => [([a], b)] -> [a] -> Maybe ([a], b, [a])
-bestSearch = best .: (sequence . map search)
-  where best = listToMaybe . sortBy (comparing $ \(pre, _, _) -> length pre) . catMaybes
+bestSearch rs xs = best $ sequence (map search rs) xs
+  where best = listToMaybe . sortBy leftmost . catMaybes
+        leftmost = comparing $ \(pre, _, _) -> length pre
 
 search :: Eq a => ([a], b) -> [a] -> Maybe ([a], b, [a])
-search (k, k') = listToMaybe . mapMaybe (\(i, t) -> if k `isPrefixOf` t then Just (i, k', drop (length k) t) else Nothing) . (zip <$> inits <*> tails)
+search (k, k') 
+    = listToMaybe . mapMaybe prefixOfSplit . splits
+    where
+      splits s = zip (inits s) (tails s)
+
+      prefixOfSplit (i, t) = do
+        guard $ k `isPrefixOf` t
+        return (i, k', drop (length k) t)

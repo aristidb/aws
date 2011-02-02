@@ -5,7 +5,6 @@ where
 import           Aws.Metadata
 import           Aws.Response
 import           Aws.SimpleDb.Error
-import           Aws.Util
 import           Control.Applicative
 import           Control.Arrow               ((+++))
 import           Control.Monad.Compose.Class
@@ -60,7 +59,7 @@ decodeBase64 :: Xml SdbError XL.Element String
 decodeBase64 = do
   encoded <- strContent
   encoding <- tryMaybe $ findAttr (XL.unqual "encoding")
-  raisesXml $ case toLower .: encoding of
+  raisesXml $ case map toLower <$> encoding of
                 Nothing -> Right encoded
                 Just "base64" -> (EncodingError . ("Invalid Base64 data: "++) +++ BU.toString) . Base64.decode . BU.fromString $ encoded
                 Just actual -> Left $ UnexpectedAttributeValueQ actual "base64"
