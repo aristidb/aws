@@ -20,6 +20,9 @@ data Configuration
 class ConfigurationFetch a where
     configurationFetch :: Configuration -> a
 
+instance ConfigurationFetch () where
+    configurationFetch _ = ()
+
 instance ConfigurationFetch SdbInfo where
     configurationFetch = sdbInfo
 
