@@ -57,6 +57,7 @@ Library
                        Aws.Metadata,
                        Aws.Query,
                        Aws.Response,
+                       Aws.S3.GetService,
                        Aws.S3.Model,
                        Aws.SimpleDb,
                        Aws.SimpleDb.BatchPutAttributes,
