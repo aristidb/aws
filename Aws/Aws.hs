@@ -5,10 +5,11 @@ where
 import           Aws.Credentials
 import           Aws.Http
 import           Aws.Query
+import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
 import           Control.Monad.Reader
-import qualified Data.ByteString       as B
+import qualified Data.ByteString      as B
 
 data Configuration
     = Configuration {
