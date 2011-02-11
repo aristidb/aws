@@ -40,21 +40,5 @@ sdbHttpsGet endpoint = SdbInfo HTTPS Get endpoint (defaultPort HTTPS)
 sdbHttpsPost :: B.ByteString -> SdbInfo
 sdbHttpsPost endpoint = SdbInfo HTTPS PostQuery endpoint (defaultPort HTTPS)
 
-sdbiBaseQuery :: SdbInfo -> Query
-sdbiBaseQuery SdbInfo{..} = Query { 
-                              api = SimpleDB
-                            , method = sdbiHttpMethod
-                            , protocol = sdbiProtocol
-                            , host = sdbiHost
-                            , port = sdbiPort 
-                            , path = "/"
-                            , canonicalizedResource = ""
-                            , subresource = Nothing
-                            , query = [("Version", "2009-04-15")]
-                            , date = Nothing
-                            , authorization = Nothing
-                            , contentType = Nothing
-                            , contentMd5 = Nothing
-                            , body = L.empty
-                            , stringToSign = Nothing
-                            }
+{-
+-}

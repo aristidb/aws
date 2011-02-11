@@ -71,6 +71,7 @@ Library
                        Aws.SimpleDb.ListDomains,
                        Aws.SimpleDb.Model,
                        Aws.SimpleDb.PutAttributes,
+                       Aws.SimpleDb.Query,
                        Aws.SimpleDb.Response,
                        Aws.SimpleDb.Select,
                        Aws.Transaction,

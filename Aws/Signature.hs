@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Aws.Signature
 where
   
@@ -18,6 +18,12 @@ import qualified Data.ByteString           as B
 import qualified Data.ByteString.Base64    as Base64
 import qualified Data.Serialize            as Serialize
 
+data TimeInfo
+    = Timestamp
+    | ExpiresAt { fromExpiresAt :: UTCTime }
+    | ExpiresIn { fromExpiresIn :: NominalDiffTime }
+    deriving (Show)
+
 data AbsoluteTimeInfo
     = AbsoluteTimestamp { fromAbsoluteTimestamp :: UTCTime }
     | AbsoluteExpires { fromAbsoluteExpires :: UTCTime }
@@ -27,10 +33,31 @@ fromAbsoluteTimeInfo :: AbsoluteTimeInfo -> UTCTime
 fromAbsoluteTimeInfo (AbsoluteTimestamp time) = time
 fromAbsoluteTimeInfo (AbsoluteExpires time) = time
 
-data TimeInfo
-    = Timestamp
-    | ExpiresAt { fromExpiresAt :: UTCTime }
-    | ExpiresIn { fromExpiresIn :: NominalDiffTime }
+makeAbsoluteTimeInfo :: TimeInfo -> UTCTime -> AbsoluteTimeInfo
+makeAbsoluteTimeInfo Timestamp     now = AbsoluteTimestamp now
+makeAbsoluteTimeInfo (ExpiresAt t) _   = AbsoluteExpires t
+makeAbsoluteTimeInfo (ExpiresIn s) now = AbsoluteExpires $ addUTCTime s now
+
+data SignatureData
+    = SignatureData {
+        signatureTimeInfo :: AbsoluteTimeInfo
+      , signatureTime :: UTCTime
+      , signatureCredentials :: Credentials
+      }
+
+signatureData :: TimeInfo -> Credentials -> IO SignatureData
+signatureData rti cr = do
+  now <- getCurrentTime
+  let ti = makeAbsoluteTimeInfo rti now
+  return SignatureData { signatureTimeInfo = ti, signatureTime = now, signatureCredentials = cr }
+
+class SignQuery r where
+    type Info r :: *
+    signQuery :: Info r -> r -> SignatureData -> SignedQuery
+  
+data Api
+    = SimpleDB
+    | S3
     deriving (Show)
 
 data AuthorizationHash
@@ -42,12 +69,8 @@ amzHash :: AuthorizationHash -> B.ByteString
 amzHash HmacSHA1 = "HmacSHA1"
 amzHash HmacSHA256 = "HmacSHA256"
 
-makeAbsoluteTimeInfo :: TimeInfo -> UTCTime -> AbsoluteTimeInfo
-makeAbsoluteTimeInfo Timestamp     now = AbsoluteTimestamp now
-makeAbsoluteTimeInfo (ExpiresAt t) _   = AbsoluteExpires t
-makeAbsoluteTimeInfo (ExpiresIn s) now = AbsoluteExpires $ addUTCTime s now
-
-calculateStringToSign :: AbsoluteTimeInfo -> Query -> B.ByteString
+{-
+calculateStringToSign :: AbsoluteTimeInfo -> SignedQuery -> B.ByteString
 calculateStringToSign ti Query{..} 
     = case api of 
         SimpleDB -> B.intercalate "\n" [httpMethod method
@@ -63,6 +86,7 @@ calculateStringToSign ti Query{..}
                                           , [] -- canonicalized AMZ headers
                                           , [canonicalizedResource]]
     where sortedQuery = sort query
+-}
 
 signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
 signature cr ah input = Base64.encode sig
@@ -73,6 +97,7 @@ signature cr ah input = Base64.encode sig
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key = HMAC.MacKey (secretAccessKey cr)
 
+{-
 signQuery' :: AbsoluteTimeInfo -> UTCTime -> Credentials -> Query -> Query
 signQuery' ti now cr query
     = flip execState query $ do
@@ -96,35 +121,39 @@ signQuery' ti now cr query
         
       addQueryItemM n v = modify $ addQueryItem n v
       
-      authorizationQuery = (authorizationQueryPrepare, authorizationQueryComplete)
-      authorizationQueryPrepare = do
-        case ti of
-          AbsoluteTimestamp time -> 
-              addQueryItemM "Timestamp" $ fmtAmzTime time
-          AbsoluteExpires time -> 
-              addQueryItemM "Expires" $ case api' of
-                                          SimpleDB -> fmtAmzTime time
-                                          S3 -> fmtTimeEpochSeconds time
-        addQueryItemM "AWSAccessKeyId" $ accessKeyID cr 
-        addQueryItemM "SignatureMethod" $ amzHash ah
-        case api' of
-          SimpleDB -> addQueryItemM "SignatureVersion" "2"
-          S3 -> return ()
-      authorizationQueryComplete sig = do
-        addQueryItemM "Signature" sig
-      
-      authorizationHeader = (authorizationHeaderPrepare, authorizationHeaderComplete)
-      authorizationHeaderPrepare = return ()
-      authorizationHeaderComplete sig = do
-        modify $ \q -> q { authorization = Just $ B.concat [
-                                            "AWS "
-                                           , accessKeyID cr
-                                           , ":"
-                                           , sig
-                                           ] }
 
 signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
 signQuery rti cr query = do
   now <- liftIO getCurrentTime
   let ti = makeAbsoluteTimeInfo rti now
   return $ signQuery' ti now cr query
+-}
+
+authorizationQueryPrepare :: Api -> AuthorizationHash -> SignatureData -> [(B.ByteString, B.ByteString)]
+authorizationQueryPrepare api' ah SignatureData { signatureTimeInfo = ti, signatureCredentials = cr }
+    = concat [
+       case ti of
+         AbsoluteTimestamp time -> 
+               [("Timestamp", fmtAmzTime time)]
+         AbsoluteExpires time -> 
+               [("Expires", case api' of
+                             SimpleDB -> fmtAmzTime time
+                             S3 -> fmtTimeEpochSeconds time)]
+      , [("AWSAccessKeyId", accessKeyID cr)]
+      , [("SignatureMethod", amzHash ah)]
+      , case api' of
+          SimpleDB -> [("SignatureVersion", "2")]
+          S3 -> []
+      ]
+
+authorizationQueryComplete :: B.ByteString -> [(B.ByteString, B.ByteString)]
+authorizationQueryComplete sig = [("Signature", sig)]
+
+authorizationHeaderComplete :: SignatureData -> B.ByteString -> SignedQuery -> SignedQuery
+authorizationHeaderComplete SignatureData { signatureCredentials = cr } sig q 
+  = q { authorization = Just $ B.concat [
+                         "AWS "
+                        , accessKeyID cr
+                        , ":"
+                        , sig
+                        ] }

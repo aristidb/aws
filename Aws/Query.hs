@@ -13,24 +13,13 @@ import qualified Data.ByteString.Lazy    as L
 import qualified Data.ByteString.UTF8    as BU
 import qualified Network.HTTP.Enumerator as HTTP
 
-class AsQuery r where
-    type Info r :: *
-    asQuery :: Info r -> r -> Query
-  
-data Api
-    = SimpleDB
-    | S3
-    deriving (Show)
-
-data Query 
-    = Query {
-        api :: Api
-      , method :: Method
+data SignedQuery 
+    = SignedQuery {
+        method :: Method
       , protocol :: Protocol
       , host :: B.ByteString
       , port :: Int
       , path :: B.ByteString
-      , canonicalizedResource :: B.ByteString
       , subresource :: Maybe B.ByteString
       , query :: [(B.ByteString, B.ByteString)]
       , date :: Maybe UTCTime
@@ -38,28 +27,24 @@ data Query
       , contentType :: Maybe B.ByteString
       , contentMd5 :: Maybe B.ByteString
       , body :: L.ByteString
-      , stringToSign :: Maybe B.ByteString
+      , stringToSign :: B.ByteString
       }
     deriving (Show)
 
-instance AsQuery Query where
-    type Info Query = ()
-    asQuery _ = id
-             
-addQuery :: [(B.ByteString, B.ByteString)] -> Query -> Query
+addQuery :: [(B.ByteString, B.ByteString)] -> SignedQuery -> SignedQuery
 addQuery xs q = q { query = xs ++ query q }
 
-addQueryItem :: B.ByteString -> B.ByteString -> Query -> Query
+addQueryItem :: B.ByteString -> B.ByteString -> SignedQuery -> SignedQuery
 addQueryItem name value = addQuery [(name, value)]
 
-addQueryIf :: Bool -> [(B.ByteString, B.ByteString)] -> Query -> Query
+addQueryIf :: Bool -> [(B.ByteString, B.ByteString)] -> SignedQuery -> SignedQuery
 addQueryIf True  = addQuery
 addQueryIf False = const id
 
-addQueryUnless :: Bool -> [(B.ByteString, B.ByteString)] -> Query -> Query
+addQueryUnless :: Bool -> [(B.ByteString, B.ByteString)] -> SignedQuery -> SignedQuery
 addQueryUnless = addQueryIf . not
       
-addQueryMaybe :: (a -> B.ByteString) -> (B.ByteString, Maybe a) -> Query -> Query
+addQueryMaybe :: (a -> B.ByteString) -> (B.ByteString, Maybe a) -> SignedQuery -> SignedQuery
 addQueryMaybe f (name, Just a) q = q { query = (name, f a) : query q }
 addQueryMaybe _ (_, Nothing) q = q
 
@@ -71,7 +56,7 @@ queryList f prefix xs = concat $ zipWith combine prefixList (map f xs)
     where prefixList = map (dot prefix . BU.fromString . show) [(1 :: Int) ..]
           combine pf = map $ first (pf `dot`)
           
-addQueryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> Query -> Query 
+addQueryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> SignedQuery -> SignedQuery 
 addQueryList f prefix xs = addQuery $ queryList f prefix xs
           
 awsBool :: Bool -> B.ByteString
@@ -84,8 +69,8 @@ awsTrue = awsBool True
 awsFalse :: B.ByteString
 awsFalse = awsBool False
 
-queryToHttpRequest :: Query -> HTTP.Request
-queryToHttpRequest Query{..}
+queryToHttpRequest :: SignedQuery -> HTTP.Request
+queryToHttpRequest SignedQuery{..}
     = HTTP.Request {
         HTTP.method = httpMethod method
       , HTTP.secure = case protocol of
@@ -109,8 +94,8 @@ queryToHttpRequest Query{..}
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
                            _ -> contentType
 
-queryToUri :: Query -> B.ByteString
-queryToUri Query{..} 
+queryToUri :: SignedQuery -> B.ByteString
+queryToUri SignedQuery{..} 
     = B.concat [
        case protocol of
          HTTP -> "http://"

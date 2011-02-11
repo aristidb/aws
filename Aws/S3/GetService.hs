@@ -9,6 +9,7 @@ import Data.ByteString.Lazy.Char8 ({- IsString -})
 
 data GetService = GetService
 
+{-
 instance AsQuery GetService where
     type Info GetService = () -- < preliminary
     asQuery _ _ = Query {
@@ -28,3 +29,4 @@ instance AsQuery GetService where
                   , body = ""
                   , stringToSign = Nothing
                   }
+-}

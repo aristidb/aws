@@ -10,6 +10,7 @@ module Aws.SimpleDb
 , module Aws.SimpleDb.ListDomains
 , module Aws.SimpleDb.Model
 , module Aws.SimpleDb.PutAttributes
+, module Aws.SimpleDb.Query
 , module Aws.SimpleDb.Response
 , module Aws.SimpleDb.Select
 )
@@ -25,5 +26,6 @@ import Aws.SimpleDb.Info
 import Aws.SimpleDb.ListDomains
 import Aws.SimpleDb.Model
 import Aws.SimpleDb.PutAttributes
+import Aws.SimpleDb.Query
 import Aws.SimpleDb.Response
 import Aws.SimpleDb.Select
