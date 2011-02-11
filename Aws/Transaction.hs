@@ -19,6 +19,6 @@ transact :: (Transaction r a)
 transact ti cr i r = do
   sd <- signatureData ti cr
   let q = signQuery i r sd
-  debugPrint "String to sign" $ stringToSign q
+  debugPrint "String to sign" $ sqStringToSign q
   let httpRequest = queryToHttpRequest q
   En.run_ $ HTTP.httpRedirect httpRequest responseIteratee

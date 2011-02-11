@@ -15,24 +15,24 @@ import qualified Network.HTTP.Enumerator as HTTP
 
 data SignedQuery 
     = SignedQuery {
-        method :: Method
-      , protocol :: Protocol
-      , host :: B.ByteString
-      , port :: Int
-      , path :: B.ByteString
-      , subresource :: Maybe B.ByteString
-      , query :: [(B.ByteString, B.ByteString)]
-      , date :: Maybe UTCTime
-      , authorization :: Maybe B.ByteString
-      , contentType :: Maybe B.ByteString
-      , contentMd5 :: Maybe B.ByteString
-      , body :: L.ByteString
-      , stringToSign :: B.ByteString
+        sqMethod :: Method
+      , sqProtocol :: Protocol
+      , sqHost :: B.ByteString
+      , sqPort :: Int
+      , sqPath :: B.ByteString
+      , sqSubresource :: Maybe B.ByteString
+      , sqQuery :: [(B.ByteString, B.ByteString)]
+      , sqDate :: Maybe UTCTime
+      , sqAuthorization :: Maybe B.ByteString
+      , sqContentType :: Maybe B.ByteString
+      , sqContentMd5 :: Maybe B.ByteString
+      , sqBody :: L.ByteString
+      , sqStringToSign :: B.ByteString
       }
     deriving (Show)
 
 addQuery :: [(B.ByteString, B.ByteString)] -> SignedQuery -> SignedQuery
-addQuery xs q = q { query = xs ++ query q }
+addQuery xs q = q { sqQuery = xs ++ sqQuery q }
 
 addQueryItem :: B.ByteString -> B.ByteString -> SignedQuery -> SignedQuery
 addQueryItem name value = addQuery [(name, value)]
@@ -45,7 +45,7 @@ addQueryUnless :: Bool -> [(B.ByteString, B.ByteString)] -> SignedQuery -> Signe
 addQueryUnless = addQueryIf . not
       
 addQueryMaybe :: (a -> B.ByteString) -> (B.ByteString, Maybe a) -> SignedQuery -> SignedQuery
-addQueryMaybe f (name, Just a) q = q { query = (name, f a) : query q }
+addQueryMaybe f (name, Just a) q = q { sqQuery = (name, f a) : sqQuery q }
 addQueryMaybe _ (_, Nothing) q = q
 
 dot :: B.ByteString -> B.ByteString -> B.ByteString
@@ -55,7 +55,7 @@ queryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> [(B
 queryList f prefix xs = concat $ zipWith combine prefixList (map f xs)
     where prefixList = map (dot prefix . BU.fromString . show) [(1 :: Int) ..]
           combine pf = map $ first (pf `dot`)
-          
+
 addQueryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> SignedQuery -> SignedQuery 
 addQueryList f prefix xs = addQuery $ queryList f prefix xs
           
@@ -72,36 +72,36 @@ awsFalse = awsBool False
 queryToHttpRequest :: SignedQuery -> HTTP.Request
 queryToHttpRequest SignedQuery{..}
     = HTTP.Request {
-        HTTP.method = httpMethod method
-      , HTTP.secure = case protocol of
+        HTTP.method = httpMethod sqMethod
+      , HTTP.secure = case sqProtocol of
                         HTTP -> False
                         HTTPS -> True
-      , HTTP.host = host
-      , HTTP.port = port
-      , HTTP.path = B.concat $ path : case method of 
-                                         Get -> [urlEncodeVarsBS' True subresource query]
+      , HTTP.host = sqHost
+      , HTTP.port = sqPort
+      , HTTP.path = B.concat $ sqPath : case sqMethod of 
+                                         Get -> [urlEncodeVarsBS' True sqSubresource sqQuery]
                                          PostQuery -> []
       , HTTP.queryString = [] -- not used for safety reasons
-      , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) date
-                                        , fmap (\c -> ("Content-Type", c)) contentType'
-                                        , fmap (\md5 -> ("Content-MD5", md5)) contentMd5
-                                        , fmap (\auth -> ("Authorization", auth)) authorization]
-      , HTTP.requestBody = case method of
+      , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) sqDate
+                                        , fmap (\c -> ("Content-Type", c)) contentType
+                                        , fmap (\md5 -> ("Content-MD5", md5)) sqContentMd5
+                                        , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
+      , HTTP.requestBody = case sqMethod of
                              Get -> L.empty
-                             PostQuery -> L.fromChunks [urlEncodeVarsBS' False subresource query]
+                             PostQuery -> L.fromChunks [urlEncodeVarsBS' False sqSubresource sqQuery]
       }
-    where contentType' = case method of
+    where contentType = case sqMethod of
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
-                           _ -> contentType
+                           _ -> sqContentType
 
 queryToUri :: SignedQuery -> B.ByteString
 queryToUri SignedQuery{..} 
     = B.concat [
-       case protocol of
+       case sqProtocol of
          HTTP -> "http://"
          HTTPS -> "https://"
-      , host
-      , if port == defaultPort protocol then "" else BU.fromString $ ':' : show port
-      , path
-      , urlEncodeVarsBS' True subresource query
+      , sqHost
+      , if sqPort == defaultPort sqProtocol then "" else BU.fromString $ ':' : show sqPort
+      , sqPath
+      , urlEncodeVarsBS' True sqSubresource sqQuery
       ]

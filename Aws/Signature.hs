@@ -151,9 +151,9 @@ authorizationQueryComplete sig = [("Signature", sig)]
 
 authorizationHeaderComplete :: SignatureData -> B.ByteString -> SignedQuery -> SignedQuery
 authorizationHeaderComplete SignatureData { signatureCredentials = cr } sig q 
-  = q { authorization = Just $ B.concat [
-                         "AWS "
-                        , accessKeyID cr
-                        , ":"
-                        , sig
-                        ] }
+  = q { sqAuthorization = Just $ B.concat [
+                           "AWS "
+                          , accessKeyID cr
+                          , ":"
+                          , sig
+                          ] }
