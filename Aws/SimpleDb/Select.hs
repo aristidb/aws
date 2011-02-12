@@ -10,6 +10,7 @@ import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
+import           Aws.Util
 import           Control.Monad
 import           Control.Monad.Compose.Class
 import           Text.XML.Monad

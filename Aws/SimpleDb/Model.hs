@@ -5,6 +5,7 @@ where
 import           Aws.Query
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Response
+import           Aws.Util
 import           Control.Monad.Compose.Class
 import           Text.XML.Monad
 import qualified Data.ByteString             as B

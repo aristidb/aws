@@ -10,6 +10,7 @@ import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
+import           Aws.Util
 import           Control.Applicative
 import           Text.XML.Monad
 import qualified Data.ByteString.UTF8  as BU

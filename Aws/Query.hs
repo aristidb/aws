@@ -31,44 +31,6 @@ data SignedQuery
       }
     deriving (Show)
 
-addQuery :: [(B.ByteString, B.ByteString)] -> SignedQuery -> SignedQuery
-addQuery xs q = q { sqQuery = xs ++ sqQuery q }
-
-addQueryItem :: B.ByteString -> B.ByteString -> SignedQuery -> SignedQuery
-addQueryItem name value = addQuery [(name, value)]
-
-addQueryIf :: Bool -> [(B.ByteString, B.ByteString)] -> SignedQuery -> SignedQuery
-addQueryIf True  = addQuery
-addQueryIf False = const id
-
-addQueryUnless :: Bool -> [(B.ByteString, B.ByteString)] -> SignedQuery -> SignedQuery
-addQueryUnless = addQueryIf . not
-      
-addQueryMaybe :: (a -> B.ByteString) -> (B.ByteString, Maybe a) -> SignedQuery -> SignedQuery
-addQueryMaybe f (name, Just a) q = q { sqQuery = (name, f a) : sqQuery q }
-addQueryMaybe _ (_, Nothing) q = q
-
-dot :: B.ByteString -> B.ByteString -> B.ByteString
-dot x y = B.concat [x, BU.fromString ".", y]
-
-queryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> [(B.ByteString, B.ByteString)]
-queryList f prefix xs = concat $ zipWith combine prefixList (map f xs)
-    where prefixList = map (dot prefix . BU.fromString . show) [(1 :: Int) ..]
-          combine pf = map $ first (pf `dot`)
-
-addQueryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> SignedQuery -> SignedQuery 
-addQueryList f prefix xs = addQuery $ queryList f prefix xs
-          
-awsBool :: Bool -> B.ByteString
-awsBool True = "true"
-awsBool False = "false"
-
-awsTrue :: B.ByteString
-awsTrue = awsBool True
-
-awsFalse :: B.ByteString
-awsFalse = awsBool False
-
 queryToHttpRequest :: SignedQuery -> HTTP.Request
 queryToHttpRequest SignedQuery{..}
     = HTTP.Request {
