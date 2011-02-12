@@ -92,12 +92,3 @@ authorizationQueryPrepare api' ah SignatureData { signatureTimeInfo = ti, signat
 
 authorizationQueryComplete :: B.ByteString -> [(B.ByteString, B.ByteString)]
 authorizationQueryComplete sig = [("Signature", sig)]
-
-authorizationHeaderComplete :: SignatureData -> B.ByteString -> SignedQuery -> SignedQuery
-authorizationHeaderComplete SignatureData { signatureCredentials = cr } sig q 
-  = q { sqAuthorization = Just $ B.concat [
-                           "AWS "
-                          , accessKeyID cr
-                          , ":"
-                          , sig
-                          ] }
