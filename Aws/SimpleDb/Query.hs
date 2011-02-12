@@ -24,13 +24,28 @@ sdbiBaseQuery SdbInfo{..} = SignedQuery {
 
 sdbSignQuery :: [(B.ByteString, B.ByteString)] -> SdbInfo -> SignatureData -> SignedQuery
 sdbSignQuery q si sd
-    = undefined
+    = SignedQuery {
+        sqMethod = method
+      , sqProtocol = sdbiProtocol si
+      , sqHost = host
+      , sqPort = sdbiPort si
+      , sqPath = path
+      , sqSubresource = Nothing
+      , sqQuery = q'
+      , sqDate = Just $ signatureTime sd
+      , sqAuthorization = Nothing
+      , sqContentType = Nothing
+      , sqContentMd5 = Nothing
+      , sqBody = ""
+      , sqStringToSign = stringToSign
+      }
     where
-      q' = sort $ q ++ ("Version", "2009-04-15") : authorizationQueryPrepare SimpleDB HmacSHA256 sd
+      ah = HmacSHA256
+      q' = sort $ q ++ ("Version", "2009-04-15") : authorizationQueryPrepare SimpleDB ah sd
       method = sdbiHttpMethod si
       host = sdbiHost si
       path = "/"
-      sig = signature (signatureCredentials sd) HmacSHA256 stringToSign
+      sig = signature (signatureCredentials sd) ah stringToSign
       stringToSign = B.intercalate "\n" [httpMethod method
                                         , host
                                         , path

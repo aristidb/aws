@@ -53,7 +53,7 @@ signatureData rti cr = do
 
 class SignQuery r where
     type Info r :: *
-    signQuery :: Info r -> r -> SignatureData -> SignedQuery
+    signQuery :: r -> Info r -> SignatureData -> SignedQuery
   
 data Api
     = SimpleDB

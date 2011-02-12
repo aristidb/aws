@@ -4,8 +4,10 @@ module Aws.SimpleDb.BatchPutAttributes
 where
 
 import           Aws.Query
+import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Control.Applicative
@@ -26,12 +28,13 @@ data BatchPutAttributesResponse
 batchPutAttributes :: [Item [Attribute SetAttribute]] -> String -> BatchPutAttributes
 batchPutAttributes items domain = BatchPutAttributes { bpaItems = items, bpaDomainName = domain }
 
-instance AsQuery BatchPutAttributes where
+instance SignQuery BatchPutAttributes where
     type Info BatchPutAttributes = SdbInfo
-    asQuery i BatchPutAttributes{..}
-        = addQuery [("Action", "BatchPutAttributes"), ("DomainName", BU.fromString bpaDomainName)]
-          . addQueryList (itemQuery $ queryList (attributeQuery setAttributeQuery) "Attribute") "Item" bpaItems
-          $ sdbiBaseQuery i
+    signQuery BatchPutAttributes{..}
+        = sdbSignQuery $ 
+            [("Action", "BatchPutAttributes")
+            , ("DomainName", BU.fromString bpaDomainName)] ++
+            queryList (itemQuery $ queryList (attributeQuery setAttributeQuery) "Attribute") "Item" bpaItems
 
 instance SdbFromResponse BatchPutAttributesResponse where
     sdbFromResponse = BatchPutAttributesResponse <$ testElementNameUI "BatchPutAttributesResponse"
