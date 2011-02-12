@@ -31,7 +31,7 @@ sdbSignQuery q si sd
       , sqPort = sdbiPort si
       , sqPath = path
       , sqSubresource = Nothing
-      , sqQuery = q'
+      , sqQuery = sq
       , sqDate = Just $ signatureTime sd
       , sqAuthorization = Nothing
       , sqContentType = Nothing
@@ -42,6 +42,7 @@ sdbSignQuery q si sd
     where
       ah = HmacSHA256
       q' = sort $ q ++ ("Version", "2009-04-15") : authorizationQueryPrepare SimpleDB ah sd
+      sq = q' ++ authorizationQueryComplete sig
       method = sdbiHttpMethod si
       host = sdbiHost si
       path = "/"
