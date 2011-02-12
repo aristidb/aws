@@ -7,6 +7,7 @@ import           Aws.Query
 import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
+import           Aws.Debug
 import           Control.Monad.Reader
 import qualified Data.ByteString      as B
 
@@ -15,29 +16,36 @@ data Configuration
        timeInfo :: TimeInfo
       , credentials :: Credentials
       , sdbInfo :: SdbInfo
+      , sdbInfoUri :: SdbInfo
       }
 
 class ConfigurationFetch a where
     configurationFetch :: Configuration -> a
+    configurationFetchUri :: Configuration -> a
+    configurationFetchUri = configurationFetch
 
 instance ConfigurationFetch () where
     configurationFetch _ = ()
 
 instance ConfigurationFetch SdbInfo where
     configurationFetch = sdbInfo
+    configurationFetchUri = sdbInfoUri
 
 baseConfiguration :: MonadIO io => io Configuration
 baseConfiguration = do
   Just cr <- loadCredentialsDefault
   return Configuration {
-               timeInfo = Timestamp
-             , credentials = cr
-             , sdbInfo = sdbHttpsPost sdbUsEast
-             }
+                      timeInfo = Timestamp
+                    , credentials = cr
+                    , sdbInfo = sdbHttpsPost sdbUsEast
+                    , sdbInfoUri = sdbHttpsGet sdbUsEast
+                    }
 -- TODO: better error handling when credentials cannot be loaded
 
 debugConfiguration :: MonadIO io => io Configuration
-debugConfiguration = liftM (\c -> c { sdbInfo = sdbHttpPost sdbUsEast }) baseConfiguration
+debugConfiguration = do 
+  c <- baseConfiguration
+  return c { sdbInfo = sdbHttpPost sdbUsEast, sdbInfoUri = sdbHttpGet sdbUsEast  }
 
 newtype AwsT m a = AwsT { fromAwsT :: ReaderT Configuration m a }
 
@@ -81,8 +89,8 @@ awsUri request = do
   cfg <- configuration
   let ti = timeInfo cfg
       cr = credentials cfg
-      info = configurationFetch cfg
-  -- TODO: force GET
+      info = configurationFetchUri cfg
   sd <- liftIO $ signatureData ti cr
   let q = signQuery request info sd
+  debugPrint "String to sign" $ sqStringToSign q
   return $ queryToUri q
