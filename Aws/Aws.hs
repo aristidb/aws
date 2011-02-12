@@ -3,13 +3,17 @@ module Aws.Aws
 where
 
 import           Aws.Credentials
+import           Aws.Debug
 import           Aws.Query
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
-import           Aws.Debug
+import           Control.Applicative
 import           Control.Monad.Reader
-import qualified Data.ByteString      as B
+import qualified Data.ByteString         as B
+import qualified Data.Enumerator         as En
+import qualified Network.HTTP.Enumerator as HTTP
 
 data Configuration
     = Configuration {
@@ -79,7 +83,12 @@ aws :: (Transaction request response
       => request -> aws response
 aws request = do
   cfg <- configuration
-  liftIO $ liftM3 transact timeInfo credentials configurationFetch cfg request
+  sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
+  let info = configurationFetch cfg
+  let q = signQuery request info sd
+  debugPrint "String to sign" $ sqStringToSign q
+  let httpRequest = queryToHttpRequest q
+  liftIO $ En.run_ $ HTTP.httpRedirect httpRequest responseIteratee
 
 awsUri :: (SignQuery request
           , ConfigurationFetch (Info request)
