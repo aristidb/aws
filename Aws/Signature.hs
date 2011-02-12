@@ -64,17 +64,6 @@ amzHash :: AuthorizationHash -> B.ByteString
 amzHash HmacSHA1 = "HmacSHA1"
 amzHash HmacSHA256 = "HmacSHA256"
 
-{-
-        S3 -> B.intercalate "\n" $ concat [[httpMethod method]
-                                          , [fromMaybe "" contentMd5]
-                                          , [fromMaybe "" contentType]
-                                          , [case ti of
-                                               AbsoluteTimestamp time -> fmtRfc822Time time
-                                               AbsoluteExpires time -> fmtTimeEpochSeconds time]
-                                          , [] -- canonicalized AMZ headers
-                                          , [canonicalizedResource]]
--}
-
 signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
 signature cr ah input = Base64.encode sig
     where

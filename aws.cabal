@@ -59,6 +59,7 @@ Library
                        Aws.Response,
                        Aws.S3.GetService,
                        Aws.S3.Model,
+                       Aws.S3.Query,
                        Aws.Signature,
                        Aws.SimpleDb,
                        Aws.SimpleDb.BatchPutAttributes,
