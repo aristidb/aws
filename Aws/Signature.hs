@@ -3,13 +3,8 @@ module Aws.Signature
 where
   
 import           Aws.Credentials
-import           Aws.Http
 import           Aws.Query
 import           Aws.Util
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.State
-import           Data.List
-import           Data.Maybe
 import           Data.Time
 import qualified Crypto.HMAC               as HMAC
 import qualified Crypto.Hash.SHA1          as SHA1

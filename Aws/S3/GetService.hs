@@ -3,8 +3,6 @@
 module Aws.S3.GetService
 where
   
-import Aws.Http
-import Aws.Query
 import Data.ByteString.Lazy.Char8 ({- IsString -})
 
 data GetService = GetService

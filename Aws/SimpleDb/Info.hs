@@ -3,8 +3,6 @@ module Aws.SimpleDb.Info
 where
 
 import           Aws.Http
-import           Aws.Query
-import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString as B
 
 data SdbInfo
@@ -39,6 +37,3 @@ sdbHttpsGet endpoint = SdbInfo HTTPS Get endpoint (defaultPort HTTPS)
              
 sdbHttpsPost :: B.ByteString -> SdbInfo
 sdbHttpsPost endpoint = SdbInfo HTTPS PostQuery endpoint (defaultPort HTTPS)
-
-{-
--}

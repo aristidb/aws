@@ -5,7 +5,6 @@ where
 
 import           Aws.Http
 import           Aws.Util
-import           Control.Arrow
 import           Data.Maybe
 import           Data.Time
 import qualified Data.ByteString         as B

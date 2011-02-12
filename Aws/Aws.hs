@@ -3,7 +3,6 @@ module Aws.Aws
 where
 
 import           Aws.Credentials
-import           Aws.Http
 import           Aws.Query
 import           Aws.Signature
 import           Aws.SimpleDb.Info

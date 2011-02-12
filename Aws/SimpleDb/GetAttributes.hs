@@ -3,7 +3,6 @@
 module Aws.SimpleDb.GetAttributes
 where
 
-import           Aws.Query
 import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Model

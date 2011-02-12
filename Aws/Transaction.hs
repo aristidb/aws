@@ -7,7 +7,6 @@ import           Aws.Debug
 import           Aws.Query
 import           Aws.Response
 import           Aws.Signature
-import           Data.Maybe
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
 

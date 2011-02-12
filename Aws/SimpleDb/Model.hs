@@ -2,7 +2,6 @@
 module Aws.SimpleDb.Model
 where
   
-import           Aws.Query
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Response
 import           Aws.Util
