@@ -10,18 +10,6 @@ import           Aws.Util
 import           Data.List
 import qualified Data.ByteString   as B
 
-{-
-sdbiBaseQuery :: SdbInfo -> SignedQuery
-sdbiBaseQuery SdbInfo{..} = SignedQuery { 
-                              method = sdbiHttpMethod
-                            , protocol = sdbiProtocol
-                            , host = sdbiHost
-                            , port = sdbiPort 
-                            , path = "/"
-                            , query = [("Version", "2009-04-15")]
-                            }
--}
-
 sdbSignQuery :: [(B.ByteString, B.ByteString)] -> SdbInfo -> SignatureData -> SignedQuery
 sdbSignQuery q si sd
     = SignedQuery {

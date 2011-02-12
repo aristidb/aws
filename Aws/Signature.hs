@@ -70,13 +70,6 @@ amzHash HmacSHA1 = "HmacSHA1"
 amzHash HmacSHA256 = "HmacSHA256"
 
 {-
-calculateStringToSign :: AbsoluteTimeInfo -> SignedQuery -> B.ByteString
-calculateStringToSign ti Query{..} 
-    = case api of 
-        SimpleDB -> B.intercalate "\n" [httpMethod method
-                                       , host
-                                       , path
-                                       , urlEncodeVarsBS False sortedQuery]
         S3 -> B.intercalate "\n" $ concat [[httpMethod method]
                                           , [fromMaybe "" contentMd5]
                                           , [fromMaybe "" contentType]
@@ -85,7 +78,6 @@ calculateStringToSign ti Query{..}
                                                AbsoluteExpires time -> fmtTimeEpochSeconds time]
                                           , [] -- canonicalized AMZ headers
                                           , [canonicalizedResource]]
-    where sortedQuery = sort query
 -}
 
 signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
@@ -96,38 +88,6 @@ signature cr ah input = Base64.encode sig
               HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key = HMAC.MacKey (secretAccessKey cr)
-
-{-
-signQuery' :: AbsoluteTimeInfo -> UTCTime -> Credentials -> Query -> Query
-signQuery' ti now cr query
-    = flip execState query $ do
-        modify $ \q -> q { date = Just now }
-        let (authPrepare, authComplete) 
-                = case (api', ti) of
-                    (SimpleDB, _) -> authorizationQuery
-                    (S3, AbsoluteTimestamp _) -> authorizationHeader
-                    (S3, AbsoluteExpires _) -> authorizationQuery
-                           
-        authPrepare
-        sts <- gets $ calculateStringToSign ti
-        modify $ \q -> q { stringToSign = Just sts }
-        authComplete $ signature cr ah sts
-    where
-      api' = api query
-
-      ah = case api' of
-             SimpleDB -> HmacSHA256
-             S3 -> HmacSHA1
-        
-      addQueryItemM n v = modify $ addQueryItem n v
-      
-
-signQuery :: MonadIO io => TimeInfo -> Credentials -> Query -> io Query
-signQuery rti cr query = do
-  now <- liftIO getCurrentTime
-  let ti = makeAbsoluteTimeInfo rti now
-  return $ signQuery' ti now cr query
--}
 
 authorizationQueryPrepare :: Api -> AuthorizationHash -> SignatureData -> [(B.ByteString, B.ByteString)]
 authorizationQueryPrepare api' ah SignatureData { signatureTimeInfo = ti, signatureCredentials = cr }
