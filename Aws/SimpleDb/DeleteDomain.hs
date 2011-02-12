@@ -4,7 +4,9 @@ module Aws.SimpleDb.DeleteDomain
 where
 
 import           Aws.Query
+import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Control.Applicative
@@ -24,9 +26,9 @@ data DeleteDomainResponse
 deleteDomain :: String -> DeleteDomain
 deleteDomain name = DeleteDomain { ddDomainName = name }
              
-instance AsQuery DeleteDomain where
+instance SignQuery DeleteDomain where
     type Info DeleteDomain = SdbInfo
-    asQuery i DeleteDomain{..} = addQuery [("Action", "DeleteDomain"), ("DomainName", BU.fromString ddDomainName)] (sdbiBaseQuery i)
+    signQuery DeleteDomain{..} = sdbSignQuery [("Action", "DeleteDomain"), ("DomainName", BU.fromString ddDomainName)]
 
 instance SdbFromResponse DeleteDomainResponse where
     sdbFromResponse = DeleteDomainResponse <$ testElementNameUI "DeleteDomainResponse"

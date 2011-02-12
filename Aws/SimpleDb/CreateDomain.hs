@@ -4,7 +4,9 @@ module Aws.SimpleDb.CreateDomain
 where
 
 import           Aws.Query
+import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Control.Applicative
@@ -24,9 +26,9 @@ data CreateDomainResponse
 createDomain :: String -> CreateDomain
 createDomain name = CreateDomain { cdDomainName = name }
              
-instance AsQuery CreateDomain where
+instance SignQuery CreateDomain where
     type Info CreateDomain = SdbInfo
-    asQuery i CreateDomain{..} = addQuery [("Action", "CreateDomain"), ("DomainName", BU.fromString cdDomainName)] (sdbiBaseQuery i)
+    signQuery CreateDomain{..} = sdbSignQuery [("Action", "CreateDomain"), ("DomainName", BU.fromString cdDomainName)]
 
 instance SdbFromResponse CreateDomainResponse where
     sdbFromResponse = CreateDomainResponse <$ testElementNameUI "CreateDomainResponse"

@@ -74,7 +74,7 @@ aws request = do
   cfg <- configuration
   liftIO $ liftM3 transact timeInfo credentials configurationFetch cfg request
 
-awsUri :: (AsQuery request
+awsUri :: (SignQuery request
           , ConfigurationFetch (Info request)
           , MonadAws aws)
          => request -> aws B.ByteString
@@ -83,7 +83,7 @@ awsUri request = do
   let ti = timeInfo cfg
       cr = credentials cfg
       info = configurationFetch cfg
-  let uq = asQuery info request
-      uq' = uq { method = Get }
-  q <- signQuery ti cr uq'
+  -- TODO: force GET
+  sd <- liftIO $ signatureData ti cr
+  let q = signQuery request info sd
   return $ queryToUri q

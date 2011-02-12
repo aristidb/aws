@@ -4,8 +4,10 @@ module Aws.SimpleDb.PutAttributes
 where
 
 import           Aws.Query
+import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Model
+import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Control.Applicative
@@ -33,13 +35,13 @@ putAttributes item attributes domain = PutAttributes {
                                        , paDomainName = domain 
                                        }
                                        
-instance AsQuery PutAttributes where
+instance SignQuery PutAttributes where
     type Info PutAttributes = SdbInfo
-    asQuery i PutAttributes{..}
-        = addQuery [("Action", "PutAttributes"), ("ItemName", BU.fromString paItemName), ("DomainName", BU.fromString paDomainName)]
-          . addQueryList (attributeQuery setAttributeQuery) "Attribute" paAttributes
-          . addQueryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
-          $ sdbiBaseQuery i
+    signQuery PutAttributes{..}
+        = sdbSignQuery $ 
+            [("Action", "PutAttributes"), ("ItemName", BU.fromString paItemName), ("DomainName", BU.fromString paDomainName)] ++
+            queryList (attributeQuery setAttributeQuery) "Attribute" paAttributes ++
+            queryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
 
 instance SdbFromResponse PutAttributesResponse where
     sdbFromResponse = PutAttributesResponse <$ testElementNameUI "PutAttributesResponse"

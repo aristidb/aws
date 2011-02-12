@@ -4,7 +4,9 @@ module Aws.SimpleDb.DomainMetadata
 where
 
 import           Aws.Query
+import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Control.Applicative
@@ -35,9 +37,9 @@ data DomainMetadataResponse
 domainMetadata :: String -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
-instance AsQuery DomainMetadata where
+instance SignQuery DomainMetadata where
     type Info DomainMetadata = SdbInfo
-    asQuery i DomainMetadata{..} = addQuery [("Action", "DomainMetadata"), ("DomainName", BU.fromString dmDomainName)] (sdbiBaseQuery i)
+    signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", BU.fromString dmDomainName)]
 
 instance SdbFromResponse DomainMetadataResponse where
     sdbFromResponse = do
