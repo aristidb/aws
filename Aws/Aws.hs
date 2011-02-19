@@ -50,8 +50,8 @@ baseConfiguration = do
                     , credentials = cr
                     , sdbInfo = sdbHttpsPost sdbUsEast
                     , sdbInfoUri = sdbHttpsGet sdbUsEast
-                    , s3Info = s3Http
-                    , s3InfoUri = s3Http
+                    , s3Info = s3Http False
+                    , s3InfoUri = s3Http True
                     }
 -- TODO: better error handling when credentials cannot be loaded
 
