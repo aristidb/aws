@@ -6,19 +6,20 @@ where
 import           Aws.Credentials
 import           Aws.Http
 import           Aws.Query
+import           Aws.S3.Info
 import           Aws.Signature
 import           Aws.Util
 import           Data.Maybe
 import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as L
 
-s3SignQuery :: () -> () -> SignatureData -> SignedQuery
+s3SignQuery :: () -> S3Info -> SignatureData -> SignedQuery
 s3SignQuery x si sd 
     = SignedQuery {
         sqMethod = Get
-      , sqProtocol = HTTP
-      , sqHost = "s3.amazonaws.com"
-      , sqPort = 80
+      , sqProtocol = s3Protocol si
+      , sqHost = s3Host si
+      , sqPort = s3Port si
       , sqPath = path
       , sqSubresource = Nothing
       , sqQuery = []

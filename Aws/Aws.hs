@@ -6,6 +6,7 @@ import           Aws.Credentials
 import           Aws.Debug
 import           Aws.Query
 import           Aws.Response
+import           Aws.S3.Info
 import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
@@ -21,6 +22,8 @@ data Configuration
       , credentials :: Credentials
       , sdbInfo :: SdbInfo
       , sdbInfoUri :: SdbInfo
+      , s3Info :: S3Info
+      , s3InfoUri :: S3Info
       }
 
 class ConfigurationFetch a where
@@ -35,6 +38,10 @@ instance ConfigurationFetch SdbInfo where
     configurationFetch = sdbInfo
     configurationFetchUri = sdbInfoUri
 
+instance ConfigurationFetch S3Info where
+    configurationFetch = s3Info
+    configurationFetchUri = s3InfoUri
+
 baseConfiguration :: MonadIO io => io Configuration
 baseConfiguration = do
   Just cr <- loadCredentialsDefault
@@ -43,6 +50,8 @@ baseConfiguration = do
                     , credentials = cr
                     , sdbInfo = sdbHttpsPost sdbUsEast
                     , sdbInfoUri = sdbHttpsGet sdbUsEast
+                    , s3Info = s3Http
+                    , s3InfoUri = s3Http
                     }
 -- TODO: better error handling when credentials cannot be loaded
 
