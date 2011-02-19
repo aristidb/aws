@@ -9,7 +9,8 @@ import           Aws.Query
 import           Aws.Signature
 import           Aws.Util
 import           Data.Maybe
-import qualified Data.ByteString as B
+import qualified Data.ByteString      as B
+import qualified Data.ByteString.Lazy as L
 
 s3SignQuery :: () -> () -> SignatureData -> SignedQuery
 s3SignQuery x si sd 
@@ -18,7 +19,7 @@ s3SignQuery x si sd
       , sqProtocol = HTTP
       , sqHost = "s3.amazonaws.com"
       , sqPort = 80
-      , sqPath = "/"
+      , sqPath = path
       , sqSubresource = Nothing
       , sqQuery = []
       , sqDate = Just $ signatureTime sd
@@ -30,7 +31,7 @@ s3SignQuery x si sd
                           ]
       , sqContentType = Nothing
       , sqContentMd5 = Nothing
-      , sqBody = ""
+      , sqBody = L.empty
       , sqStringToSign = stringToSign
       }
     where

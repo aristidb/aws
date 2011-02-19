@@ -8,7 +8,8 @@ import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Util
 import           Data.List
-import qualified Data.ByteString   as B
+import qualified Data.ByteString      as B
+import qualified Data.ByteString.Lazy as L
 
 sdbSignQuery :: [(B.ByteString, B.ByteString)] -> SdbInfo -> SignatureData -> SignedQuery
 sdbSignQuery q si sd
@@ -24,7 +25,7 @@ sdbSignQuery q si sd
       , sqAuthorization = Nothing
       , sqContentType = Nothing
       , sqContentMd5 = Nothing
-      , sqBody = ""
+      , sqBody = L.empty
       , sqStringToSign = stringToSign
       }
     where
