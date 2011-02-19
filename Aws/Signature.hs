@@ -72,23 +72,3 @@ signature cr ah input = Base64.encode sig
               HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key = HMAC.MacKey (secretAccessKey cr)
-
-authorizationQueryPrepare :: Api -> AuthorizationHash -> SignatureData -> [(B.ByteString, B.ByteString)]
-authorizationQueryPrepare api' ah SignatureData { signatureTimeInfo = ti, signatureCredentials = cr }
-    = concat [
-       case ti of
-         AbsoluteTimestamp time -> 
-               [("Timestamp", fmtAmzTime time)]
-         AbsoluteExpires time -> 
-               [("Expires", case api' of
-                             SimpleDB -> fmtAmzTime time
-                             S3 -> fmtTimeEpochSeconds time)]
-      , [("AWSAccessKeyId", accessKeyID cr)]
-      , [("SignatureMethod", amzHash ah)]
-      , case api' of
-          SimpleDB -> [("SignatureVersion", "2")]
-          S3 -> []
-      ]
-
-authorizationQueryComplete :: B.ByteString -> [(B.ByteString, B.ByteString)]
-authorizationQueryComplete sig = [("Signature", sig)]

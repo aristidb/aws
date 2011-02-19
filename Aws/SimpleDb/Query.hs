@@ -2,6 +2,7 @@
 module Aws.SimpleDb.Query
 where
 
+import           Aws.Credentials
 import           Aws.Http
 import           Aws.Query
 import           Aws.Signature
@@ -30,12 +31,23 @@ sdbSignQuery q si sd
       }
     where
       ah = HmacSHA256
-      q' = sort $ q ++ ("Version", "2009-04-15") : authorizationQueryPrepare SimpleDB ah sd
-      sq = q' ++ authorizationQueryComplete sig
+      q' = sort $ q ++ ("Version", "2009-04-15") : queryAuth
+      ti = signatureTimeInfo sd
+      cr = signatureCredentials sd
+      queryAuth = [case ti of
+                     AbsoluteTimestamp time -> 
+                         ("Timestamp", fmtAmzTime time)
+                     AbsoluteExpires time -> 
+                         ("Expires", fmtAmzTime time)
+                  , ("AWSAccessKeyId", accessKeyID cr)
+                  , ("SignatureMethod", amzHash ah)
+                  , ("SignatureVersion", "2")
+                  ]
+      sq = ("Signature", sig) : q'
       method = sdbiHttpMethod si
       host = sdbiHost si
       path = "/"
-      sig = signature (signatureCredentials sd) ah stringToSign
+      sig = signature cr ah stringToSign
       stringToSign = B.intercalate "\n" [httpMethod method
                                         , host
                                         , path
