@@ -87,7 +87,7 @@ Library
                        bytestring ==0.9.*,
                        cereal ==0.3.*,
                        containers ==0.3.*,
-                       crypto-api ==0.3.*,
+                       crypto-api ==0.5.*,
                        cryptohash ==0.6.*,
                        directory ==1.0.*,
                        enumerator ==0.4.*,
