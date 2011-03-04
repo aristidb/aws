@@ -25,7 +25,7 @@ xmlResponseIteratee :: C.Exception e => Xml e HTTP.Response a -> Wai.Status -> H
 xmlResponseIteratee xml status headers = do
   body <- HTTP.lbsIter status headers
   case runXml xml body of
-    Left e -> En.Iteratee $ C.throw e
+    Left e -> En.throwError e
     Right a -> return a
 
 parseXmlResponse :: (FromXmlError e, Error e) => Xml e HTTP.Response XL.Element
