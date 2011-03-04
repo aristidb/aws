@@ -19,7 +19,7 @@ data S3Response a
 instance ResponseIteratee (S3Response ()) where
     responseIteratee status headers = do
       let headerString = fromMaybe "" . fmap BU.toString . flip lookup headers
-      let amzId2 = headerString "x-aamz-id-2"
+      let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
       return $ S3Response {
                    fromS3Response = ()
