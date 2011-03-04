@@ -57,6 +57,7 @@ Library
                        Aws.Metadata,
                        Aws.Query,
                        Aws.Response,
+                       Aws.S3.Error,
                        Aws.S3.GetService,
                        Aws.S3.Info,
                        Aws.S3.Model,
