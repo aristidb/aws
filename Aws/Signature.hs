@@ -48,11 +48,6 @@ signatureData rti cr = do
 class SignQuery r where
     type Info r :: *
     signQuery :: r -> Info r -> SignatureData -> SignedQuery
-  
-data Api
-    = SimpleDB
-    | S3
-    deriving (Show)
 
 data AuthorizationHash
     = HmacSHA1
