@@ -24,18 +24,10 @@ data BucketInfo
       }
     deriving (Show)
 
-{-
-data LocationConstraint 
-    = EU | UsWest1 | ApSouthEast1 | UsClassic
-    deriving (Show)
--}
+type LocationConstraint = String
 
-$(makeId "LocationConstraint" [| flip const |]
-             [
-               ("EU", "EU")
-             , ("UsWest1", "us-west-1")
-             , ("ApSouthEast1", "ap-southeast-1")
-             , ("ApNorthEast1", "ap-northeast-1")
-             , ("UsClassic", "")
-             ]
-             [])
+locationUsClassic = ""
+locationUsWest = "us-west-1"
+locationEU = "EU"
+locationApSouthEast = "ap-southeast-1"
+locationApNorthEast = "ap-northeast-1"
