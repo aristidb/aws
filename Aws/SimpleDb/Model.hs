@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, NoMonomorphismRestriction #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Aws.SimpleDb.Model
 where
   

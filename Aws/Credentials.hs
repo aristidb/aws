@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
-
 module Aws.Credentials
 where
   

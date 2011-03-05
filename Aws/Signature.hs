@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, OverloadedStrings #-}
 module Aws.Signature
 where
   

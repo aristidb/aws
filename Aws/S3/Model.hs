@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Aws.S3.Model
 where
 

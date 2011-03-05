@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, OverloadedStrings #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 module Aws.Transaction
 where
   

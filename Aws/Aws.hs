@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances, FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Aws.Aws
 where
 

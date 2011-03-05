@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, TemplateHaskell #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module Aws.SimpleDb.Error
 where
 

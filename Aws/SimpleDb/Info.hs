@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Aws.SimpleDb.Info
 where
 

@@ -1,5 +1,4 @@
-{-# LANGUAGE RecordWildCards, MultiParamTypeClasses, TypeFamilies, OverloadedStrings #-}
-
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Aws.Query
 where
 
