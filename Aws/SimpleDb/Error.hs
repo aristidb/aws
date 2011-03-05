@@ -2,7 +2,6 @@
 module Aws.SimpleDb.Error
 where
 
-import           Aws.Id
 import           Aws.Metadata
 import           Control.Monad.Error.Class
 import           Data.Typeable

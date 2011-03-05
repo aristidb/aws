@@ -4,7 +4,6 @@ module Aws
 , module Aws.Credentials
 , module Aws.Debug
 , module Aws.Http
-, module Aws.Id
 , module Aws.Metadata
 , module Aws.Query
 , module Aws.Response
@@ -20,7 +19,6 @@ import Aws.Aws
 import Aws.Credentials
 import Aws.Debug
 import Aws.Http
-import Aws.Id
 import Aws.Metadata
 import Aws.Query
 import Aws.Response

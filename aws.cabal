@@ -53,7 +53,6 @@ Library
                        Aws.Credentials,
                        Aws.Debug,
                        Aws.Http,
-                       Aws.Id,
                        Aws.Metadata,
                        Aws.Query,
                        Aws.Response,
