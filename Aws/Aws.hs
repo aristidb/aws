@@ -4,6 +4,7 @@ where
 
 import           Aws.Credentials
 import           Aws.Debug
+import           Aws.Http
 import           Aws.Query
 import           Aws.Response
 import           Aws.S3.Info
@@ -50,8 +51,8 @@ baseConfiguration = do
                     , credentials = cr
                     , sdbInfo = sdbHttpsPost sdbUsEast
                     , sdbInfoUri = sdbHttpsGet sdbUsEast
-                    , s3Info = s3Http False
-                    , s3InfoUri = s3Http True
+                    , s3Info = s3 HTTP s3EndpointUsClassic False
+                    , s3InfoUri = s3 HTTP s3EndpointUsClassic True
                     }
 -- TODO: better error handling when credentials cannot be loaded
 

@@ -19,7 +19,7 @@ s3SignQuery x si sd
     = SignedQuery {
         sqMethod = Get
       , sqProtocol = s3Protocol si
-      , sqHost = s3Host si
+      , sqHost = endpointHost endpoint
       , sqPort = s3Port si
       , sqPath = path
       , sqSubresource = Nothing
@@ -32,6 +32,7 @@ s3SignQuery x si sd
       , sqStringToSign = stringToSign
       }
     where
+      endpoint = s3Endpoint si
       method = Get
       contentMd5 = Nothing
       contentType = Nothing
