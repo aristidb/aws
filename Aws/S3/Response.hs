@@ -24,7 +24,7 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
       let headerString = fromMaybe "" . fmap BU.toString . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
-      return $ S3Response {
+      return S3Response {
                    fromS3Response = specific
                  , s3AmzId2 = amzId2
                  , s3RequestId = requestId
