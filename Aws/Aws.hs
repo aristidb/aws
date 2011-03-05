@@ -90,7 +90,15 @@ aws :: (Transaction request response
        , ConfigurationFetch (Info request)
        , MonadAws aws) 
       => request -> aws response
-aws request = do
+aws = unsafeAws
+
+unsafeAws
+  :: (MonadAws m,
+      ResponseIteratee response,
+      SignQuery request,
+      ConfigurationFetch (Info request)) =>
+     request -> m response
+unsafeAws request = do
   cfg <- configuration
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
   let info = configurationFetch cfg
