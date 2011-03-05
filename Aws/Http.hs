@@ -3,7 +3,8 @@
 module Aws.Http
 where
   
-import qualified Data.ByteString as B
+import           Data.ByteString.Char8 ({- IsString -})
+import qualified Data.ByteString       as B
 
 data Protocol
     = HTTP
