@@ -25,6 +25,9 @@ sdbEuWest = "sdb.eu-west-1.amazonaws.com"
 
 sdbApSoutheast :: B.ByteString
 sdbApSoutheast = "sdb.ap-southeast-1.amazonaws.com"
+
+sdbApNortheast :: B.ByteString
+sdbApNortheast = "sdb.ap-northeast-1.amazonaws.com"
              
 sdbHttpGet :: B.ByteString -> SdbInfo
 sdbHttpGet endpoint = SdbInfo HTTP Get endpoint (defaultPort HTTP)
