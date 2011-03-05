@@ -2,7 +2,6 @@
 module Aws.S3.Model
 where
 
-import Data.ByteString.Char8 ({- IsString -})
 import Data.Time
 
 type CanonicalUserId = String
