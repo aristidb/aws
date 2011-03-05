@@ -15,7 +15,6 @@ import           Control.Monad.Compose.Class
 import           Data.Time.Format
 import           System.Locale
 import           Text.XML.Monad
-import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
 data GetService = GetService
@@ -38,9 +37,9 @@ instance S3ResponseIteratee GetServiceResponse where
             return GetServiceResponse { gsrOwner = owner, gsrBuckets = buckets }
           
           parseUserInfo = do
-            id <- strContent <<< findElementNameUI "ID"
+            id_ <- strContent <<< findElementNameUI "ID"
             displayName <- strContent <<< findElementNameUI "DisplayName"
-            return UserInfo { userId = id, userDisplayName = displayName }
+            return UserInfo { userId = id_, userDisplayName = displayName }
 
           parseBucket = do
             name <- strContent <<< findElementNameUI "Name"

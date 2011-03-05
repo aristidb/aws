@@ -4,7 +4,6 @@ where
   
 import           Aws.Credentials
 import           Aws.Query
-import           Aws.Util
 import           Data.Time
 import qualified Crypto.HMAC               as HMAC
 import qualified Crypto.Hash.SHA1          as SHA1

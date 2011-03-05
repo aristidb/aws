@@ -3,7 +3,6 @@ module Aws.S3.Response
 where
 
 import           Aws.Response
-import           Aws.S3.Error
 import           Data.Maybe
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.UTF8    as BU

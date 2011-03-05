@@ -21,4 +21,5 @@ data S3Info
       }
     deriving (Show)
 
+s3Http :: Bool -> S3Info
 s3Http uri = S3Info { s3Protocol = HTTP, s3Host = "s3.amazonaws.com", s3Port = 80, s3UseUri = uri, s3DefaultExpiry = 15*60 }
