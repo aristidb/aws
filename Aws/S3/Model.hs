@@ -35,6 +35,7 @@ $(makeId "LocationConstraint" [| flip const |]
                ("EU", "EU")
              , ("UsWest1", "us-west-1")
              , ("ApSouthEast1", "ap-southeast-1")
+             , ("ApNorthEast1", "ap-northeast-1")
              , ("UsClassic", "")
              ]
              [])
