@@ -11,6 +11,7 @@ import           Aws.Util
 import           Data.List
 import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as L
+import qualified Network.HTTP.Types   as HTTP
 
 sdbSignQuery :: [(B.ByteString, B.ByteString)] -> SdbInfo -> SignatureData -> SignedQuery
 sdbSignQuery q si sd
@@ -20,7 +21,6 @@ sdbSignQuery q si sd
       , sqHost = host
       , sqPort = sdbiPort si
       , sqPath = path
-      , sqSubresource = Nothing
       , sqQuery = sq
       , sqDate = Just $ signatureTime sd
       , sqAuthorization = Nothing
@@ -31,7 +31,7 @@ sdbSignQuery q si sd
       }
     where
       ah = HmacSHA256
-      q' = sort $ q ++ ("Version", "2009-04-15") : queryAuth
+      q' = HTTP.simpleQueryToQuery . sort $ q ++ ("Version", "2009-04-15") : queryAuth
       ti = signatureTimeInfo sd
       cr = signatureCredentials sd
       queryAuth = [case ti of
@@ -43,7 +43,7 @@ sdbSignQuery q si sd
                   , ("SignatureMethod", amzHash ah)
                   , ("SignatureVersion", "2")
                   ]
-      sq = ("Signature", sig) : q'
+      sq = ("Signature", Just sig) : q'
       method = sdbiHttpMethod si
       host = sdbiHost si
       path = "/"
@@ -51,4 +51,4 @@ sdbSignQuery q si sd
       stringToSign = B.intercalate "\n" [httpMethod method
                                         , host
                                         , path
-                                        , urlEncodeVarsBS False q']
+                                        , HTTP.renderQuery False q']

@@ -10,6 +10,7 @@ import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as L
 import qualified Data.ByteString.UTF8    as BU
 import qualified Network.HTTP.Enumerator as HTTP
+import qualified Network.HTTP.Types      as HTTP
 
 data SignedQuery 
     = SignedQuery {
@@ -18,8 +19,7 @@ data SignedQuery
       , sqHost :: B.ByteString
       , sqPort :: Int
       , sqPath :: B.ByteString
-      , sqSubresource :: Maybe B.ByteString
-      , sqQuery :: [(B.ByteString, B.ByteString)]
+      , sqQuery :: HTTP.Query
       , sqDate :: Maybe UTCTime
       , sqAuthorization :: Maybe B.ByteString
       , sqContentType :: Maybe B.ByteString
@@ -39,7 +39,7 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.host = sqHost
       , HTTP.port = sqPort
       , HTTP.path = B.concat $ sqPath : case sqMethod of 
-                                         Get -> [urlEncodeVarsBS' True sqSubresource sqQuery]
+                                         Get -> [HTTP.renderQuery True sqQuery]
                                          PostQuery -> []
       , HTTP.queryString = [] -- not used for safety reasons
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) sqDate
@@ -48,7 +48,7 @@ queryToHttpRequest SignedQuery{..}
                                         , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
       , HTTP.requestBody = case sqMethod of
                              Get -> L.empty
-                             PostQuery -> L.fromChunks [urlEncodeVarsBS' False sqSubresource sqQuery]
+                             PostQuery -> L.fromChunks [HTTP.renderQuery False sqQuery]
       }
     where contentType = case sqMethod of
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
@@ -63,5 +63,5 @@ queryToUri SignedQuery{..}
       , sqHost
       , if sqPort == defaultPort sqProtocol then "" else BU.fromString $ ':' : show sqPort
       , sqPath
-      , urlEncodeVarsBS' True sqSubresource sqQuery
+      , HTTP.renderQuery True sqQuery
       ]

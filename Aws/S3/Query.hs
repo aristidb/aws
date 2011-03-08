@@ -13,6 +13,7 @@ import           Data.Maybe
 import           Data.Time
 import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as L
+import qualified Network.HTTP.Types   as HTTP
 
 s3SignQuery :: () -> S3Info -> SignatureData -> SignedQuery
 s3SignQuery x si sd 
@@ -22,7 +23,6 @@ s3SignQuery x si sd
       , sqHost = endpointHost endpoint
       , sqPort = s3Port si
       , sqPath = path
-      , sqSubresource = Nothing
       , sqQuery = query
       , sqDate = Just $ signatureTime sd
       , sqAuthorization = authorization
@@ -54,7 +54,7 @@ s3SignQuery x si sd
                                                  , [canonicalizedResource]]
       (authorization, query) = case ti of
                                  AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID cr, ":", sig], [])
-                                 AbsoluteExpires time -> (Nothing, authQuery time)
+                                 AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ authQuery time)
       authQuery time
           = [("Expires", fmtTimeEpochSeconds time)
             , ("AWSAccessKeyId", accessKeyID cr)

@@ -94,6 +94,7 @@ Library
                        enumerator ==0.4.*,
                        filepath ==1.1.*,
                        http-enumerator >=0.3.1 && < 0.4,
+                       http-types >=0.4.1 && <0.5,
                        mtl ==2.*,
                        old-locale ==1.*,
                        shortcircuit ==0.1.*,
