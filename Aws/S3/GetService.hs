@@ -36,11 +36,6 @@ instance S3ResponseIteratee GetServiceResponse where
             
             return GetServiceResponse { gsrOwner = owner, gsrBuckets = buckets }
           
-          parseUserInfo = do
-            id_ <- strContent <<< findElementNameUI "ID"
-            displayName <- strContent <<< findElementNameUI "DisplayName"
-            return UserInfo { userId = id_, userDisplayName = displayName }
-
           parseBucket = do
             name <- strContent <<< findElementNameUI "Name"
             creationDateString <- strContent <<< findElementNameUI "CreationDate"

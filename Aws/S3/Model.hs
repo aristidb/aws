@@ -1,7 +1,11 @@
 module Aws.S3.Model
 where
 
-import Data.Time
+import           Aws.S3.Error
+import           Control.Monad.Compose.Class
+import           Data.Time
+import           Text.XML.Monad
+import qualified Text.XML.Light              as XL
 
 type CanonicalUserId = String
 
@@ -12,6 +16,12 @@ data UserInfo
       }
     deriving (Show)
 
+parseUserInfo :: Xml S3Error XL.Element UserInfo
+parseUserInfo = do
+  id_ <- strContent <<< findElementNameUI "ID"
+  displayName <- strContent <<< findElementNameUI "DisplayName"
+  return UserInfo { userId = id_, userDisplayName = displayName }
+
 type Bucket = String
 
 data BucketInfo
@@ -19,6 +29,21 @@ data BucketInfo
         bucketName :: Bucket
       , bucketCreationDate :: UTCTime
       }
+    deriving (Show)
+
+data ObjectInfo
+    = ObjectInfo {
+        objectKey :: String
+      , objectLastModified :: UTCTime
+      , objectETag :: String
+      , objectSize :: Integer
+      , objectStorageClass :: StorageClass
+      , objectOwner :: UserInfo
+      }
+    deriving (Show)
+
+data StorageClass 
+    = StorageClassStandard
     deriving (Show)
 
 type LocationConstraint = String
