@@ -78,7 +78,7 @@ s3 :: Protocol -> Endpoint -> Bool -> S3Info
 s3 protocol endpoint uri 
     = S3Info { 
         s3Protocol = protocol
-      , s3Endpoint = s3EndpointUsClassic
+      , s3Endpoint = endpoint
       , s3Port = defaultPort protocol
       , s3UseUri = uri
       , s3DefaultExpiry = 15*60
