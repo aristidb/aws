@@ -30,6 +30,7 @@ data S3Info
       }
     deriving (Show)
 
+s3EndpointUsClassic :: Endpoint
 s3EndpointUsClassic 
     = Endpoint { 
         endpointHost = "s3.amazonaws.com"
@@ -41,6 +42,7 @@ s3EndpointUsClassic
                                              , locationApNorthEast]
       }
 
+s3EndpointUsWest :: Endpoint
 s3EndpointUsWest
     = Endpoint {
         endpointHost = "s3-us-west-1.amazonaws.com"
@@ -48,6 +50,7 @@ s3EndpointUsWest
       , endpointAllowedLocationConstraints = [locationUsWest]
       }
 
+s3EndpointEu :: Endpoint
 s3EndpointEu
     = Endpoint {
         endpointHost = "s3-eu-west-1.amazonaws.com"
@@ -55,6 +58,7 @@ s3EndpointEu
       , endpointAllowedLocationConstraints = [locationEu]
       }
 
+s3EndpointApSouthEast :: Endpoint
 s3EndpointApSouthEast
     = Endpoint {
         endpointHost = "s3-ap-southeast-1.amazonaws.com"
@@ -62,6 +66,7 @@ s3EndpointApSouthEast
       , endpointAllowedLocationConstraints = [locationApSouthEast]
       }
 
+s3EndpointApNorthEast :: Endpoint
 s3EndpointApNorthEast
     = Endpoint {
         endpointHost = "s3-ap-northeast-1.amazonaws.com"
