@@ -9,22 +9,34 @@ import           Aws.Query
 import           Aws.S3.Info
 import           Aws.Signature
 import           Aws.Util
+import           Control.Applicative
+import           Data.List
 import           Data.Maybe
+import           Data.Monoid
 import           Data.Time
-import qualified Data.Ascii           as A
-import qualified Data.ByteString      as B
-import qualified Data.ByteString.Lazy as L
-import qualified Network.HTTP.Types   as HTTP
+import qualified Blaze.ByteString.Builder as Blaze
+import qualified Data.Ascii               as A
+import qualified Data.ByteString          as B
+import qualified Data.ByteString.Lazy     as L
+import qualified Network.HTTP.Types       as HTTP
 
-s3SignQuery :: () -> S3Info -> SignatureData -> SignedQuery
-s3SignQuery x si sd 
+data S3Query
+    = S3Query {
+        s3QBucket :: Maybe A.Ascii
+      , s3QSubresources :: HTTP.Query
+      , s3QQuery :: HTTP.Query
+      }
+    deriving (Show)
+
+s3SignQuery :: S3Query -> S3Info -> SignatureData -> SignedQuery
+s3SignQuery s3q si sd 
     = SignedQuery {
         sqMethod = Get
       , sqProtocol = s3Protocol si
       , sqHost = endpointHost endpoint
       , sqPort = s3Port si
       , sqPath = path
-      , sqQuery = query
+      , sqQuery = sortedSubresources ++ query ++ authQuery
       , sqDate = Just $ signatureTime sd
       , sqAuthorization = authorization
       , sqContentType = Nothing
@@ -37,8 +49,15 @@ s3SignQuery x si sd
       method = Get
       contentMd5 = Nothing
       contentType = Nothing
-      path = "/"
-      canonicalizedResource = "/"
+      bucket = s3QBucket s3q
+      path = mconcat . catMaybes $ [Just "/", bucket]
+      query = s3QQuery s3q
+      sortedSubresources = sort $ s3QSubresources s3q
+      canonicalizedResource = A.fromAsciiBuilder . mconcat . catMaybes $
+                              [ Just $ A.toAsciiBuilder "/"
+                              , A.toAsciiBuilder <$> bucket
+                              , Just $ HTTP.renderQueryBuilder True sortedSubresources
+                              ]
       ti = case (s3UseUri si, signatureTimeInfo sd) of
              (False, ti') -> ti'
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry si `addUTCTime` time
@@ -52,11 +71,11 @@ s3SignQuery x si sd
                                                                        AbsoluteTimestamp time -> fmtRfc822Time time
                                                                        AbsoluteExpires time -> fmtTimeEpochSeconds time]
                                                  , [] -- canonicalized AMZ headers
-                                                 , [canonicalizedResource]]
-      (authorization, query) = case ti of
+                                                 , [A.toByteString canonicalizedResource]]
+      (authorization, authQuery) = case ti of
                                  AbsoluteTimestamp _ -> (Just $ A.unsafeFromByteString $ B.concat ["AWS ", accessKeyID cr, ":", sig], [])
-                                 AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ authQuery time)
-      authQuery time
+                                 AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ makeAuthQuery time)
+      makeAuthQuery time
           = [("Expires", A.toByteString $ fmtTimeEpochSeconds time)
             , ("AWSAccessKeyId", accessKeyID cr)
             , ("SignatureMethod", "HmacSHA256")
