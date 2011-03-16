@@ -5,7 +5,7 @@ where
 import           Aws.Http
 import           Aws.S3.Model
 import           Data.Time
-import qualified Data.ByteString as B
+import qualified Data.Ascii   as A
 
 data S3Authorization 
     = S3AuthorizationHeader 
@@ -14,7 +14,7 @@ data S3Authorization
 
 data Endpoint
     = Endpoint {
-        endpointHost :: B.ByteString
+        endpointHost :: A.Ascii
       , endpointDefaultLocationConstraint :: LocationConstraint
       , endpointAllowedLocationConstraints :: [LocationConstraint]
       }

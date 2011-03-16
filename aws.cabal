@@ -83,8 +83,10 @@ Library
   
   -- Packages needed in order to build this package.
   Build-depends:
+                       ascii >=0.0.2 && <0.1,
                        base ==4.*,
                        base64-bytestring ==0.1.*,
+                       blaze-builder >=0.2.1.4 && <0.3,
                        bytestring ==0.9.*,
                        cereal ==0.3.*,
                        containers ==0.3.*,
@@ -93,8 +95,8 @@ Library
                        directory ==1.0.*,
                        enumerator ==0.4.*,
                        filepath ==1.1.*,
-                       http-enumerator >=0.3.1 && < 0.4,
-                       http-types >=0.4.1 && <0.5,
+                       http-enumerator >=0.4.0.1 && < 0.5,
+                       http-types >=0.5.1 && <0.6,
                        mtl ==2.*,
                        old-locale ==1.*,
                        shortcircuit ==0.1.*,

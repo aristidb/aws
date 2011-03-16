@@ -3,8 +3,7 @@
 module Aws.Http
 where
   
-import           Data.ByteString.Char8 ({- IsString -})
-import qualified Data.ByteString       as B
+import qualified Network.HTTP.Types    as HTTP
 
 data Protocol
     = HTTP
@@ -20,6 +19,6 @@ data Method
     | PostQuery
     deriving (Show, Eq)
 
-httpMethod :: Method -> B.ByteString
+httpMethod :: Method -> HTTP.Method
 httpMethod Get = "GET"
 httpMethod PostQuery = "POST"

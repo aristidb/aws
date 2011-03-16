@@ -4,11 +4,11 @@ module Aws.Util
 where
   
 import           Control.Arrow
-import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Time
 import           System.Locale
-import qualified Data.ByteString       as B
-import qualified Data.ByteString.UTF8  as BU
+import qualified Data.Ascii           as A
+import qualified Data.ByteString      as B
+import qualified Data.ByteString.UTF8 as BU
 
 queryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> [(B.ByteString, B.ByteString)]
 queryList f prefix xs = concat $ zipWith combine prefixList (map f xs)
@@ -26,14 +26,14 @@ awsTrue = awsBool True
 awsFalse :: B.ByteString
 awsFalse = awsBool False
 
-fmtTime :: String -> UTCTime -> B.ByteString
-fmtTime s t = BU.fromString $ formatTime defaultTimeLocale s t
+fmtTime :: String -> UTCTime -> A.Ascii
+fmtTime s t = A.unsafeFromString $ formatTime defaultTimeLocale s t
 
-fmtRfc822Time :: UTCTime -> B.ByteString
+fmtRfc822Time :: UTCTime -> A.Ascii
 fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"
 
-fmtAmzTime :: UTCTime -> B.ByteString
+fmtAmzTime :: UTCTime -> A.Ascii
 fmtAmzTime = fmtTime "%Y-%m-%dT%H:%M:%S"
 
-fmtTimeEpochSeconds :: UTCTime -> B.ByteString
+fmtTimeEpochSeconds :: UTCTime -> A.Ascii
 fmtTimeEpochSeconds = fmtTime "%s"

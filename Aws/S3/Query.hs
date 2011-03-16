@@ -11,6 +11,7 @@ import           Aws.Signature
 import           Aws.Util
 import           Data.Maybe
 import           Data.Time
+import qualified Data.Ascii           as A
 import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as L
 import qualified Network.HTTP.Types   as HTTP
@@ -44,19 +45,19 @@ s3SignQuery x si sd
              (True, AbsoluteExpires time) -> AbsoluteExpires time
       cr = signatureCredentials sd
       sig = signature cr HmacSHA1 stringToSign
-      stringToSign = B.intercalate "\n" $ concat [[httpMethod method]
+      stringToSign = B.intercalate "\n" $ concat [[A.toByteString $ httpMethod method]
                                                  , [fromMaybe "" contentMd5]
                                                  , [fromMaybe "" contentType]
-                                                 , [case ti of
-                                                      AbsoluteTimestamp time -> fmtRfc822Time time
-                                                      AbsoluteExpires time -> fmtTimeEpochSeconds time]
+                                                 , [A.toByteString $ case ti of
+                                                                       AbsoluteTimestamp time -> fmtRfc822Time time
+                                                                       AbsoluteExpires time -> fmtTimeEpochSeconds time]
                                                  , [] -- canonicalized AMZ headers
                                                  , [canonicalizedResource]]
       (authorization, query) = case ti of
-                                 AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID cr, ":", sig], [])
+                                 AbsoluteTimestamp _ -> (Just $ A.unsafeFromByteString $ B.concat ["AWS ", accessKeyID cr, ":", sig], [])
                                  AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ authQuery time)
       authQuery time
-          = [("Expires", fmtTimeEpochSeconds time)
+          = [("Expires", A.toByteString $ fmtTimeEpochSeconds time)
             , ("AWSAccessKeyId", accessKeyID cr)
             , ("SignatureMethod", "HmacSHA256")
             , ("Signature", sig)]

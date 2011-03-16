@@ -106,7 +106,7 @@ unsafeAws request = do
   let q = signQuery request info sd
   debugPrint "String to sign" $ sqStringToSign q
   let httpRequest = queryToHttpRequest q
-  liftIO $ En.run_ $ HTTP.httpRedirect httpRequest responseIteratee
+  liftIO $ HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest responseIteratee
 
 awsUri :: (SignQuery request
           , ConfigurationFetch (Info request)
