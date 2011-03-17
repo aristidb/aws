@@ -4,12 +4,20 @@ where
 data Metadata
     = NoMetadata
     | FromSdbMetadata SdbMetadata
+    | FromS3Metadata S3Metadata
     deriving (Show)
 
 data SdbMetadata 
     = SdbMetadata {
         requestId :: String
       , boxUsage :: Maybe String
+      }
+    deriving (Show)
+
+data S3Metadata
+    = S3Metadata {
+        s3MAmzId2 :: String
+      , s3MRequestId :: String
       }
     deriving (Show)
 
@@ -30,6 +38,11 @@ instance SpecificMetadata SdbMetadata where
     asMetadata = FromSdbMetadata
     fromMetadata (FromSdbMetadata m) = Just m
     fromMetadata _                   = Nothing
+
+instance SpecificMetadata S3Metadata where
+    asMetadata = FromS3Metadata
+    fromMetadata (FromS3Metadata m) = Just m
+    fromMetadata _                  = Nothing
 
 getMetadata' :: (WithMetadata a, SpecificMetadata m) => a -> Maybe m
 getMetadata' = fromMetadata . getMetadata

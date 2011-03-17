@@ -23,3 +23,7 @@ instance FromXmlError S3Error where
 instance Error S3Error where
     noMsg = fromXmlError noMsg
     strMsg = fromXmlError . strMsg
+
+instance WithMetadata S3Error where
+    getMetadata = s3XmlErrorMetadata
+    setMetadata m a = a { s3XmlErrorMetadata = m }
