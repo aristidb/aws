@@ -37,6 +37,15 @@ replaceAttribute name value = ForAttribute name (SetAttribute value True)
 setAttributeQuery :: SetAttribute -> [(B.ByteString, B.ByteString)]
 setAttributeQuery (SetAttribute value replace)
     = ("Value", BU.fromString value) : [("Replace", awsTrue) | replace]
+
+data DeleteAttribute
+    = DeleteAttribute
+    | ValuedDeleteAttribute { deleteAttributeValue :: String }
+    deriving (Show)
+
+deleteAttributeQuery :: DeleteAttribute -> [(B.ByteString, B.ByteString)]
+deleteAttributeQuery DeleteAttribute = []
+deleteAttributeQuery (ValuedDeleteAttribute value) = [("Value", BU.fromString value)]
              
 data ExpectedAttribute
     = ExpectedValue { expectedAttributeValue :: String }

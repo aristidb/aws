@@ -1,7 +1,9 @@
 module Aws.SimpleDb
 (
-  module Aws.SimpleDb.BatchPutAttributes
+  module Aws.SimpleDb.BatchDeleteAttributes
+, module Aws.SimpleDb.BatchPutAttributes
 , module Aws.SimpleDb.CreateDomain
+, module Aws.SimpleDb.DeleteAttributes
 , module Aws.SimpleDb.DeleteDomain
 , module Aws.SimpleDb.DomainMetadata
 , module Aws.SimpleDb.Error
@@ -16,8 +18,10 @@ module Aws.SimpleDb
 )
 where
 
+import Aws.SimpleDb.BatchDeleteAttributes
 import Aws.SimpleDb.BatchPutAttributes
 import Aws.SimpleDb.CreateDomain
+import Aws.SimpleDb.DeleteAttributes
 import Aws.SimpleDb.DeleteDomain
 import Aws.SimpleDb.DomainMetadata
 import Aws.SimpleDb.Error
