@@ -32,7 +32,7 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
       specific <- tryError $ s3ResponseIteratee status headers
       
       case specific of
-        Left (err :: S3Error) -> En.throwError (setMetadata' m err)
+        Left (err :: S3Error) -> En.throwError (setMetadata m err)
             where m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
         Right resp -> return S3Response {
                                         fromS3Response = resp

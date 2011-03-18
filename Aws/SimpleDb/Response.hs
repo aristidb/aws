@@ -37,7 +37,7 @@ instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
                      let metadata = SdbMetadata requestId' boxUsage'
                      innerTry <- try $ fromXmlInner status
                      inner <- case innerTry of
-                       Left err -> raise $ setMetadata' metadata err
+                       Left err -> raise $ setMetadata metadata err
                        Right response -> return response
                      return $ SdbResponse inner metadata
               fromXmlInner :: SdbFromResponse a => Int -> Xml SdbError XL.Element a
@@ -50,7 +50,7 @@ instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
               fromError status = do
                      errCode <- strContent <<< findElementNameUI "Code"
                      errMessage <- strContent <<< findElementNameUI "Message"
-                     raise $ SdbError status errCode errMessage NoMetadata
+                     raise $ SdbError status errCode errMessage Nothing
 
 class SdbFromResponse a where
     sdbFromResponse :: Xml SdbError XL.Element a

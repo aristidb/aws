@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
 module Aws.SimpleDb.Error
 where
 
@@ -15,23 +15,23 @@ data SdbError
         sdbStatusCode :: Int
       , sdbErrorCode :: ErrorCode
       , sdbErrorMessage :: String
-      , sdbErrorMetadata :: Metadata
+      , sdbErrorMetadata :: Maybe SdbMetadata
       }
     | SdbXmlError { 
         fromSdbXmlError :: XmlError
-      , sdbXmlErrorMetadata :: Metadata
+      , sdbXmlErrorMetadata :: Maybe SdbMetadata
       }
     deriving (Show, Typeable)
 
 instance FromXmlError SdbError where
-    fromXmlError = flip SdbXmlError NoMetadata
+    fromXmlError = flip SdbXmlError Nothing
 
-instance WithMetadata SdbError where
+instance WithMetadata SdbError SdbMetadata where
     getMetadata SdbError { sdbErrorMetadata = err }       = err
     getMetadata SdbXmlError { sdbXmlErrorMetadata = err } = err
 
-    setMetadata m e@SdbError{}    = e { sdbErrorMetadata = m }
-    setMetadata m e@SdbXmlError{} = e { sdbXmlErrorMetadata = m }
+    setMetadata m e@SdbError{}    = e { sdbErrorMetadata = Just m }
+    setMetadata m e@SdbXmlError{} = e { sdbXmlErrorMetadata = Just m }
 
 instance Error SdbError where
     noMsg = fromXmlError noMsg
