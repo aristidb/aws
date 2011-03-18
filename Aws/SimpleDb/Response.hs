@@ -5,6 +5,7 @@ where
 import           Aws.Metadata
 import           Aws.Response
 import           Aws.SimpleDb.Error
+import           Aws.SimpleDb.Metadata
 import           Control.Applicative
 import           Control.Arrow               ((+++))
 import           Control.Monad.Compose.Class

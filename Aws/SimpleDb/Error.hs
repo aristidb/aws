@@ -3,6 +3,7 @@ module Aws.SimpleDb.Error
 where
 
 import           Aws.Metadata
+import           Aws.SimpleDb.Metadata
 import           Control.Monad.Error.Class
 import           Data.Typeable
 import           Text.XML.Monad

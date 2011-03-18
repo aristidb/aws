@@ -10,6 +10,7 @@ module Aws.SimpleDb
 , module Aws.SimpleDb.GetAttributes
 , module Aws.SimpleDb.Info
 , module Aws.SimpleDb.ListDomains
+, module Aws.SimpleDb.Metadata
 , module Aws.SimpleDb.Model
 , module Aws.SimpleDb.PutAttributes
 , module Aws.SimpleDb.Query
@@ -28,6 +29,7 @@ import Aws.SimpleDb.Error
 import Aws.SimpleDb.GetAttributes
 import Aws.SimpleDb.Info
 import Aws.SimpleDb.ListDomains
+import Aws.SimpleDb.Metadata
 import Aws.SimpleDb.Model
 import Aws.SimpleDb.PutAttributes
 import Aws.SimpleDb.Query

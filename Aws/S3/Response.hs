@@ -5,6 +5,7 @@ where
 import           Aws.Metadata
 import           Aws.Response
 import           Aws.S3.Error
+import           Aws.S3.Metadata
 import           Aws.Util
 import           Control.Applicative
 import           Control.Exception

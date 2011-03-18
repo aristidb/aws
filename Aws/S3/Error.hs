@@ -3,9 +3,10 @@ module Aws.S3.Error
 where
 
 import           Aws.Metadata
+import           Aws.S3.Metadata
+import           Control.Monad.Error.Class
 import           Data.Typeable
 import           Text.XML.Monad
-import           Control.Monad.Error.Class
 import qualified Control.Exception         as C
 
 data S3Error
