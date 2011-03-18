@@ -33,7 +33,7 @@ Maintainer:          aristidb@googlemail.com
 -- A copyright notice.
 Copyright:           Copyright (C) 2010 Aristid Breitkreuz
 
-Category:            Web
+Category:            Network, Web
 
 Build-type:          Simple
 
