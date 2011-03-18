@@ -6,13 +6,13 @@ Name:                aws
 -- The package version. See the Haskell package versioning policy
 -- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
 -- standards guiding when and how versions should be incremented.
-Version:             0.1
+Version:             0.0.1
 
 -- A short (one-line) description of the package.
-Synopsis:            Amazon Web Services for Haskell
+Synopsis:            Amazon Web Services (AWS) for Haskell
 
 -- A longer description of the package.
--- Description:         
+Description:         Bindings for Amazon Web Services (AWS), with the aim of supporting all AWS services.
 
 -- URL for the project homepage or repository.
 Homepage:            http://github.com/aristidb/aws
