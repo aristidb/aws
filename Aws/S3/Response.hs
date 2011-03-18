@@ -9,12 +9,18 @@ import           Aws.S3.Metadata
 import           Aws.Util
 import           Control.Applicative
 import           Control.Exception
+import           Control.Monad.Compose.Class
+import           Control.Monad.Reader.Class
+import           Data.Char
 import           Data.Maybe
-import qualified Data.Ascii              as A
-import qualified Data.ByteString         as B
-import qualified Data.Enumerator         as En
-import qualified Network.HTTP.Enumerator as HTTP
-import qualified Network.HTTP.Types      as HTTP
+import           Data.Word
+import           Text.XML.Monad
+import qualified Data.Ascii                  as A
+import qualified Data.ByteString             as B
+import qualified Data.Enumerator             as En
+import qualified Network.HTTP.Enumerator     as HTTPE
+import qualified Network.HTTP.Types          as HTTP
+import qualified Text.XML.Light              as XL
 
 data S3Response a
     = S3Response {
@@ -29,8 +35,11 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
       let headerString = fromMaybe "" . fmap A.toString . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
+      let contentType = headerString "Content-Type"
       
-      specific <- tryError $ s3ResponseIteratee status headers
+      specific <- tryError $ if status >= HTTP.status400
+                             then s3ErrorResponseIteratee status headers
+                             else s3ResponseIteratee status headers
       
       case specific of
         Left (err :: S3Error) -> En.throwError (setMetadata m err)
@@ -41,8 +50,47 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
                                       , s3RequestId = requestId
                                       }
 
+s3ErrorResponseIteratee status headers = xmlResponseIteratee (e <<< parseXmlResponse) status headers
+    where                 
+      e :: Xml S3Error XL.Element a
+      e = do
+        err <- e' <<< findElementNameUI "Error"
+        raise err
+      
+      e' = do
+        code <- strContent <<< findElementNameUI "Code"
+        message <- strContent <<< findElementNameUI "Message"
+        resource <- tryMaybe $ strContent <<< findElementNameUI "Resource"
+        hostId <- tryMaybe $ strContent <<< findElementNameUI "HostId"
+        accessKeyId <- tryMaybe $ strContent <<< findElementNameUI "AWSAccessKeyId"
+        stringToSignUnprocessed <- tryMaybe $ strContent <<< findElementNameUI "StringToSignBytes"
+        let stringToSign = B.pack <$> (sequence . map readHex2 . words =<< stringToSignUnprocessed)
+        
+        return S3Error { 
+                     s3StatusCode = status
+                   , s3ErrorCode = code
+                   , s3ErrorMessage = message
+                   , s3ErrorResource = resource
+                   , s3ErrorHostId = hostId
+                   , s3ErrorAccessKeyId = accessKeyId
+                   , s3ErrorStringToSign = stringToSign
+                   , s3ErrorMetadata = Nothing
+                   }
+
+      readHex2 :: [Char] -> Maybe Word8
+      readHex2 [c1,c2] = do
+        n1 <- readHex1 c1
+        n2 <- readHex1 c2
+        return . fromIntegral $ n1 * 16 + n2
+      readHex2 _ = Nothing
+      
+      readHex1 c | c >= '0' && c <= '9' = Just $ ord c - ord '0'
+                 | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
+                 | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
+      readHex1 _                        = Nothing
+
 class S3ResponseIteratee a where
     s3ResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 
-instance S3ResponseIteratee HTTP.Response where
-    s3ResponseIteratee = HTTP.lbsIter
+instance S3ResponseIteratee HTTPE.Response where
+    s3ResponseIteratee = HTTPE.lbsIter
