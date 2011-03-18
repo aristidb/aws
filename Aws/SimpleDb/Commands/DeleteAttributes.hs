@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
-module Aws.SimpleDb.DeleteAttributes
+module Aws.SimpleDb.Commands.DeleteAttributes
 where
 
 import           Aws.Signature

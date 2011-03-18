@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
-module Aws.SimpleDb.GetAttributes
+module Aws.SimpleDb.Commands.GetAttributes
 where
 
 import           Aws.Signature

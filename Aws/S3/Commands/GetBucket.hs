@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, RecordWildCards, TupleSections, OverloadedStrings #-}
-module Aws.S3.GetBucket
+module Aws.S3.Commands.GetBucket
 where
 
 import           Aws.S3.Info

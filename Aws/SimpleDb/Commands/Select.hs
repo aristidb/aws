@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
-module Aws.SimpleDb.Select
+module Aws.SimpleDb.Commands.Select
 where
 
 import           Aws.Signature

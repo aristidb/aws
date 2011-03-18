@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
-module Aws.SimpleDb.BatchDeleteAttributes
+module Aws.SimpleDb.Commands.BatchDeleteAttributes
 where
 
 import           Aws.Signature

@@ -1,6 +1,5 @@
 {-# LANGUAGE TypeFamilies, MultiParamTypeClasses, FlexibleInstances #-}
-
-module Aws.S3.GetService
+module Aws.S3.Commands.GetService
 where
   
 import           Aws.Response

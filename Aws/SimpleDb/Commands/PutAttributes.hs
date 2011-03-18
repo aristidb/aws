@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
-module Aws.SimpleDb.PutAttributes
+module Aws.SimpleDb.Commands.PutAttributes
 where
 
 import           Aws.Signature

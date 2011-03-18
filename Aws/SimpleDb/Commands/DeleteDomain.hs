@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
-module Aws.SimpleDb.DeleteDomain
+module Aws.SimpleDb.Commands.DeleteDomain
 where
 
 import           Aws.Signature

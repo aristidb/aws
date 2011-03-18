@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
-module Aws.SimpleDb.CreateDomain
+module Aws.SimpleDb.Commands.CreateDomain
 where
 
 import           Aws.Signature
