@@ -35,7 +35,6 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
       let headerString = fromMaybe "" . fmap A.toString . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
-      let contentType = headerString "Content-Type"
       
       specific <- tryError $ if status >= HTTP.status400
                              then s3ErrorResponseIteratee status headers
