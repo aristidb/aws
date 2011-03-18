@@ -28,27 +28,25 @@ instance Functor SdbResponse where
     fmap f (SdbResponse a m) = SdbResponse (f a) m
 
 instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
-    responseIteratee = xmlResponseIteratee $ do
-          status <- asks HTTP.statusCode
-          fromXml status <<< parseXmlResponse
-        where fromXml :: SdbFromResponse a => Int -> Xml SdbError XL.Element (SdbResponse a)
-              fromXml status = do
+    responseIteratee status headers = xmlResponseIteratee (fromXml <<< parseXmlResponse) status headers
+        where fromXml :: SdbFromResponse a => Xml SdbError XL.Element (SdbResponse a)
+              fromXml = do
                      requestId' <- strContent <<< findElementNameUI "RequestID"
                      boxUsage' <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
                      let metadata = SdbMetadata requestId' boxUsage'
-                     innerTry <- try $ fromXmlInner status
+                     innerTry <- try $ fromXmlInner
                      inner <- case innerTry of
                        Left err -> raise $ setMetadata metadata err
                        Right response -> return response
                      return $ SdbResponse inner metadata
-              fromXmlInner :: SdbFromResponse a => Int -> Xml SdbError XL.Element a
-              fromXmlInner status = do
+              fromXmlInner :: SdbFromResponse a => Xml SdbError XL.Element a
+              fromXmlInner = do
                      xmlError <- tryMaybe $ findElementNameUI "Error"
                      case xmlError of
-                       Just err -> mapply (fromError status) err
+                       Just err -> mapply fromError err
                        Nothing -> sdbFromResponse
-              fromError :: Int -> Xml SdbError XL.Element a
-              fromError status = do
+              fromError :: Xml SdbError XL.Element a
+              fromError = do
                      errCode <- strContent <<< findElementNameUI "Code"
                      errMessage <- strContent <<< findElementNameUI "Message"
                      raise $ SdbError status errCode errMessage Nothing

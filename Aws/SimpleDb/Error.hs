@@ -8,12 +8,13 @@ import           Control.Monad.Error.Class
 import           Data.Typeable
 import           Text.XML.Monad
 import qualified Control.Exception         as C
+import qualified Network.HTTP.Types        as HTTP
 
 type ErrorCode = String
 
 data SdbError
     = SdbError {
-        sdbStatusCode :: Int
+        sdbStatusCode :: HTTP.Status
       , sdbErrorCode :: ErrorCode
       , sdbErrorMessage :: String
       , sdbErrorMetadata :: Maybe SdbMetadata
