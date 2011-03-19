@@ -8,9 +8,7 @@ import           Aws.S3.Error
 import           Aws.S3.Metadata
 import           Aws.Util
 import           Control.Applicative
-import           Control.Exception
 import           Control.Monad.Compose.Class
-import           Control.Monad.Reader.Class
 import           Data.Char
 import           Data.Maybe
 import           Data.Word
@@ -49,6 +47,7 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
                                       , s3RequestId = requestId
                                       }
 
+s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ErrorResponseIteratee status headers = xmlResponseIteratee (e <<< parseXmlResponse) status headers
     where                 
       e :: Xml S3Error XL.Element a

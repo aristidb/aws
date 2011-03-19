@@ -9,12 +9,10 @@ import           Aws.SimpleDb.Metadata
 import           Control.Applicative
 import           Control.Arrow               ((+++))
 import           Control.Monad.Compose.Class
-import           Control.Monad.Reader.Class
 import           Data.Char
 import           Text.XML.Monad
 import qualified Data.ByteString.Base64      as Base64
 import qualified Data.ByteString.UTF8        as BU
-import qualified Network.HTTP.Enumerator     as HTTP
 import qualified Text.XML.Light              as XL
 
 data SdbResponse a

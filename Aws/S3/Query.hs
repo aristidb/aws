@@ -14,11 +14,10 @@ import           Data.List
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Time
-import qualified Blaze.ByteString.Builder as Blaze
-import qualified Data.Ascii               as A
-import qualified Data.ByteString          as B
-import qualified Data.ByteString.Lazy     as L
-import qualified Network.HTTP.Types       as HTTP
+import qualified Data.Ascii           as A
+import qualified Data.ByteString      as B
+import qualified Data.ByteString.Lazy as L
+import qualified Network.HTTP.Types   as HTTP
 
 data S3Query
     = S3Query {
