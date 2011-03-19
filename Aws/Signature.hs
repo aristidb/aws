@@ -5,12 +5,13 @@ where
 import           Aws.Credentials
 import           Aws.Query
 import           Data.Time
-import qualified Crypto.HMAC               as HMAC
-import qualified Crypto.Hash.SHA1          as SHA1
-import qualified Crypto.Hash.SHA256        as SHA256
-import qualified Data.ByteString           as B
-import qualified Data.ByteString.Base64    as Base64
-import qualified Data.Serialize            as Serialize
+import qualified Crypto.Classes         as Crypto
+import qualified Crypto.HMAC            as HMAC
+import qualified Crypto.Hash.SHA1       as SHA1
+import qualified Crypto.Hash.SHA256     as SHA256
+import qualified Data.ByteString        as B
+import qualified Data.ByteString.Base64 as Base64
+import qualified Data.Serialize         as Serialize
 
 data TimeInfo
     = Timestamp
@@ -64,5 +65,6 @@ signature cr ah input = Base64.encode sig
       sig = case ah of
               HmacSHA1 -> computeSig (undefined :: SHA1.SHA1)
               HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
+      computeSig :: Crypto.Hash c d => d -> B.ByteString
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key = HMAC.MacKey (secretAccessKey cr)
