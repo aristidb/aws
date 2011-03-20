@@ -13,10 +13,11 @@ import           Data.List
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Time
-import qualified Blaze.ByteString.Builder as Blaze
-import qualified Data.ByteString          as B
-import qualified Data.ByteString.Lazy     as L
-import qualified Network.HTTP.Types       as HTTP
+import qualified Blaze.ByteString.Builder       as Blaze
+import qualified Blaze.ByteString.Builder.Char8 as Blaze8
+import qualified Data.ByteString                as B
+import qualified Data.ByteString.Lazy           as L
+import qualified Network.HTTP.Types             as HTTP
 
 data S3Query
     = S3Query {
@@ -48,24 +49,24 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       contentType = Nothing
       path = mconcat . catMaybes $ [Just "/", s3QBucket]
       sortedSubresources = sort s3QSubresources
-      canonicalizedResource = Blaze.toByteString . mconcat $
-                              [ Blaze.copyByteString "/"
-                              , maybe mempty Blaze.copyByteString s3QBucket
-                              , HTTP.renderQueryBuilder True sortedSubresources
-                              ]
+      canonicalizedResource = Blaze.copyByteString "/" `mappend`
+                              maybe mempty Blaze.copyByteString s3QBucket `mappend`
+                              HTTP.renderQueryBuilder True sortedSubresources
       ti = case (s3UseUri, signatureTimeInfo) of
              (False, ti') -> ti'
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
              (True, AbsoluteExpires time) -> AbsoluteExpires time
       sig = signature signatureCredentials HmacSHA1 stringToSign
-      stringToSign = B.intercalate "\n" $ concat [[httpMethod method]
-                                                 , [fromMaybe "" contentMd5]
-                                                 , [fromMaybe "" contentType]
-                                                 , [case ti of
-                                                      AbsoluteTimestamp time -> fmtRfc822Time time
-                                                      AbsoluteExpires time -> fmtTimeEpochSeconds time]
-                                                 , [] -- canonicalized AMZ headers
-                                                 , [canonicalizedResource]]
+      stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
+                       [[Blaze.copyByteString $ httpMethod method]
+                       , [maybe mempty Blaze.copyByteString contentMd5]
+                       , [maybe mempty Blaze.copyByteString contentType]
+                       , [Blaze.copyByteString $ case ti of
+                                                   AbsoluteTimestamp time -> fmtRfc822Time time
+                                                   AbsoluteExpires time -> fmtTimeEpochSeconds time]
+                       , [] -- canonicalized AMZ headers
+                       , [canonicalizedResource]
+                       ]
       (authorization, authQuery) = case ti of
                                  AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
                                  AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ makeAuthQuery time)

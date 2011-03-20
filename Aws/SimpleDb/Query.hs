@@ -9,9 +9,12 @@ import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Util
 import           Data.List
-import qualified Data.ByteString      as B
-import qualified Data.ByteString.Lazy as L
-import qualified Network.HTTP.Types   as HTTP
+import           Data.Monoid
+import qualified Blaze.ByteString.Builder       as Blaze
+import qualified Blaze.ByteString.Builder.Char8 as Blaze8
+import qualified Data.ByteString                as B
+import qualified Data.ByteString.Lazy           as L
+import qualified Network.HTTP.Types             as HTTP
 
 sdbSignQuery :: [(B.ByteString, B.ByteString)] -> SdbInfo -> SignatureData -> SignedQuery
 sdbSignQuery q si sd
@@ -46,5 +49,9 @@ sdbSignQuery q si sd
       host = sdbiHost si
       path = "/"
       sig = signature cr ah stringToSign
-      stringToSign = B.intercalate "\n" 
-                       [httpMethod method, host, path, HTTP.renderQuery False q']
+      stringToSign = Blaze.toByteString . mconcat $ 
+                     intersperse (Blaze8.fromChar '\n')
+                       [Blaze.copyByteString $ httpMethod method
+                       , Blaze.copyByteString $ host
+                       , Blaze.copyByteString $ path
+                       , HTTP.renderQueryBuilder False q']
