@@ -13,8 +13,8 @@ import           Data.Char
 import           Data.Maybe
 import           Data.Word
 import           Text.XML.Monad
-import qualified Data.Ascii                  as A
 import qualified Data.ByteString             as B
+import qualified Data.ByteString.Char8       as B8
 import qualified Data.Enumerator             as En
 import qualified Network.HTTP.Enumerator     as HTTPE
 import qualified Network.HTTP.Types          as HTTP
@@ -30,7 +30,7 @@ data S3Response a
 
 instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
     responseIteratee status headers = do
-      let headerString = fromMaybe "" . fmap A.toString . flip lookup headers
+      let headerString = fromMaybe "" . fmap B8.unpack . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
       

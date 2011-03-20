@@ -9,7 +9,6 @@ import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Util
 import           Data.List
-import qualified Data.Ascii           as A
 import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as L
 import qualified Network.HTTP.Types   as HTTP
@@ -36,8 +35,8 @@ sdbSignQuery q si sd
       ti = signatureTimeInfo sd
       cr = signatureCredentials sd
       queryAuth = [case ti of
-                     AbsoluteTimestamp time -> ("Timestamp", A.toByteString $ fmtAmzTime time)
-                     AbsoluteExpires   time -> ("Expires", A.toByteString $ fmtAmzTime time)
+                     AbsoluteTimestamp time -> ("Timestamp", fmtAmzTime time)
+                     AbsoluteExpires   time -> ("Expires", fmtAmzTime time)
                   , ("AWSAccessKeyId", accessKeyID cr)
                   , ("SignatureMethod", amzHash ah)
                   , ("SignatureVersion", "2")
@@ -47,5 +46,5 @@ sdbSignQuery q si sd
       host = sdbiHost si
       path = "/"
       sig = signature cr ah stringToSign
-      stringToSign = B.intercalate "\n" $ map A.toByteString
+      stringToSign = B.intercalate "\n" 
                        [httpMethod method, host, path, HTTP.renderQuery False q']

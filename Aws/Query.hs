@@ -7,7 +7,6 @@ import           Aws.Util
 import           Data.Maybe
 import           Data.Time
 import qualified Blaze.ByteString.Builder as Blaze
-import qualified Data.Ascii               as A
 import qualified Data.ByteString          as B
 import qualified Data.ByteString.Lazy     as L
 import qualified Data.ByteString.UTF8     as BU
@@ -18,14 +17,14 @@ data SignedQuery
     = SignedQuery {
         sqMethod :: Method
       , sqProtocol :: Protocol
-      , sqHost :: A.Ascii
+      , sqHost :: B.ByteString
       , sqPort :: Int
-      , sqPath :: A.Ascii
+      , sqPath :: B.ByteString
       , sqQuery :: HTTP.Query
       , sqDate :: Maybe UTCTime
-      , sqAuthorization :: Maybe A.Ascii
-      , sqContentType :: Maybe A.Ascii
-      , sqContentMd5 :: Maybe A.Ascii
+      , sqAuthorization :: Maybe B.ByteString
+      , sqContentType :: Maybe B.ByteString
+      , sqContentMd5 :: Maybe B.ByteString
       , sqBody :: L.ByteString
       , sqStringToSign :: B.ByteString
       }
@@ -49,7 +48,7 @@ queryToHttpRequest SignedQuery{..}
                                         , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
       , HTTP.requestBody = HTTP.RequestBodyLBS $ case sqMethod of
                                                    Get -> L.empty
-                                                   PostQuery -> Blaze.toLazyByteString . A.toBuilder $ HTTP.renderQueryBuilder False sqQuery
+                                                   PostQuery -> Blaze.toLazyByteString $ HTTP.renderQueryBuilder False sqQuery
       }
     where contentType = case sqMethod of
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
@@ -61,8 +60,8 @@ queryToUri SignedQuery{..}
        case sqProtocol of
          HTTP -> "http://"
          HTTPS -> "https://"
-      , A.toByteString sqHost
+      , sqHost
       , if sqPort == defaultPort sqProtocol then "" else BU.fromString $ ':' : show sqPort
-      , A.toByteString sqPath
-      , A.toByteString $ HTTP.renderQuery True sqQuery
+      , sqPath
+      , HTTP.renderQuery True sqQuery
       ]

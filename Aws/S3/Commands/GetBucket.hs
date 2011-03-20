@@ -10,7 +10,6 @@ import           Control.Applicative
 import           Control.Arrow         (second)
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
-import qualified Data.Ascii            as A
 import qualified Data.ByteString.UTF8  as BU
 import qualified Network.HTTP.Types    as HTTP
 
@@ -49,7 +48,7 @@ data GetBucketResult
 instance SignQuery GetBucket where
     type Info GetBucket = S3Info
     signQuery GetBucket {..} = s3SignQuery S3Query { 
-                                 s3QBucket = Just $ A.unsafeFromString gbBucket
+                                 s3QBucket = Just $ BU.fromString gbBucket
                                , s3QSubresources = []
                                , s3QQuery = HTTP.simpleQueryToQuery $ map (second BU.fromString) $ catMaybes [
                                               ("delimiter",) <$> gbDelimiter
