@@ -49,6 +49,8 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.requestBody = HTTP.RequestBodyLBS $ case sqMethod of
                                                    Get -> L.empty
                                                    PostQuery -> Blaze.toLazyByteString $ HTTP.renderQueryBuilder False sqQuery
+      , HTTP.proxy = Nothing
+      , HTTP.rawBody = False
       }
     where contentType = case sqMethod of
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
