@@ -10,15 +10,17 @@ import           Aws.Util
 import           Control.Applicative
 import           Control.Monad.Compose.Class
 import           Data.Char
+import           Data.Enumerator              ((=$))
 import           Data.Maybe
 import           Data.Word
-import           Text.XML.Monad
-import qualified Data.ByteString             as B
-import qualified Data.ByteString.Char8       as B8
-import qualified Data.Enumerator             as En
-import qualified Network.HTTP.Enumerator     as HTTPE
-import qualified Network.HTTP.Types          as HTTP
-import qualified Text.XML.Light              as XL
+import qualified Data.ByteString              as B
+import qualified Data.ByteString.Char8        as B8
+import qualified Data.Enumerator              as En
+import qualified Network.HTTP.Enumerator      as HTTPE
+import qualified Network.HTTP.Types           as HTTP
+import qualified Text.XML.Enumerator.Cursor   as XML
+import qualified Text.XML.Enumerator.Parse    as XML
+import qualified Text.XML.Enumerator.Resolved as XML
 
 data S3Response a
     = S3Response {
@@ -47,6 +49,13 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
                                       , s3RequestId = requestId
                                       }
 
+s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
+                                            let cursor = XML.fromDocument doc
+                                            En.throwError (parseError cursor)
+    where parseError _ = S3Error {}
+
+{-
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ErrorResponseIteratee status headers = xmlResponseIteratee (e <<< parseXmlResponse) status headers
     where                 
@@ -86,6 +95,7 @@ s3ErrorResponseIteratee status headers = xmlResponseIteratee (e <<< parseXmlResp
                  | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
                  | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
       readHex1 _                        = Nothing
+-}
 
 class S3ResponseIteratee a where
     s3ResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
