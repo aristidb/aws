@@ -54,63 +54,43 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
                                             let cursor = Cu.fromDocument doc
-                                            En.throwError $ parseError cursor
+                                            case parseError cursor of
+                                              Left invalidXml -> En.throwError invalidXml
+                                              Right err -> En.throwError err
     where
-      parseError :: Cu.Cursor -> S3Error
-      parseError root = let code = root $/ Cu.element "Code" &/ Cu.content &| T.unpack
-                            message = root $/ Cu.element "Message" &/ Cu.content &| T.unpack
-                        in S3Error {
-                                 s3StatusCode = status
-                               , s3ErrorCode = head code -- FIXME: don't just throw a fatal error. this is not THAT fatal
-                               , s3ErrorMessage = head message -- FIXME: same
-                               , s3ErrorResource = Nothing
-                               , s3ErrorHostId = Nothing
-                               , s3ErrorAccessKeyId = Nothing
-                               , s3ErrorStringToSign = Nothing
-                               , s3ErrorMetadata = Nothing
-                               }
+      parseError :: Cu.Cursor -> Either S3Error S3Error
+      parseError root = do code <- force $ root $/ elCont "Code"
+                           message <- force $ root $/ elCont "Message"
+                           let resource = listToMaybe $ root $/ elCont "Resource"
+                               hostId = listToMaybe $ root $/ elCont "HostId"
+                               accessKeyId = listToMaybe $ root $/ elCont "AWSAccessKeyId"
+                               stringToSign = do unprocessed <- listToMaybe $ root $/ elCont "StringToSignBytes"
+                                                 bytes <- mapM readHex2 $ words unprocessed
+                                                 return $ B.pack bytes
+                           return S3Error {
+                                        s3StatusCode = status
+                                      , s3ErrorCode = code
+                                      , s3ErrorMessage = message
+                                      , s3ErrorResource = resource
+                                      , s3ErrorHostId = hostId
+                                      , s3ErrorAccessKeyId = accessKeyId
+                                      , s3ErrorStringToSign = stringToSign
+                                      , s3ErrorMetadata = Nothing
+                                      }
+          where force [] = Left $ S3XmlError Nothing
+                force (x:_) = Right $ x
+                elCont el = Cu.element el &/ Cu.content &| T.unpack
 
-{-
-s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-s3ErrorResponseIteratee status headers = xmlResponseIteratee (e <<< parseXmlResponse) status headers
-    where                 
-      e :: Xml S3Error XL.Element a
-      e = do
-        err <- e' <<< findElementNameUI "Error"
-        raise err
+                readHex2 :: [Char] -> Maybe Word8
+                readHex2 [c1,c2] = do n1 <- readHex1 c1
+                                      n2 <- readHex1 c2
+                                      return . fromIntegral $ n1 * 16 + n2
+                readHex2 _ = Nothing
       
-      e' = do
-        code <- strContent <<< findElementNameUI "Code"
-        message <- strContent <<< findElementNameUI "Message"
-        resource <- tryMaybe $ strContent <<< findElementNameUI "Resource"
-        hostId <- tryMaybe $ strContent <<< findElementNameUI "HostId"
-        accessKeyId <- tryMaybe $ strContent <<< findElementNameUI "AWSAccessKeyId"
-        stringToSignUnprocessed <- tryMaybe $ strContent <<< findElementNameUI "StringToSignBytes"
-        let stringToSign = B.pack <$> (sequence . map readHex2 . words =<< stringToSignUnprocessed)
-        
-        return S3Error { 
-                     s3StatusCode = status
-                   , s3ErrorCode = code
-                   , s3ErrorMessage = message
-                   , s3ErrorResource = resource
-                   , s3ErrorHostId = hostId
-                   , s3ErrorAccessKeyId = accessKeyId
-                   , s3ErrorStringToSign = stringToSign
-                   , s3ErrorMetadata = Nothing
-                   }
-
-      readHex2 :: [Char] -> Maybe Word8
-      readHex2 [c1,c2] = do
-        n1 <- readHex1 c1
-        n2 <- readHex1 c2
-        return . fromIntegral $ n1 * 16 + n2
-      readHex2 _ = Nothing
-      
-      readHex1 c | c >= '0' && c <= '9' = Just $ ord c - ord '0'
-                 | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
-                 | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
-      readHex1 _                        = Nothing
--}
+                readHex1 c | c >= '0' && c <= '9' = Just $ ord c - ord '0'
+                           | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
+                           | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
+                readHex1 _                        = Nothing
 
 class S3ResponseIteratee a where
     s3ResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
