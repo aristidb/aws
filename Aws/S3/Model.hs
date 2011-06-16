@@ -1,11 +1,13 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Aws.S3.Model
 where
 
 import           Aws.S3.Error
-import           Control.Monad.Compose.Class
+import           Data.Maybe
 import           Data.Time
-import           Text.XML.Monad
-import qualified Text.XML.Light              as XL
+import           Text.XML.Enumerator.Cursor (($/), (&/), (&|))
+import qualified Data.Text                  as T
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 type CanonicalUserId = String
 
@@ -16,13 +18,10 @@ data UserInfo
       }
     deriving (Show)
 
-{-
-parseUserInfo :: Xml S3Error XL.Element UserInfo
-parseUserInfo = do
-  id_ <- strContent <<< findElementNameUI "ID"
-  displayName <- strContent <<< findElementNameUI "DisplayName"
-  return UserInfo { userId = id_, userDisplayName = displayName }
--}
+parseUserInfo :: Cu.Cursor -> Either S3Error UserInfo
+parseUserInfo el = do id_ <- xmlForce "Missing user ID" $ el $/ Cu.laxElement "ID" &/ Cu.content &| T.unpack
+                      displayName <- xmlForce "Missing user DisplayName" $ el $/ Cu.laxElement "DisplayName" &/ Cu.content &| T.unpack
+                      return UserInfo { userId = id_, userDisplayName = displayName }
 
 type Bucket = String
 

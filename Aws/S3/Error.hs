@@ -25,7 +25,8 @@ data S3Error
       , s3ErrorMetadata :: Maybe S3Metadata
       }
     | S3XmlError { 
-        s3XmlErrorMetadata :: Maybe S3Metadata
+        s3XmlErrorMessage :: String
+      , s3XmlErrorMetadata :: Maybe S3Metadata
       }
     deriving (Show, Typeable)
 
@@ -37,3 +38,7 @@ instance WithMetadata S3Error S3Metadata where
 
     setMetadata m a@S3Error{} = a { s3ErrorMetadata = Just m }
     setMetadata m a@S3XmlError{} = a { s3XmlErrorMetadata = Just m }
+
+xmlForce :: String -> [a] -> Either S3Error a
+xmlForce msg []    = Left (S3XmlError msg Nothing)
+xmlForce _   (x:_) = Right x

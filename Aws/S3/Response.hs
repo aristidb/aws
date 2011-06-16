@@ -59,8 +59,8 @@ s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEnti
                                               Right err -> En.throwError err
     where
       parseError :: Cu.Cursor -> Either S3Error S3Error
-      parseError root = do code <- force $ root $/ elCont "Code"
-                           message <- force $ root $/ elCont "Message"
+      parseError root = do code <- xmlForce "Missing error Code" $ root $/ elCont "Code"
+                           message <- xmlForce "Missing error Message" $ root $/ elCont "Message"
                            let resource = listToMaybe $ root $/ elCont "Resource"
                                hostId = listToMaybe $ root $/ elCont "HostId"
                                accessKeyId = listToMaybe $ root $/ elCont "AWSAccessKeyId"
@@ -77,9 +77,7 @@ s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEnti
                                       , s3ErrorStringToSign = stringToSign
                                       , s3ErrorMetadata = Nothing
                                       }
-          where force [] = Left $ S3XmlError Nothing
-                force (x:_) = Right $ x
-                elCont el = Cu.element el &/ Cu.content &| T.unpack
+          where elCont el = Cu.laxElement el &/ Cu.content &| T.unpack
 
                 readHex2 :: [Char] -> Maybe Word8
                 readHex2 [c1,c2] = do n1 <- readHex1 c1
