@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables, RecordWildCards #-}
 module Aws.S3.Response
 where
 
@@ -13,12 +13,14 @@ import           Data.Char
 import           Data.Enumerator              ((=$))
 import           Data.Maybe
 import           Data.Word
+import           Text.XML.Enumerator.Cursor   (($/), (&|), (&/))
 import qualified Data.ByteString              as B
 import qualified Data.ByteString.Char8        as B8
 import qualified Data.Enumerator              as En
+import qualified Data.Text                    as T
 import qualified Network.HTTP.Enumerator      as HTTPE
 import qualified Network.HTTP.Types           as HTTP
-import qualified Text.XML.Enumerator.Cursor   as XML
+import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
 
@@ -51,9 +53,22 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
 
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = XML.fromDocument doc
-                                            En.throwError (parseError cursor)
-    where parseError _ = S3Error {}
+                                            let cursor = Cu.fromDocument doc
+                                            En.throwError $ parseError cursor
+    where
+      parseError :: Cu.Cursor -> S3Error
+      parseError root = let code = root $/ Cu.element "Code" &/ Cu.content &| T.unpack
+                            message = root $/ Cu.element "Message" &/ Cu.content &| T.unpack
+                        in S3Error {
+                                 s3StatusCode = status
+                               , s3ErrorCode = head code -- FIXME: don't just throw a fatal error. this is not THAT fatal
+                               , s3ErrorMessage = head message -- FIXME: same
+                               , s3ErrorResource = Nothing
+                               , s3ErrorHostId = Nothing
+                               , s3ErrorAccessKeyId = Nothing
+                               , s3ErrorStringToSign = Nothing
+                               , s3ErrorMetadata = Nothing
+                               }
 
 {-
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a

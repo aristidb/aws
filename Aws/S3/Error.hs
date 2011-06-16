@@ -25,19 +25,11 @@ data S3Error
       , s3ErrorMetadata :: Maybe S3Metadata
       }
     | S3XmlError { 
-        fromS3XmlError :: XmlError
-      , s3XmlErrorMetadata :: Maybe S3Metadata
+        s3XmlErrorMetadata :: Maybe S3Metadata
       }
     deriving (Show, Typeable)
 
 instance C.Exception S3Error
-
-instance FromXmlError S3Error where
-    fromXmlError = flip S3XmlError Nothing
-
-instance Error S3Error where
-    noMsg = fromXmlError noMsg
-    strMsg = fromXmlError . strMsg
 
 instance WithMetadata S3Error S3Metadata where
     getMetadata S3Error { s3ErrorMetadata = m } = m

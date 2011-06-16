@@ -25,6 +25,7 @@ data GetServiceResponse
       }
     deriving (Show)
 
+{-
 instance S3ResponseIteratee GetServiceResponse where
     s3ResponseIteratee = xmlResponseIteratee $ parse <<< parseXmlResponse
         where
@@ -41,9 +42,10 @@ instance S3ResponseIteratee GetServiceResponse where
             creationDate <- maybeRaiseXml (EncodingError "Invalid date encoding") $
                             parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
+-}
 
 instance SignQuery GetService where
     type Info GetService = S3Info
     signQuery GetService = s3SignQuery S3Query { s3QBucket = Nothing, s3QSubresources = [], s3QQuery = [] }
 
-instance Transaction GetService (S3Response GetServiceResponse)
+--instance Transaction GetService (S3Response GetServiceResponse)

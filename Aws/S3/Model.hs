@@ -16,11 +16,13 @@ data UserInfo
       }
     deriving (Show)
 
+{-
 parseUserInfo :: Xml S3Error XL.Element UserInfo
 parseUserInfo = do
   id_ <- strContent <<< findElementNameUI "ID"
   displayName <- strContent <<< findElementNameUI "DisplayName"
   return UserInfo { userId = id_, userDisplayName = displayName }
+-}
 
 type Bucket = String
 
