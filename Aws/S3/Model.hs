@@ -3,6 +3,7 @@ module Aws.S3.Model
 where
 
 import           Aws.S3.Error
+import           Aws.Xml
 import           Data.Maybe
 import           Data.Time
 import           Text.XML.Enumerator.Cursor (($/), (&/), (&|))
@@ -19,8 +20,8 @@ data UserInfo
     deriving (Show)
 
 parseUserInfo :: Cu.Cursor -> Either S3Error UserInfo
-parseUserInfo el = do id_ <- xmlForce "Missing user ID" $ el $/ Cu.laxElement "ID" &/ Cu.content &| T.unpack
-                      displayName <- xmlForce "Missing user DisplayName" $ el $/ Cu.laxElement "DisplayName" &/ Cu.content &| T.unpack
+parseUserInfo el = do id_ <- s3Force "Missing user ID" $ el $/ elCont "ID"
+                      displayName <- s3Force "Missing user DisplayName" $ el $/ elCont "DisplayName"
                       return UserInfo { userId = id_, userDisplayName = displayName }
 
 type Bucket = String

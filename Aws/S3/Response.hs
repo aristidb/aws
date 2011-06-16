@@ -7,6 +7,7 @@ import           Aws.Response
 import           Aws.S3.Error
 import           Aws.S3.Metadata
 import           Aws.Util
+import           Aws.Xml
 import           Control.Applicative
 import           Control.Monad.Compose.Class
 import           Data.Char
@@ -59,8 +60,8 @@ s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEnti
                                               Right err -> En.throwError err
     where
       parseError :: Cu.Cursor -> Either S3Error S3Error
-      parseError root = do code <- xmlForce "Missing error Code" $ root $/ elCont "Code"
-                           message <- xmlForce "Missing error Message" $ root $/ elCont "Message"
+      parseError root = do code <- s3Force "Missing error Code" $ root $/ elCont "Code"
+                           message <- s3Force "Missing error Message" $ root $/ elCont "Message"
                            let resource = listToMaybe $ root $/ elCont "Resource"
                                hostId = listToMaybe $ root $/ elCont "HostId"
                                accessKeyId = listToMaybe $ root $/ elCont "AWSAccessKeyId"
@@ -77,9 +78,7 @@ s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEnti
                                       , s3ErrorStringToSign = stringToSign
                                       , s3ErrorMetadata = Nothing
                                       }
-          where elCont el = Cu.laxElement el &/ Cu.content &| T.unpack
-
-                readHex2 :: [Char] -> Maybe Word8
+          where readHex2 :: [Char] -> Maybe Word8
                 readHex2 [c1,c2] = do n1 <- readHex1 c1
                                       n2 <- readHex1 c2
                                       return . fromIntegral $ n1 * 16 + n2

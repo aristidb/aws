@@ -86,7 +86,8 @@ Library
                        Aws.SimpleDb.Query,
                        Aws.SimpleDb.Response,
                        Aws.Transaction,
-                       Aws.Util
+                       Aws.Util,
+                       Aws.Xml
   
   -- Packages needed in order to build this package.
   Build-depends:

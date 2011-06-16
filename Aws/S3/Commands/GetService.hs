@@ -10,6 +10,7 @@ import           Aws.S3.Query
 import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
+import           Aws.Xml
 import           Control.Monad
 import           Data.Enumerator              ((=$))
 import           Data.Maybe
@@ -40,15 +41,15 @@ instance S3ResponseIteratee GetServiceResponse where
         where
           parse :: Cu.Cursor -> Either S3Error GetServiceResponse
           parse el = do
-            owner <- xmlForce "Missing Owner" <=< sequence $ el $/ Cu.laxElement "Owner" &| parseUserInfo
+            owner <- s3Force "Missing Owner" <=< sequence $ el $/ Cu.laxElement "Owner" &| parseUserInfo
             buckets <- sequence $ el $// Cu.laxElement "Bucket" &| parseBucket
             return GetServiceResponse { gsrOwner = owner, gsrBuckets = buckets }
           
           parseBucket :: Cu.Cursor -> Either S3Error BucketInfo
           parseBucket el = do
-            name <- xmlForce "Missing owner Name" $ el $/ Cu.laxElement "Name" &/ Cu.content &| T.unpack
-            creationDateString <- xmlForce "Missing owner CreationDate" $ el $/ Cu.laxElement "CreationDate" &/ Cu.content &| T.unpack
-            creationDate <- xmlForce "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
+            name <- s3Force "Missing owner Name" $ el $/ elCont "Name"
+            creationDateString <- s3Force "Missing owner CreationDate" $ el $/ elCont "CreationDate"
+            creationDate <- s3Force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
 
 instance SignQuery GetService where

@@ -10,6 +10,7 @@ module Aws
 , module Aws.Signature
 , module Aws.Transaction
 , module Aws.Util
+, module Aws.Xml
 )
 where
 
@@ -23,3 +24,4 @@ import Aws.Response
 import Aws.Signature
 import Aws.Transaction
 import Aws.Util
+import Aws.Xml
