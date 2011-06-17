@@ -4,12 +4,11 @@ where
 
 import           Aws.Metadata
 import           Aws.S3.Metadata
-import           Control.Monad.Error.Class
+import           Aws.Xml
 import           Data.Typeable
-import           Text.XML.Monad
-import qualified Control.Exception         as C
-import qualified Data.ByteString           as B
-import qualified Network.HTTP.Types        as HTTP
+import qualified Control.Exception  as C
+import qualified Data.ByteString    as B
+import qualified Network.HTTP.Types as HTTP
 
 type ErrorCode = String
 
@@ -25,19 +24,12 @@ data S3Error
       , s3ErrorMetadata :: Maybe S3Metadata
       }
     | S3XmlError { 
-        fromS3XmlError :: XmlError
+        s3XmlErrorMessage :: String
       , s3XmlErrorMetadata :: Maybe S3Metadata
       }
     deriving (Show, Typeable)
 
 instance C.Exception S3Error
-
-instance FromXmlError S3Error where
-    fromXmlError = flip S3XmlError Nothing
-
-instance Error S3Error where
-    noMsg = fromXmlError noMsg
-    strMsg = fromXmlError . strMsg
 
 instance WithMetadata S3Error S3Metadata where
     getMetadata S3Error { s3ErrorMetadata = m } = m
@@ -45,3 +37,6 @@ instance WithMetadata S3Error S3Metadata where
 
     setMetadata m a@S3Error{} = a { s3ErrorMetadata = Just m }
     setMetadata m a@S3XmlError{} = a { s3XmlErrorMetadata = Just m }
+
+s3Force :: String -> [a] -> Either S3Error a
+s3Force msg = force (S3XmlError msg Nothing)
