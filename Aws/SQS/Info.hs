@@ -2,40 +2,84 @@
 module Aws.SQS.Info where
 
 import           Aws.Http
+import           Aws.S3.Model
+import           Data.Time
 import qualified Data.ByteString as B
 
-data SqsInfo 
-    = SqsInfo{
-          sqsiProtocol :: Protocol
-        , sqsiHttpMethod :: Method
-        , sqsiHost :: B.ByteString
-        , sqsiPort :: Int
-}
+data SqsAuthorization 
+    = SqsAuthorizationHeader 
+    | SqsAuthorizationQuery
+    deriving (Show)
 
-sqsUsEast :: B.ByteString
-sqsUsEast = "sqs.us-east-1.amazonaws.com"
+data Endpoint
+    = Endpoint {
+        endpointHost :: B.ByteString
+      , endpointDefaultLocationConstraint :: LocationConstraint
+      , endpointAllowedLocationConstraints :: [LocationConstraint]
+      }
+    deriving (Show)
 
-sqsUsWest :: B.ByteString
-sqsUsWest = "sqs.us-west-1.amazonaws.com"
+data SqsInfo
+    = SqsInfo {
+        sqsProtocol :: Protocol
+      , sqsEndpoint :: Endpoint
+      , sqsPort :: Int
+      , sqsUseUri :: Bool
+      , sqsDefaultExpiry :: NominalDiffTime
+      }
+    deriving (Show)
 
-sqsEuWest :: B.ByteString
-sqsEuWest = "sqs.eu-west-1.amazonaws.com"
+sqsEndpointUsClassic :: Endpoint
+sqsEndpointUsClassic 
+    = Endpoint { 
+        endpointHost = "sqs.us-east-1.amazonaws.com"
+      , endpointDefaultLocationConstraint = locationUsClassic
+      , endpointAllowedLocationConstraints = [locationUsClassic
+                                             , locationUsWest
+                                             , locationEu
+                                             , locationApSouthEast
+                                             , locationApNorthEast]
+      }
 
-sqsApSoutheast :: B.ByteString
-sqsApSoutheast = "sqs.ap-southeast-1.amazonaws.com"
+sqsEndpointUsWest :: Endpoint
+sqsEndpointUsWest
+    = Endpoint {
+        endpointHost = "sqs.us-west-1.amazonaws.com"
+      , endpointDefaultLocationConstraint = locationUsWest
+      , endpointAllowedLocationConstraints = [locationUsWest]
+      }
 
-sqsApNortheast :: B.ByteString
-sqsApNortheast = "sqs.ap-northeast-1.amazonaws.com"
+sqsEndpointEu :: Endpoint
+sqsEndpointEu
+    = Endpoint {
+        endpointHost = "s3-eu-west-1.amazonaws.com"
+      , endpointDefaultLocationConstraint = locationEu
+      , endpointAllowedLocationConstraints = [locationEu]
+      }
 
-sdbHttpGet :: B.ByteString -> SdbInfo
-sdbHttpGet endpoint = SqsInfo HTTP Get endpoint (defaultPort HTTP)
-                          
-sdbHttpPost :: B.ByteString -> SdbInfo
-sdbHttpPost endpoint = SqsInfo HTTP PostQuery endpoint (defaultPort HTTP)
-              
-sdbHttpsGet :: B.ByteString -> SdbInfo
-sdbHttpsGet endpoint = SqsInfo HTTPS Get endpoint (defaultPort HTTPS)
-             
-sdbHttpsPost :: B.ByteString -> SdbInfo
-sdbHttpsPost endpoint = SqsInfo HTTPS PostQuery endpoint (defaultPort HTTPS)
+sqsEndpointApSouthEast :: Endpoint
+sqsEndpointApSouthEast
+    = Endpoint {
+        endpointHost = "sqs.ap-southeast-1.amazonaws.com"
+      , endpointDefaultLocationConstraint = locationApSouthEast
+      , endpointAllowedLocationConstraints = [locationApSouthEast]
+      }
+
+sqsEndpointApNorthEast :: Endpoint
+sqsEndpointApNorthEast
+    = Endpoint {
+        endpointHost = "sqs.ap-northeast-1.amazonaws.com"
+      , endpointDefaultLocationConstraint = locationApNorthEast
+      , endpointAllowedLocationConstraints = [locationApNorthEast]
+      }
+
+sqs :: Protocol -> Endpoint -> Bool -> SqsInfo
+sqs protocol endpoint uri 
+    = SqsInfo { 
+        sqsProtocol = protocol
+      , sqsEndpoint = endpoint
+      , sqsPort = defaultPort protocol
+      , sqsUseUri = uri
+      , sqsDefaultExpiry = 15*60
+      }
 

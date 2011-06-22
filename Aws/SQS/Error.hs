@@ -4,11 +4,10 @@ where
 
 import           Aws.Metadata
 import           Aws.SQS.Metadata
-import           Control.Monad.Error.Class
+import           Aws.Xml
 import           Data.Typeable
-import           Text.XML.Monad
-import qualified Control.Exception         as C
-import qualified Network.HTTP.Types        as HTTP
+import qualified Control.Exception  as C
+import qualified Network.HTTP.Types as HTTP
 
 type ErrorCode = String
 
@@ -20,13 +19,13 @@ data SqsError
       , sqsErrorMetadata :: Maybe SqsMetadata
       }
     | SqsXmlError { 
-        fromSqsXmlError :: XmlError
+        sqsXmlErrorMessage :: String
       , sqsXmlErrorMetadata :: Maybe SqsMetadata
       }
     deriving (Show, Typeable)
 
-instance FromXmlError SqsError where
-    fromXmlError = flip SqsXmlError Nothing
+--instance FromXmlError SqsError where
+--    fromXmlError = flip SqsXmlError Nothing
 
 instance WithMetadata SqsError SqsMetadata where
     getMetadata SqsError { sqsErrorMetadata = err }       = err
@@ -35,8 +34,11 @@ instance WithMetadata SqsError SqsMetadata where
     setMetadata m e@SqsError{}    = e { sqsErrorMetadata = Just m }
     setMetadata m e@SqsXmlError{} = e { sqsXmlErrorMetadata = Just m }
 
-instance Error SqsError where
-    noMsg = fromXmlError noMsg
-    strMsg = fromXmlError . strMsg
+sqsForce :: String -> [a] -> Either SqsError a
+sqsForce msg = force (SqsXmlError msg Nothing)
+
+--instance Error SqsError where
+--    noMsg = fromXmlError noMsg
+--    strMsg = fromXmlError . strMsg
 
 instance C.Exception SqsError

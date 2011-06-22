@@ -10,6 +10,7 @@ import           Aws.Response
 import           Aws.S3.Info
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SQS.Info
 import           Aws.Transaction
 import           Control.Applicative
 import           Control.Monad.Reader
@@ -25,6 +26,8 @@ data Configuration
       , sdbInfoUri :: SdbInfo
       , s3Info :: S3Info
       , s3InfoUri :: S3Info
+      , sqsInfo :: SqsInfo
+      , sqsInfoUri :: SqsInfo
       }
 
 class ConfigurationFetch a where
@@ -42,6 +45,10 @@ instance ConfigurationFetch SdbInfo where
 instance ConfigurationFetch S3Info where
     configurationFetch = s3Info
     configurationFetchUri = s3InfoUri
+
+instance ConfigurationFetch SqsInfo where
+    configurationFetch = sqsInfo
+    configurationFetchUri = sqsInfoUri
 
 baseConfiguration :: MonadIO io => io Configuration
 baseConfiguration = do
@@ -104,7 +111,8 @@ unsafeAws request = do
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
   let info = configurationFetch cfg
   let q = signQuery request info sd
-  debugPrint "String to sign" $ sqStringToSign q
+  debugPrint "String to sign (unsafe)" $ sqStringToSign q
+  debugPrint "Resulting Url" $ queryToUri q
   let httpRequest = queryToHttpRequest q
   liftIO $ HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest responseIteratee
 
@@ -120,4 +128,5 @@ awsUri request = do
   sd <- liftIO $ signatureData ti cr
   let q = signQuery request info sd
   debugPrint "String to sign" $ sqStringToSign q
+  debugPrint "Resulting Url" $ queryToUri q
   return $ queryToUri q
