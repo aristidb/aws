@@ -33,11 +33,7 @@ data GetServiceResponse
     deriving (Show)
 
 instance S3ResponseIteratee GetServiceResponse where
-    s3ResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                           let cursor = Cu.fromDocument doc
-                                           case parse cursor of                                  
-                                             Left err -> En.throwError err
-                                             Right v -> return v
+    s3ResponseIteratee = xmlCursorIteratee (\_ _ -> parse)
         where
           parse :: Cu.Cursor -> Either S3Error GetServiceResponse
           parse el = do
