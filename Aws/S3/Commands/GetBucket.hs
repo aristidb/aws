@@ -1,17 +1,25 @@
-{-# LANGUAGE TypeFamilies, RecordWildCards, TupleSections, OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies, RecordWildCards, TupleSections, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances #-}
 module Aws.S3.Commands.GetBucket
 where
 
+import           Aws.S3.Error
 import           Aws.S3.Info
 import           Aws.S3.Model
 import           Aws.S3.Query
+import           Aws.S3.Response
 import           Aws.Signature
+import           Aws.Transaction
+import           Aws.Xml
 import           Control.Applicative
-import           Control.Arrow         (second)
-import           Data.ByteString.Char8 ({- IsString -})
+import           Control.Arrow              (second)
+import           Data.ByteString.Char8      ({- IsString -})
 import           Data.Maybe
-import qualified Data.ByteString.UTF8  as BU
-import qualified Network.HTTP.Types    as HTTP
+import           Text.XML.Enumerator.Cursor (($/), (&|), (&//))
+import qualified Data.ByteString.UTF8       as BU
+import qualified Data.Text                  as T
+import qualified Data.Traversable
+import qualified Network.HTTP.Types         as HTTP
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 data GetBucket
     = GetBucket {
@@ -33,8 +41,8 @@ getBucket bucket
       , gbPrefix    = Nothing
       }
 
-data GetBucketResult
-    = GetBucketResult {
+data GetBucketResponse
+    = GetBucketResponse {
         gbrName           :: Bucket
       , gbrDelimiter      :: Maybe String
       , gbrMarker         :: Maybe String
@@ -57,3 +65,25 @@ instance SignQuery GetBucket where
                                             , ("prefix",) <$> gbPrefix
                                             ]
                                }
+
+instance S3ResponseIteratee GetBucketResponse where
+    s3ResponseIteratee = xmlCursorIteratee parse
+        where parse cursor 
+                  = do name <- s3Force "Missing Name" $ cursor $/ elCont "Name"
+                       let delimiter = listToMaybe $ cursor $/ elCont "Delimiter"
+                       let marker = listToMaybe $ cursor $/ elCont "Marker"
+                       maxKeys <- Data.Traversable.sequence . listToMaybe $ cursor $/ elCont "MaxKeys" &| s3ReadInt
+                       let prefix = listToMaybe $ cursor $/ elCont "Prefix"
+                       contents <- sequence $ cursor $/ Cu.laxElement "Contents" &| parseObjectInfo
+                       let commonPrefixes = cursor $/ Cu.laxElement "CommonPrefixes" &// Cu.content &| T.unpack
+                       return GetBucketResponse{
+                                                gbrName           = name
+                                              , gbrDelimiter      = delimiter
+                                              , gbrMarker         = marker
+                                              , gbrMaxKeys        = maxKeys
+                                              , gbrPrefix         = prefix
+                                              , gbrContents       = contents
+                                              , gbrCommonPrefixes = commonPrefixes
+                                              }
+
+instance Transaction GetBucket (S3Response GetBucketResponse)

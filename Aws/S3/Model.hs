@@ -3,9 +3,12 @@ module Aws.S3.Model
 where
 
 import           Aws.S3.Error
+import           Aws.S3.Response
+import           Aws.Util
 import           Aws.Xml
 import           Data.Time
-import           Text.XML.Enumerator.Cursor (($/))
+import           System.Locale
+import           Text.XML.Enumerator.Cursor (($/), (&|))
 import qualified Text.XML.Enumerator.Cursor as Cu
 
 type CanonicalUserId = String
@@ -37,14 +40,30 @@ data ObjectInfo
       , objectLastModified :: UTCTime
       , objectETag :: String
       , objectSize :: Integer
-      , objectStorageClass :: StorageClass
+      , objectStorageClass :: String
       , objectOwner :: UserInfo
       }
     deriving (Show)
 
-data StorageClass 
-    = StorageClassStandard
-    deriving (Show)
+parseObjectInfo :: Cu.Cursor -> Either S3Error ObjectInfo
+parseObjectInfo el 
+    = do key <- s3Force "Missing object Key" $ el $/ elCont "Key"
+         let time s = case parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" s of
+                        Nothing -> Left $ S3XmlError "Invalid time" Nothing
+                        (Just v) -> Right v
+         lastModified <- s3ForceM "Missing object LastModified" $ el $/ elCont "LastModified" &| time
+         eTag <- s3Force "Missing object ETag" $ el $/ elCont "ETag"
+         size <- s3ForceM "Missing object Size" $ el $/ elCont "Size" &| s3ReadInt
+         storageClass <- s3Force "Missing object StorageClass" $ el $/ elCont "StorageClass"
+         owner <- s3ForceM "Missing object Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
+         return ObjectInfo{
+                      objectKey          = key
+                    , objectLastModified = lastModified
+                    , objectETag         = eTag
+                    , objectSize         = size
+                    , objectStorageClass = storageClass
+                    , objectOwner        = owner
+                    }
 
 type LocationConstraint = String
 
