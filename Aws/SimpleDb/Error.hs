@@ -5,9 +5,7 @@ where
 import           Aws.Metadata
 import           Aws.SimpleDb.Metadata
 import           Aws.Xml
-import           Control.Monad.Error.Class
 import           Data.Typeable
-import           Text.XML.Monad
 import qualified Control.Exception         as C
 import qualified Network.HTTP.Types        as HTTP
 
@@ -26,19 +24,12 @@ data SdbError
       }
     deriving (Show, Typeable)
 
-instance FromXmlError SdbError where
-    fromXmlError = flip SdbXmlError Nothing . show
-
 instance WithMetadata SdbError SdbMetadata where
     getMetadata SdbError { sdbErrorMetadata = err }       = err
     getMetadata SdbXmlError { sdbXmlErrorMetadata = err } = err
 
     setMetadata m e@SdbError{}    = e { sdbErrorMetadata = Just m }
     setMetadata m e@SdbXmlError{} = e { sdbXmlErrorMetadata = Just m }
-
-instance Error SdbError where
-    noMsg = fromXmlError noMsg
-    strMsg = fromXmlError . strMsg
 
 instance C.Exception SdbError
 
