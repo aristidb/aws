@@ -3,16 +3,18 @@ module Aws.SimpleDb.Commands.DomainMetadata
 where
 
 import           Aws.Signature
+import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
+import           Aws.Xml
 import           Control.Applicative
-import           Control.Monad.Compose.Class
 import           Data.Time
 import           Data.Time.Clock.POSIX
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8        as BU
+import           Text.XML.Enumerator.Cursor (($//), (&|))
+import qualified Data.ByteString.UTF8       as BU
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 data DomainMetadata
     = DomainMetadata {
@@ -39,18 +41,19 @@ instance SignQuery DomainMetadata where
     type Info DomainMetadata = SdbInfo
     signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", BU.fromString dmDomainName)]
 
-{-
 instance SdbFromResponse DomainMetadataResponse where
-    sdbFromResponse = do
-      testElementNameUI "DomainMetadataResponse"
-      dmrTimestamp <- posixSecondsToUTCTime . fromInteger <$> readContent <<< findElementNameUI "Timestamp"
-      dmrItemCount <- readContent <<< findElementNameUI "ItemCount"
-      dmrAttributeValueCount <- readContent <<< findElementNameUI "AttributeValueCount"
-      dmrAttributeNameCount <- readContent <<< findElementNameUI "AttributeNameCount"
-      dmrItemNamesSizeBytes <- readContent <<< findElementNameUI "ItemNamesSizeBytes"
-      dmrAttributeValuesSizeBytes <- readContent <<< findElementNameUI "AttributeValuesSizeBytes"
-      dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
+    sdbFromResponse cursor = do
+      sdbCheckResponseType () "DomainMetadataResponse" cursor
+      let readNum s = case reads s of
+                        [(n,"")] -> Right $ fromInteger n
+                        _        -> Left $ SdbXmlError "Integer expected" Nothing
+      dmrTimestamp <- sdbForceM "Timestamp expected" $ cursor $// elCont "Timestamp" &| (fmap posixSecondsToUTCTime . readNum)
+      dmrItemCount <- sdbForceM "ItemCount expected" $ cursor $// elCont "ItemCount" &| readNum
+      dmrAttributeValueCount <- sdbForceM "AttributeValueCount expected" $ cursor $// elCont "AttributeValueCount" &| readNum
+      dmrAttributeNameCount <- sdbForceM "AttributeNameCount expected" $ cursor $// elCont "AttributeNameCount" &| readNum
+      dmrItemNamesSizeBytes <- sdbForceM "ItemNamesSizeBytes expected" $ cursor $// elCont "ItemNamesSizeBytes" &| readNum
+      dmrAttributeValuesSizeBytes <- sdbForceM "AttributeValuesSizeBytes expected" $ cursor $// elCont "AttributeValuesSizeBytes" &| readNum
+      dmrAttributeNamesSizeBytes <- sdbForceM "AttributeNamesSizeBytes expected" $ cursor $// elCont "AttributeNamesSizeBytes" &| readNum
       return DomainMetadataResponse{..}
 
 instance Transaction DomainMetadata (SdbResponse DomainMetadataResponse)
--}
