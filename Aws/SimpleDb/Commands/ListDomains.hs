@@ -7,11 +7,11 @@ import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
+import           Aws.Xml
 import           Control.Applicative
-import           Control.Monad.Compose.Class
 import           Data.Maybe
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8        as BU
+import           Text.XML.Enumerator.Cursor (($//))
+import qualified Data.ByteString.UTF8       as BU
 
 data ListDomains
     = ListDomains {
@@ -38,13 +38,11 @@ instance SignQuery ListDomains where
                                 , ("NextToken",) <$> BU.fromString <$> ldNextToken
                                 ]
 
-{-
 instance SdbFromResponse ListDomainsResponse where
-    sdbFromResponse = do
-      testElementNameUI "ListDomainsResponse"
-      names <- inList strContent <<< findElementsNameUI "DomainName"
-      nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
+    sdbFromResponse cursor = do
+      sdbCheckResponseType () "ListDomainsResponse" cursor
+      let names = cursor $// elCont "DomainName"
+      let nextToken = listToMaybe $ cursor $// elCont "NextToken"
       return $ ListDomainsResponse names nextToken
 
 instance Transaction ListDomains (SdbResponse ListDomainsResponse)
--}
