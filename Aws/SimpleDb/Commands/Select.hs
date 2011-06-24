@@ -9,10 +9,12 @@ import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
+import           Aws.Xml
 import           Control.Monad
-import           Control.Monad.Compose.Class
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8        as BU
+import           Data.Maybe
+import           Text.XML.Enumerator.Cursor (($//), (&|))
+import qualified Data.ByteString.UTF8       as BU
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 data Select
     = Select {
@@ -41,10 +43,10 @@ instance SignQuery Select where
             (guard (not $ null sNextToken) >> [("NextToken", BU.fromString sNextToken)])
 
 instance SdbFromResponse SelectResponse where
-    sdbFromResponse = do
-      testElementNameUI "SelectResponse"
-      items <- inList readItem <<< findElementsNameUI "Item"
-      nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
+    sdbFromResponse cursor = do
+      sdbCheckResponseType () "SelectResponse" cursor
+      items <- sequence $ cursor $// Cu.laxElement "Item" &| readItem
+      let nextToken = listToMaybe $ cursor $// elCont "NextToken"
       return $ SelectResponse items nextToken
 
 instance Transaction Select (SdbResponse SelectResponse)

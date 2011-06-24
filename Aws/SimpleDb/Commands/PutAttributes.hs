@@ -3,6 +3,7 @@ module Aws.SimpleDb.Commands.PutAttributes
 where
 
 import           Aws.Signature
+import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
@@ -11,7 +12,8 @@ import           Aws.Transaction
 import           Aws.Util
 import           Control.Applicative
 import           Text.XML.Monad
-import qualified Data.ByteString.UTF8  as BU
+import qualified Data.ByteString.UTF8       as BU
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 data PutAttributes
     = PutAttributes {
@@ -43,6 +45,6 @@ instance SignQuery PutAttributes where
             queryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
 
 instance SdbFromResponse PutAttributesResponse where
-    sdbFromResponse = PutAttributesResponse <$ testElementNameUI "PutAttributesResponse"
+    sdbFromResponse = sdbCheckResponseType PutAttributesResponse "PutAttributesResponse"
 
 instance Transaction PutAttributes (SdbResponse PutAttributesResponse)

@@ -39,6 +39,7 @@ instance SignQuery DomainMetadata where
     type Info DomainMetadata = SdbInfo
     signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", BU.fromString dmDomainName)]
 
+{-
 instance SdbFromResponse DomainMetadataResponse where
     sdbFromResponse = do
       testElementNameUI "DomainMetadataResponse"
@@ -52,3 +53,4 @@ instance SdbFromResponse DomainMetadataResponse where
       return DomainMetadataResponse{..}
 
 instance Transaction DomainMetadata (SdbResponse DomainMetadataResponse)
+-}

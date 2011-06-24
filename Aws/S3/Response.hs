@@ -8,17 +8,14 @@ import           Aws.S3.Error
 import           Aws.S3.Metadata
 import           Aws.Util
 import           Aws.Xml
-import           Control.Applicative
-import           Control.Monad.Compose.Class
 import           Data.Char
 import           Data.Enumerator              ((=$))
 import           Data.Maybe
 import           Data.Word
-import           Text.XML.Enumerator.Cursor   (($/), (&|), (&/))
+import           Text.XML.Enumerator.Cursor   (($/))
 import qualified Data.ByteString              as B
 import qualified Data.ByteString.Char8        as B8
 import qualified Data.Enumerator              as En
-import qualified Data.Text                    as T
 import qualified Network.HTTP.Enumerator      as HTTPE
 import qualified Network.HTTP.Types           as HTTP
 import qualified Text.XML.Enumerator.Cursor   as Cu
@@ -53,11 +50,12 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
                                       }
 
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            case parseError cursor of
-                                              Left invalidXml -> En.throwError invalidXml
-                                              Right err -> En.throwError err
+s3ErrorResponseIteratee status _headers 
+    = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
+         let cursor = Cu.fromDocument doc
+         case parseError cursor of
+           Left invalidXml -> En.throwError invalidXml
+           Right err -> En.throwError err
     where
       parseError :: Cu.Cursor -> Either S3Error S3Error
       parseError root = do code <- s3Force "Missing error Code" $ root $/ elCont "Code"

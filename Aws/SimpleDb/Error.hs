@@ -4,6 +4,7 @@ where
 
 import           Aws.Metadata
 import           Aws.SimpleDb.Metadata
+import           Aws.Xml
 import           Control.Monad.Error.Class
 import           Data.Typeable
 import           Text.XML.Monad
@@ -20,13 +21,13 @@ data SdbError
       , sdbErrorMetadata :: Maybe SdbMetadata
       }
     | SdbXmlError { 
-        fromSdbXmlError :: XmlError
+        sdbXmlErrorMessage :: String
       , sdbXmlErrorMetadata :: Maybe SdbMetadata
       }
     deriving (Show, Typeable)
 
 instance FromXmlError SdbError where
-    fromXmlError = flip SdbXmlError Nothing
+    fromXmlError = flip SdbXmlError Nothing . show
 
 instance WithMetadata SdbError SdbMetadata where
     getMetadata SdbError { sdbErrorMetadata = err }       = err
@@ -40,3 +41,6 @@ instance Error SdbError where
     strMsg = fromXmlError . strMsg
 
 instance C.Exception SdbError
+
+sdbForce :: String -> [a] -> Either SdbError a
+sdbForce msg = force (SdbXmlError msg Nothing)

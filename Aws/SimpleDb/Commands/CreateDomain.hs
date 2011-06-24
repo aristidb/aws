@@ -7,9 +7,7 @@ import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
-import           Control.Applicative
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8  as BU
+import qualified Data.ByteString.UTF8       as BU
 
 data CreateDomain
     = CreateDomain {
@@ -29,6 +27,6 @@ instance SignQuery CreateDomain where
     signQuery CreateDomain{..} = sdbSignQuery [("Action", "CreateDomain"), ("DomainName", BU.fromString cdDomainName)]
 
 instance SdbFromResponse CreateDomainResponse where
-    sdbFromResponse = CreateDomainResponse <$ testElementNameUI "CreateDomainResponse"
+    sdbFromResponse = sdbCheckResponseType CreateDomainResponse "CreateDomainResponse"
 
 instance Transaction CreateDomain (SdbResponse CreateDomainResponse)

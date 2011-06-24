@@ -38,6 +38,7 @@ instance SignQuery ListDomains where
                                 , ("NextToken",) <$> BU.fromString <$> ldNextToken
                                 ]
 
+{-
 instance SdbFromResponse ListDomainsResponse where
     sdbFromResponse = do
       testElementNameUI "ListDomainsResponse"
@@ -46,3 +47,4 @@ instance SdbFromResponse ListDomainsResponse where
       return $ ListDomainsResponse names nextToken
 
 instance Transaction ListDomains (SdbResponse ListDomainsResponse)
+-}

@@ -42,6 +42,7 @@ instance SignQuery GetAttributes where
             maybeToList (("AttributeName",) <$> BU.fromString <$> gaAttributeName) ++
             (guard gaConsistentRead >> [("ConsistentRead", awsTrue)])
 
+{-
 instance SdbFromResponse GetAttributesResponse where
     sdbFromResponse = do
       testElementNameUI "GetAttributesResponse"
@@ -49,3 +50,4 @@ instance SdbFromResponse GetAttributesResponse where
       return $ GetAttributesResponse attributes
 
 instance Transaction GetAttributes (SdbResponse GetAttributesResponse)
+-}

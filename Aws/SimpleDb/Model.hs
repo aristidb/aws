@@ -5,20 +5,20 @@ where
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Response
 import           Aws.Util
-import           Control.Monad.Compose.Class
-import           Text.XML.Monad
-import qualified Data.ByteString             as B
-import qualified Data.ByteString.UTF8        as BU
-import qualified Text.XML.Light              as XL
+import           Control.Monad
+import           Text.XML.Enumerator.Cursor (($/), (&|))
+import qualified Data.ByteString            as B
+import qualified Data.ByteString.UTF8       as BU
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 data Attribute a
     = ForAttribute { attributeName :: String, attributeData :: a }
     deriving (Show)
 
-readAttribute :: Xml SdbError XL.Element (Attribute String)
-readAttribute = do
-  name <- decodeBase64 <<< findElementNameUI "Name"
-  value <- decodeBase64 <<< findElementNameUI "Value"
+readAttribute :: Cu.Cursor -> Either SdbError (Attribute String)
+readAttribute cursor = do
+  name <- sdbForce "Missing Name" <=< sequence $ cursor $/ Cu.laxElement "Name" &| decodeBase64
+  value <- sdbForce "Missing Value " <=< sequence $ cursor $/ Cu.laxElement "Value" &| decodeBase64
   return $ ForAttribute name value
              
 data SetAttribute
@@ -66,10 +66,10 @@ data Item a
     = Item { itemName :: String, itemData :: a }
     deriving (Show)
 
-readItem :: Xml SdbError XL.Element (Item [Attribute String])
-readItem = do
-  name <- decodeBase64 <<< findElementNameUI "Name"
-  attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
+readItem :: Cu.Cursor -> Either SdbError (Item [Attribute String])
+readItem cursor = do
+  name <- sdbForce "Missing Name" <=< sequence $ cursor $/ Cu.laxElement "Name" &| decodeBase64
+  attributes <- sequence $ cursor $/ Cu.laxElement "Attribute" &| readAttribute
   return $ Item name attributes
              
 itemQuery :: (a -> [(B.ByteString, B.ByteString)]) -> Item a -> [(B.ByteString, B.ByteString)]

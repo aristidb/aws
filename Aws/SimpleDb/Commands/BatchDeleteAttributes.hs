@@ -9,9 +9,7 @@ import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
-import           Control.Applicative
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8  as BU
+import qualified Data.ByteString.UTF8       as BU
 
 data BatchDeleteAttributes
     = BatchDeleteAttributes {
@@ -36,6 +34,6 @@ instance SignQuery BatchDeleteAttributes where
             queryList (itemQuery $ queryList (attributeQuery deleteAttributeQuery) "Attribute") "Item" bdaItems
 
 instance SdbFromResponse BatchDeleteAttributesResponse where
-    sdbFromResponse = BatchDeleteAttributesResponse <$ testElementNameUI "BatchDeleteAttributesResponse"
+    sdbFromResponse = sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
 
 instance Transaction BatchDeleteAttributes (SdbResponse BatchDeleteAttributesResponse)

@@ -2,7 +2,6 @@
 module Aws.S3.Commands.GetService
 where
   
-import           Aws.Response
 import           Aws.S3.Error
 import           Aws.S3.Info
 import           Aws.S3.Model
@@ -12,16 +11,11 @@ import           Aws.Signature
 import           Aws.Transaction
 import           Aws.Xml
 import           Control.Monad
-import           Data.Enumerator              ((=$))
 import           Data.Maybe
 import           Data.Time.Format
 import           System.Locale
-import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|))
-import qualified Data.Enumerator              as En
-import qualified Data.Text                    as T
-import qualified Text.XML.Enumerator.Cursor   as Cu
-import qualified Text.XML.Enumerator.Parse    as XML
-import qualified Text.XML.Enumerator.Resolved as XML
+import           Text.XML.Enumerator.Cursor (($/), ($//), (&|))
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 data GetService = GetService
 
@@ -33,7 +27,7 @@ data GetServiceResponse
     deriving (Show)
 
 instance S3ResponseIteratee GetServiceResponse where
-    s3ResponseIteratee = xmlCursorIteratee (\_ _ -> parse)
+    s3ResponseIteratee = xmlCursorIteratee parse
         where
           parse :: Cu.Cursor -> Either S3Error GetServiceResponse
           parse el = do

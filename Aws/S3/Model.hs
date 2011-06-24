@@ -4,10 +4,8 @@ where
 
 import           Aws.S3.Error
 import           Aws.Xml
-import           Data.Maybe
 import           Data.Time
-import           Text.XML.Enumerator.Cursor (($/), (&/), (&|))
-import qualified Data.Text                  as T
+import           Text.XML.Enumerator.Cursor (($/))
 import qualified Text.XML.Enumerator.Cursor as Cu
 
 type CanonicalUserId = String

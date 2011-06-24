@@ -21,13 +21,13 @@ force _ (x:_) = Right x
 
 xmlCursorIteratee :: 
     (Exception e)
-    => (HTTP.Status -> HTTP.ResponseHeaders -> Cu.Cursor -> Either e a) 
+    => (Cu.Cursor -> Either e a) 
     -> HTTP.Status 
     -> HTTP.ResponseHeaders 
     -> En.Iteratee B.ByteString IO a
-xmlCursorIteratee parse status headers
+xmlCursorIteratee parse _status _headers
     = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
          let cursor = Cu.fromDocument doc
-         case parse status headers cursor of                                  
+         case parse cursor of                                  
            Left err -> En.throwError err
            Right v -> return v
