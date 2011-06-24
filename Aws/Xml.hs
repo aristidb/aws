@@ -23,6 +23,11 @@ forceM :: e -> [Either e a] -> Either e a
 forceM e []    = Left e
 forceM _ (x:_) = x
 
+readInt :: Num a => e -> String -> Either e a
+readInt e s = case reads s of
+                [(n,"")] -> Right $ fromInteger n
+                _        -> Left e
+
 xmlCursorIteratee :: 
     (Exception e)
     => (Cu.Cursor -> Either e a) 

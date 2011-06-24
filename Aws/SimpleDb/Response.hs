@@ -59,3 +59,6 @@ decodeBase64 cursor =
       Just "base64" -> handleErr . Base64.decode . BU.fromString $ encoded
           where handleErr = (flip SdbXmlError Nothing . ("Invalid Base64 data: "++)) +++ BU.toString
       Just actual -> Left $ SdbXmlError ("Unrecognized encoding " ++ T.unpack actual) Nothing
+
+sdbReadInt :: Num a => String -> Either SdbError a
+sdbReadInt = readInt (SdbXmlError "Integer expected" Nothing)

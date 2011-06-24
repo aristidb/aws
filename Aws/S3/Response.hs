@@ -92,3 +92,6 @@ class S3ResponseIteratee a where
 
 instance S3ResponseIteratee HTTPE.Response where
     s3ResponseIteratee = HTTPE.lbsIter
+
+s3ReadInt :: Num a => String -> Either S3Error a
+s3ReadInt = readInt (S3XmlError "Integer expected" Nothing)

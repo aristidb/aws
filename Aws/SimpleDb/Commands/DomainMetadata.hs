@@ -42,16 +42,13 @@ instance SignQuery DomainMetadata where
 instance SdbFromResponse DomainMetadataResponse where
     sdbFromResponse cursor = do
       sdbCheckResponseType () "DomainMetadataResponse" cursor
-      let readNum s = case reads s of
-                        [(n,"")] -> Right $ fromInteger n
-                        _        -> Left $ SdbXmlError "Integer expected" Nothing
-      dmrTimestamp <- sdbForceM "Timestamp expected" $ cursor $// elCont "Timestamp" &| (fmap posixSecondsToUTCTime . readNum)
-      dmrItemCount <- sdbForceM "ItemCount expected" $ cursor $// elCont "ItemCount" &| readNum
-      dmrAttributeValueCount <- sdbForceM "AttributeValueCount expected" $ cursor $// elCont "AttributeValueCount" &| readNum
-      dmrAttributeNameCount <- sdbForceM "AttributeNameCount expected" $ cursor $// elCont "AttributeNameCount" &| readNum
-      dmrItemNamesSizeBytes <- sdbForceM "ItemNamesSizeBytes expected" $ cursor $// elCont "ItemNamesSizeBytes" &| readNum
-      dmrAttributeValuesSizeBytes <- sdbForceM "AttributeValuesSizeBytes expected" $ cursor $// elCont "AttributeValuesSizeBytes" &| readNum
-      dmrAttributeNamesSizeBytes <- sdbForceM "AttributeNamesSizeBytes expected" $ cursor $// elCont "AttributeNamesSizeBytes" &| readNum
+      dmrTimestamp <- sdbForceM "Timestamp expected" $ cursor $// elCont "Timestamp" &| (fmap posixSecondsToUTCTime . sdbReadInt)
+      dmrItemCount <- sdbForceM "ItemCount expected" $ cursor $// elCont "ItemCount" &| sdbReadInt
+      dmrAttributeValueCount <- sdbForceM "AttributeValueCount expected" $ cursor $// elCont "AttributeValueCount" &| sdbReadInt
+      dmrAttributeNameCount <- sdbForceM "AttributeNameCount expected" $ cursor $// elCont "AttributeNameCount" &| sdbReadInt
+      dmrItemNamesSizeBytes <- sdbForceM "ItemNamesSizeBytes expected" $ cursor $// elCont "ItemNamesSizeBytes" &| sdbReadInt
+      dmrAttributeValuesSizeBytes <- sdbForceM "AttributeValuesSizeBytes expected" $ cursor $// elCont "AttributeValuesSizeBytes" &| sdbReadInt
+      dmrAttributeNamesSizeBytes <- sdbForceM "AttributeNamesSizeBytes expected" $ cursor $// elCont "AttributeNamesSizeBytes" &| sdbReadInt
       return DomainMetadataResponse{..}
 
 instance Transaction DomainMetadata (SdbResponse DomainMetadataResponse)
