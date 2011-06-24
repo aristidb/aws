@@ -10,7 +10,6 @@ import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
 import           Aws.Xml
-import           Control.Monad
 import           Data.Maybe
 import           Data.Time.Format
 import           System.Locale

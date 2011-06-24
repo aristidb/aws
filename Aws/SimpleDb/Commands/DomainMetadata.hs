@@ -9,12 +9,10 @@ import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Xml
-import           Control.Applicative
 import           Data.Time
 import           Data.Time.Clock.POSIX
 import           Text.XML.Enumerator.Cursor (($//), (&|))
 import qualified Data.ByteString.UTF8       as BU
-import qualified Text.XML.Enumerator.Cursor as Cu
 
 data DomainMetadata
     = DomainMetadata {

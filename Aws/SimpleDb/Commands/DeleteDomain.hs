@@ -3,15 +3,11 @@ module Aws.SimpleDb.Commands.DeleteDomain
 where
 
 import           Aws.Signature
-import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
-import           Control.Applicative
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8       as BU
-import qualified Text.XML.Enumerator.Cursor as Cu
+import qualified Data.ByteString.UTF8  as BU
 
 data DeleteDomain
     = DeleteDomain {

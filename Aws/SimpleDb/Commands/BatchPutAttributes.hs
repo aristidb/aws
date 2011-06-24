@@ -3,17 +3,13 @@ module Aws.SimpleDb.Commands.BatchPutAttributes
 where
 
 import           Aws.Signature
-import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
-import           Control.Applicative
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8       as BU
-import qualified Text.XML.Enumerator.Cursor as Cu
+import qualified Data.ByteString.UTF8  as BU
 
 data BatchPutAttributes
     = BatchPutAttributes {
