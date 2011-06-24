@@ -9,12 +9,13 @@ import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
+import           Aws.Xml
 import           Control.Applicative
 import           Control.Monad
-import           Control.Monad.Compose.Class
 import           Data.Maybe
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8        as BU
+import           Text.XML.Enumerator.Cursor (($//), (&|))
+import qualified Data.ByteString.UTF8       as BU
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 data GetAttributes
     = GetAttributes {
@@ -42,12 +43,10 @@ instance SignQuery GetAttributes where
             maybeToList (("AttributeName",) <$> BU.fromString <$> gaAttributeName) ++
             (guard gaConsistentRead >> [("ConsistentRead", awsTrue)])
 
-{-
 instance SdbFromResponse GetAttributesResponse where
-    sdbFromResponse = do
-      testElementNameUI "GetAttributesResponse"
-      attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
+    sdbFromResponse cursor = do
+      sdbCheckResponseType () "GetAttributesResponse" cursor
+      attributes <- sequence $ cursor $// Cu.laxElement "Attribute" &| readAttribute
       return $ GetAttributesResponse attributes
 
 instance Transaction GetAttributes (SdbResponse GetAttributesResponse)
--}
