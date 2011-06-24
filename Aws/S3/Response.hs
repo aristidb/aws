@@ -25,8 +25,7 @@ import qualified Text.XML.Enumerator.Resolved as XML
 data S3Response a
     = S3Response {
         fromS3Response :: a
-      , s3AmzId2 :: String
-      , s3RequestId :: String
+      , s3Metadata :: S3Metadata
       }
     deriving (Show)
 
@@ -35,18 +34,17 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
       let headerString = fromMaybe "" . fmap B8.unpack . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
-      
+      let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
+
       specific <- tryError $ if status >= HTTP.status400
                              then s3ErrorResponseIteratee status headers
                              else s3ResponseIteratee status headers
-      
+
       case specific of
         Left (err :: S3Error) -> En.throwError (setMetadata m err)
-            where m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
         Right resp -> return S3Response {
                                         fromS3Response = resp
-                                      , s3AmzId2 = amzId2
-                                      , s3RequestId = requestId
+                                      , s3Metadata = m
                                       }
 
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
