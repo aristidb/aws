@@ -44,3 +44,6 @@ instance C.Exception SdbError
 
 sdbForce :: String -> [a] -> Either SdbError a
 sdbForce msg = force (SdbXmlError msg Nothing)
+
+sdbForceM :: String -> [Either SdbError a] -> Either SdbError a
+sdbForceM msg = forceM (SdbXmlError msg Nothing)

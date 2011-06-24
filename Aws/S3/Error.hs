@@ -40,3 +40,6 @@ instance WithMetadata S3Error S3Metadata where
 
 s3Force :: String -> [a] -> Either S3Error a
 s3Force msg = force (S3XmlError msg Nothing)
+
+s3ForceM :: String -> [Either S3Error a] -> Either S3Error a
+s3ForceM msg = forceM (S3XmlError msg Nothing)

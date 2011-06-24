@@ -19,6 +19,10 @@ force :: e -> [a] -> Either e a
 force e []    = Left e
 force _ (x:_) = Right x
 
+forceM :: e -> [Either e a] -> Either e a
+forceM e []    = Left e
+forceM _ (x:_) = x
+
 xmlCursorIteratee :: 
     (Exception e)
     => (Cu.Cursor -> Either e a) 

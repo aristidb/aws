@@ -17,8 +17,8 @@ data Attribute a
 
 readAttribute :: Cu.Cursor -> Either SdbError (Attribute String)
 readAttribute cursor = do
-  name <- sdbForce "Missing Name" <=< sequence $ cursor $/ Cu.laxElement "Name" &| decodeBase64
-  value <- sdbForce "Missing Value " <=< sequence $ cursor $/ Cu.laxElement "Value" &| decodeBase64
+  name <- sdbForceM "Missing Name" $ cursor $/ Cu.laxElement "Name" &| decodeBase64
+  value <- sdbForceM "Missing Value" $ cursor $/ Cu.laxElement "Value" &| decodeBase64
   return $ ForAttribute name value
              
 data SetAttribute

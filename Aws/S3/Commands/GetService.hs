@@ -31,7 +31,7 @@ instance S3ResponseIteratee GetServiceResponse where
         where
           parse :: Cu.Cursor -> Either S3Error GetServiceResponse
           parse el = do
-            owner <- s3Force "Missing Owner" <=< sequence $ el $/ Cu.laxElement "Owner" &| parseUserInfo
+            owner <- s3ForceM "Missing Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
             buckets <- sequence $ el $// Cu.laxElement "Bucket" &| parseBucket
             return GetServiceResponse { gsrOwner = owner, gsrBuckets = buckets }
           
