@@ -3,13 +3,16 @@
 module Aws.Response
 where
   
+import           Data.IORef
 import qualified Data.ByteString         as B
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
 import qualified Network.HTTP.Types      as HTTP
 
 class ResponseIteratee a where
-    responseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+    type ResponseMetadata a
+    responseIteratee :: IORef (ResponseMetadata a) -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
     
 instance ResponseIteratee HTTP.Response where
-    responseIteratee = HTTP.lbsIter
+    type ResponseMetadata HTTP.Response = ()
+    responseIteratee _ = HTTP.lbsIter

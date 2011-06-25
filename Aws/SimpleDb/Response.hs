@@ -27,7 +27,8 @@ instance Functor SdbResponse where
     fmap f (SdbResponse a m) = SdbResponse (f a) m
 
 instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
-    responseIteratee status headers = xmlCursorIteratee parse status headers
+    type ResponseMetadata (SdbResponse a) = () -- TODO
+    responseIteratee metadataRef status headers = xmlCursorIteratee parse status headers
         where parse cursor
                   = do let requestId' = listToMaybe $ cursor $// elCont "RequestID"
                        let boxUsage' = listToMaybe $ cursor $// elCont "BoxUsage"

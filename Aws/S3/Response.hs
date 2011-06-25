@@ -8,8 +8,10 @@ import           Aws.S3.Error
 import           Aws.S3.Metadata
 import           Aws.Util
 import           Aws.Xml
+import           Control.Monad.IO.Class
 import           Data.Char
 import           Data.Enumerator              ((=$))
+import           Data.IORef
 import           Data.Maybe
 import           Data.Word
 import           Text.XML.Enumerator.Cursor   (($/))
@@ -30,12 +32,16 @@ data S3Response a
     deriving (Show)
 
 instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
-    responseIteratee status headers = do
+    type ResponseMetadata (S3Response a) = S3Metadata
+
+    responseIteratee metadata status headers = do
       let headerString = fmap B8.unpack . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
+      
       let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
-
+      liftIO $ writeIORef metadata m
+      
       specific <- tryError $ if status >= HTTP.status400
                              then s3ErrorResponseIteratee status headers
                              else s3ResponseIteratee status headers

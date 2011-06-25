@@ -5,6 +5,7 @@ where
 import           Aws.Credentials
 import           Aws.Debug
 import           Aws.Http
+import           Aws.Metadata
 import           Aws.Query
 import           Aws.Response
 import           Aws.S3.Info
@@ -13,6 +14,7 @@ import           Aws.SimpleDb.Info
 import           Aws.Transaction
 import           Control.Applicative
 import           Control.Monad.Reader
+import           Data.IORef
 import qualified Data.ByteString         as B
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
@@ -94,11 +96,12 @@ aws :: (Transaction request response
 aws = unsafeAws
 
 unsafeAws
-  :: (MonadAws m,
+  :: (MonadAws aws,
       ResponseIteratee response,
+      Metadata (ResponseMetadata response),
       SignQuery request,
       ConfigurationFetch (Info request)) =>
-     request -> m response
+     request -> aws response
 unsafeAws request = do
   cfg <- configuration
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
@@ -106,7 +109,8 @@ unsafeAws request = do
   let q = signQuery request info sd
   debugPrint "String to sign" $ sqStringToSign q
   let httpRequest = queryToHttpRequest q
-  liftIO $ HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest responseIteratee
+  metadataRef <- liftIO $ newIORef emptyMetadata -- TODO: actually return metadata reference
+  liftIO $ HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee metadataRef)
 
 awsUri :: (SignQuery request
           , ConfigurationFetch (Info request)
