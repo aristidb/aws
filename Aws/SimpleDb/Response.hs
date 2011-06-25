@@ -29,11 +29,11 @@ instance Functor SdbResponse where
 instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
     responseIteratee status headers = xmlCursorIteratee parse status headers
         where parse cursor
-                  = do requestId' <- left (putMetadata Nothing) $ sdbForce "Missing RequestID" $ cursor $// elCont "RequestID"
+                  = do let requestId' = listToMaybe $ cursor $// elCont "RequestID"
                        let boxUsage' = listToMaybe $ cursor $// elCont "BoxUsage"
                        let metadata = SdbMetadata requestId' boxUsage'
                        inner <- case parseInner cursor of
-                                  Left err       -> Left $ putMetadata (Just metadata) err
+                                  Left err       -> Left $ putMetadata metadata err
                                   Right response -> return response
                        return $ SdbResponse inner metadata
               parseInner cursor = case cursor $/ Cu.laxElement "Error" of

@@ -2,11 +2,15 @@
 module Aws.SimpleDb.Metadata
 where
   
+import Aws.Metadata
 import Data.Typeable
 
 data SdbMetadata 
     = SdbMetadata {
-        requestId :: String
+        requestId :: Maybe String
       , boxUsage :: Maybe String
       }
     deriving (Show, Typeable)
+
+instance Metadata SdbMetadata where
+    emptyMetadata = SdbMetadata Nothing Nothing

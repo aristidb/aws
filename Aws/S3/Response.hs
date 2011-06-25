@@ -31,7 +31,7 @@ data S3Response a
 
 instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
     responseIteratee status headers = do
-      let headerString = fromMaybe "" . fmap B8.unpack . flip lookup headers
+      let headerString = fmap B8.unpack . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
       let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
