@@ -22,6 +22,7 @@ import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as BC
 import qualified Data.ByteString.Lazy           as L
 import qualified Network.HTTP.Types             as HTTP
+import Debug.Trace
 
 data SqsQuery = SqsQuery{
   sqsQueueName :: Maybe String,
@@ -38,7 +39,7 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
       , sqPath = path
       , sqQuery = signedQuery
       , sqDate = Just signatureTime
-      , sqAuthorization = authorization
+      , sqAuthorization = Nothing 
       , sqBody = L.empty
       , sqStringToSign = stringToSign
       , sqContentType = Nothing
@@ -47,7 +48,7 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
     where
       method = PostQuery
       path = case sqsQueueName of
-                Just x -> B.concat ["/", accessKeyID signatureCredentials,"/", BC.pack x]
+                Just x -> B.concat ["/", BC.pack x, "/"]
                 Nothing -> "/"
       expandedQuery = sortBy (comparing fst) 
                        ( sqsQuery ++ [ ("AWSAccessKeyId", Just(accessKeyID signatureCredentials)), 
@@ -77,4 +78,4 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
       (authorization, authQuery) = case ti of
                                  AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
                                  AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ makeAuthQuery)
-      makeAuthQuery = [("Signature", HTTP.urlEncode False sig)]
+      makeAuthQuery = [("Signature", sig)]

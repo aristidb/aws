@@ -44,8 +44,8 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.queryString = sqQuery
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
-                                        , fmap (\md5 -> ("Content-MD5", md5)) sqContentMd5
-                                        , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
+                                        , fmap (\md5 -> ("Content-MD5", md5)) sqContentMd5]
+                                        --, fmap (\auth -> ("Authorization", auth)) sqAuthorization]
       , HTTP.requestBody = HTTP.RequestBodyLBS $ case sqMethod of
                                                    Get -> L.empty
                                                    PostQuery -> Blaze.toLazyByteString $ HTTP.renderQueryBuilder False sqQuery
