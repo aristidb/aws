@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, RecordWildCards #-}
 module Aws.SimpleDb.Error
 where
 
@@ -11,30 +11,27 @@ import qualified Network.HTTP.Types        as HTTP
 
 type ErrorCode = String
 
-data SdbError
+data SdbError metadata
     = SdbError {
         sdbStatusCode :: HTTP.Status
       , sdbErrorCode :: ErrorCode
       , sdbErrorMessage :: String
-      , sdbErrorMetadata :: Maybe SdbMetadata
+      , sdbErrorMetadata :: metadata
       }
     | SdbXmlError { 
         sdbXmlErrorMessage :: String
-      , sdbXmlErrorMetadata :: Maybe SdbMetadata
+      , sdbXmlErrorMetadata :: metadata
       }
     deriving (Show, Typeable)
 
-instance WithMetadata SdbError SdbMetadata where
-    getMetadata SdbError { sdbErrorMetadata = err }       = err
-    getMetadata SdbXmlError { sdbXmlErrorMetadata = err } = err
+instance WithMetadata SdbError where
+    putMetadata m SdbError{..}    = let sdbErrorMetadata = m    in SdbError{..}
+    putMetadata m SdbXmlError{..} = let sdbXmlErrorMetadata = m in SdbXmlError{..}
 
-    setMetadata m e@SdbError{}    = e { sdbErrorMetadata = Just m }
-    setMetadata m e@SdbXmlError{} = e { sdbXmlErrorMetadata = Just m }
+instance (Show metadata, Typeable metadata) => C.Exception (SdbError metadata)
 
-instance C.Exception SdbError
+sdbForce :: String -> [a] -> Either (SdbError ()) a
+sdbForce msg = force (SdbXmlError msg ())
 
-sdbForce :: String -> [a] -> Either SdbError a
-sdbForce msg = force (SdbXmlError msg Nothing)
-
-sdbForceM :: String -> [Either SdbError a] -> Either SdbError a
-sdbForceM msg = forceM (SdbXmlError msg Nothing)
+sdbForceM :: String -> [Either (SdbError ()) a] -> Either (SdbError ()) a
+sdbForceM msg = forceM (SdbXmlError msg ())

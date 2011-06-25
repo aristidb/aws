@@ -8,7 +8,7 @@ import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Metadata
 import           Aws.Xml
 import           Control.Applicative
-import           Control.Arrow              ((+++))
+import           Control.Arrow              ((+++), left)
 import           Data.Maybe
 import           Text.XML.Enumerator.Cursor (($|), ($/), ($//), (&|))
 import qualified Data.ByteString.Base64     as Base64
@@ -29,11 +29,11 @@ instance Functor SdbResponse where
 instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
     responseIteratee status headers = xmlCursorIteratee parse status headers
         where parse cursor
-                  = do requestId' <- sdbForce "Missing RequestID" $ cursor $// elCont "RequestID"
+                  = do requestId' <- left (putMetadata Nothing) $ sdbForce "Missing RequestID" $ cursor $// elCont "RequestID"
                        let boxUsage' = listToMaybe $ cursor $// elCont "BoxUsage"
                        let metadata = SdbMetadata requestId' boxUsage'
                        inner <- case parseInner cursor of
-                                  Left err       -> Left $ setMetadata metadata err
+                                  Left err       -> Left $ putMetadata (Just metadata) err
                                   Right response -> return response
                        return $ SdbResponse inner metadata
               parseInner cursor = case cursor $/ Cu.laxElement "Error" of
@@ -41,15 +41,15 @@ instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
                                     (err:_) -> fromError err
               fromError cursor = do errCode <- sdbForce "Missing Error Code" $ cursor $// elCont "Code"
                                     errMessage <- sdbForce "Missing Error Message" $ cursor $// elCont "Message"
-                                    Left $ SdbError status errCode errMessage Nothing
+                                    Left $ SdbError status errCode errMessage ()
 
 class SdbFromResponse a where
-    sdbFromResponse :: Cu.Cursor -> Either SdbError a
+    sdbFromResponse :: Cu.Cursor -> Either (SdbError ()) a
 
-sdbCheckResponseType :: a -> T.Text -> Cu.Cursor -> Either SdbError a
+sdbCheckResponseType :: a -> T.Text -> Cu.Cursor -> Either (SdbError ()) a
 sdbCheckResponseType a n c = a <$ (sdbForce $ "Expected response type " ++ T.unpack n) (Cu.laxElement n c)
 
-decodeBase64 :: Cu.Cursor -> Either SdbError String
+decodeBase64 :: Cu.Cursor -> Either (SdbError ()) String
 decodeBase64 cursor =
   let encoded = T.unpack . T.concat $ cursor $/ Cu.content
       encoding = listToMaybe $ cursor $| Cu.laxAttribute "encoding" &| T.toCaseFold
@@ -57,8 +57,8 @@ decodeBase64 cursor =
     case encoding of
       Nothing -> Right encoded
       Just "base64" -> handleErr . Base64.decode . BU.fromString $ encoded
-          where handleErr = (flip SdbXmlError Nothing . ("Invalid Base64 data: "++)) +++ BU.toString
-      Just actual -> Left $ SdbXmlError ("Unrecognized encoding " ++ T.unpack actual) Nothing
+          where handleErr = (flip SdbXmlError () . ("Invalid Base64 data: "++)) +++ BU.toString
+      Just actual -> Left $ SdbXmlError ("Unrecognized encoding " ++ T.unpack actual) ()
 
-sdbReadInt :: Num a => String -> Either SdbError a
-sdbReadInt = readInt (SdbXmlError "Integer expected" Nothing)
+sdbReadInt :: Num a => String -> Either (SdbError ()) a
+sdbReadInt = readInt (SdbXmlError "Integer expected" ())

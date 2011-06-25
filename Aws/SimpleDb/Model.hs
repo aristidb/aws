@@ -15,7 +15,7 @@ data Attribute a
     = ForAttribute { attributeName :: String, attributeData :: a }
     deriving (Show)
 
-readAttribute :: Cu.Cursor -> Either SdbError (Attribute String)
+readAttribute :: Cu.Cursor -> Either (SdbError ()) (Attribute String)
 readAttribute cursor = do
   name <- sdbForceM "Missing Name" $ cursor $/ Cu.laxElement "Name" &| decodeBase64
   value <- sdbForceM "Missing Value" $ cursor $/ Cu.laxElement "Value" &| decodeBase64
@@ -66,7 +66,7 @@ data Item a
     = Item { itemName :: String, itemData :: a }
     deriving (Show)
 
-readItem :: Cu.Cursor -> Either SdbError (Item [Attribute String])
+readItem :: Cu.Cursor -> Either (SdbError ()) (Item [Attribute String])
 readItem cursor = do
   name <- sdbForce "Missing Name" <=< sequence $ cursor $/ Cu.laxElement "Name" &| decodeBase64
   attributes <- sequence $ cursor $/ Cu.laxElement "Attribute" &| readAttribute

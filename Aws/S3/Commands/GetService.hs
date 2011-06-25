@@ -28,13 +28,11 @@ data GetServiceResponse
 instance S3ResponseIteratee GetServiceResponse where
     s3ResponseIteratee = xmlCursorIteratee parse
         where
-          parse :: Cu.Cursor -> Either S3Error GetServiceResponse
           parse el = do
             owner <- s3ForceM "Missing Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
             buckets <- sequence $ el $// Cu.laxElement "Bucket" &| parseBucket
             return GetServiceResponse { gsrOwner = owner, gsrBuckets = buckets }
           
-          parseBucket :: Cu.Cursor -> Either S3Error BucketInfo
           parseBucket el = do
             name <- s3Force "Missing owner Name" $ el $/ elCont "Name"
             creationDateString <- s3Force "Missing owner CreationDate" $ el $/ elCont "CreationDate"

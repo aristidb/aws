@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, RecordWildCards #-}
 module Aws.S3.Error
 where
 
@@ -12,7 +12,7 @@ import qualified Network.HTTP.Types as HTTP
 
 type ErrorCode = String
 
-data S3Error
+data S3Error metadata
     = S3Error {
         s3StatusCode :: HTTP.Status
       , s3ErrorCode :: ErrorCode -- Error/Code
@@ -21,25 +21,22 @@ data S3Error
       , s3ErrorHostId :: Maybe String -- Error/HostId
       , s3ErrorAccessKeyId :: Maybe String -- Error/AWSAccessKeyId
       , s3ErrorStringToSign :: Maybe B.ByteString -- Error/StringToSignBytes (hexadecimal encoding)
-      , s3ErrorMetadata :: Maybe S3Metadata
+      , s3ErrorMetadata :: metadata
       }
     | S3XmlError { 
         s3XmlErrorMessage :: String
-      , s3XmlErrorMetadata :: Maybe S3Metadata
+      , s3XmlErrorMetadata :: metadata
       }
     deriving (Show, Typeable)
 
-instance C.Exception S3Error
+instance (Typeable metadata, Show metadata) => C.Exception (S3Error metadata)
 
-instance WithMetadata S3Error S3Metadata where
-    getMetadata S3Error { s3ErrorMetadata = m } = m
-    getMetadata S3XmlError { s3XmlErrorMetadata = m } = m
+instance WithMetadata S3Error where
+    putMetadata m S3Error{..}    = let s3ErrorMetadata = m    in S3Error{..}
+    putMetadata m S3XmlError{..} = let s3XmlErrorMetadata = m in S3XmlError{..}
 
-    setMetadata m a@S3Error{} = a { s3ErrorMetadata = Just m }
-    setMetadata m a@S3XmlError{} = a { s3XmlErrorMetadata = Just m }
+s3Force :: String -> [a] -> Either (S3Error ()) a
+s3Force msg = force (S3XmlError msg ())
 
-s3Force :: String -> [a] -> Either S3Error a
-s3Force msg = force (S3XmlError msg Nothing)
-
-s3ForceM :: String -> [Either S3Error a] -> Either S3Error a
-s3ForceM msg = forceM (S3XmlError msg Nothing)
+s3ForceM :: String -> [Either (S3Error ()) a] -> Either (S3Error ()) a
+s3ForceM msg = forceM (S3XmlError msg ())
