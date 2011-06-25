@@ -4,7 +4,6 @@ where
 
 import           Aws.S3.Error
 import           Aws.S3.Response
-import           Aws.Util
 import           Aws.Xml
 import           Data.Time
 import           System.Locale
