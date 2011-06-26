@@ -11,7 +11,7 @@ import qualified Data.ByteString         as B
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
 import qualified Network.HTTP.Types      as HTTP
-  
+
 class WithMetadata a where
     putMetadata :: m -> a () -> a m
 
@@ -26,6 +26,11 @@ instance Monoid m => Monad (Response m) where
 
 instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
     failure e = Response mempty (Left $ E.toException e)
+
+instance F.Try (Response m) where
+    type F.Error (Response m) = E.SomeException
+    try (Response _ (Left e)) = F.failure e
+    try (Response _ (Right x)) = return x
 
 class ResponseIteratee a where
     type ResponseMetadata a
