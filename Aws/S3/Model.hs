@@ -19,7 +19,7 @@ data UserInfo
       }
     deriving (Show)
 
-parseUserInfo :: Cu.Cursor -> Either (S3Error ()) UserInfo
+parseUserInfo :: Cu.Cursor -> Either S3Error UserInfo
 parseUserInfo el = do id_ <- s3Force "Missing user ID" $ el $/ elCont "ID"
                       displayName <- s3Force "Missing user DisplayName" $ el $/ elCont "DisplayName"
                       return UserInfo { userId = id_, userDisplayName = displayName }
@@ -44,11 +44,11 @@ data ObjectInfo
       }
     deriving (Show)
 
-parseObjectInfo :: Cu.Cursor -> Either (S3Error ()) ObjectInfo
+parseObjectInfo :: Cu.Cursor -> Either S3Error ObjectInfo
 parseObjectInfo el 
     = do key <- s3Force "Missing object Key" $ el $/ elCont "Key"
          let time s = case parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" s of
-                        Nothing -> Left $ S3XmlError "Invalid time" ()
+                        Nothing -> Left $ S3XmlError "Invalid time"
                         (Just v) -> Right v
          lastModified <- s3ForceM "Missing object LastModified" $ el $/ elCont "LastModified" &| time
          eTag <- s3Force "Missing object ETag" $ el $/ elCont "ETag"

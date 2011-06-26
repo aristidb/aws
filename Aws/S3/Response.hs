@@ -8,6 +8,7 @@ import           Aws.S3.Error
 import           Aws.S3.Metadata
 import           Aws.Util
 import           Aws.Xml
+import           Control.Applicative
 import           Control.Monad.IO.Class
 import           Data.Char
 import           Data.Enumerator              ((=$))
@@ -27,7 +28,6 @@ import qualified Text.XML.Enumerator.Resolved as XML
 data S3Response a
     = S3Response {
         fromS3Response :: a
-      , s3Metadata :: S3Metadata
       }
     deriving (Show)
 
@@ -42,16 +42,9 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
       let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
       liftIO $ writeIORef metadata m
       
-      specific <- tryError $ if status >= HTTP.status400
-                             then s3ErrorResponseIteratee status headers
-                             else s3ResponseIteratee status headers
-
-      case specific of
-        Left (err :: (S3Error ())) -> En.throwError (putMetadata m err)
-        Right resp -> return S3Response {
-                                        fromS3Response = resp
-                                      , s3Metadata = m
-                                      }
+      if status >= HTTP.status400
+        then s3ErrorResponseIteratee status headers
+        else S3Response <$> s3ResponseIteratee status headers
 
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ErrorResponseIteratee status _headers 
@@ -61,7 +54,7 @@ s3ErrorResponseIteratee status _headers
            Left invalidXml -> En.throwError invalidXml
            Right err -> En.throwError err
     where
-      parseError :: Cu.Cursor -> Either (S3Error ()) (S3Error ())
+      parseError :: Cu.Cursor -> Either S3Error S3Error
       parseError root = do code <- s3Force "Missing error Code" $ root $/ elCont "Code"
                            message <- s3Force "Missing error Message" $ root $/ elCont "Message"
                            let resource = listToMaybe $ root $/ elCont "Resource"
@@ -78,7 +71,6 @@ s3ErrorResponseIteratee status _headers
                                       , s3ErrorHostId = hostId
                                       , s3ErrorAccessKeyId = accessKeyId
                                       , s3ErrorStringToSign = stringToSign
-                                      , s3ErrorMetadata = ()
                                       }
           where readHex2 :: [Char] -> Maybe Word8
                 readHex2 [c1,c2] = do n1 <- readHex1 c1
@@ -97,5 +89,5 @@ class S3ResponseIteratee a where
 instance S3ResponseIteratee HTTPE.Response where
     s3ResponseIteratee = HTTPE.lbsIter
 
-s3ReadInt :: Num a => String -> Either (S3Error ()) a
-s3ReadInt = readInt (S3XmlError "Integer expected" ())
+s3ReadInt :: Num a => String -> Either S3Error a
+s3ReadInt = readInt (S3XmlError "Integer expected")
