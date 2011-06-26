@@ -2,7 +2,6 @@
 module Aws.Transaction
 where
   
-import Aws.Metadata
 import Aws.Response
 import Aws.Signature
 

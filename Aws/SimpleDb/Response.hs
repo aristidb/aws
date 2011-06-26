@@ -2,7 +2,6 @@
 module Aws.SimpleDb.Response
 where
 
-import           Aws.Metadata
 import           Aws.Response
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Metadata

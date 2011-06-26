@@ -8,6 +8,15 @@ import qualified Data.ByteString         as B
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
 import qualified Network.HTTP.Types      as HTTP
+  
+class Metadata m where
+    emptyMetadata :: m
+
+instance Metadata () where
+    emptyMetadata = ()
+
+class WithMetadata a where
+    putMetadata :: m -> a () -> a m
 
 class ResponseIteratee a where
     type ResponseMetadata a

@@ -5,7 +5,6 @@ where
 import           Aws.Credentials
 import           Aws.Debug
 import           Aws.Http
-import           Aws.Metadata
 import           Aws.Query
 import           Aws.Response
 import           Aws.S3.Info

@@ -2,7 +2,7 @@
 module Aws.SimpleDb.Metadata
 where
   
-import Aws.Metadata
+import Aws.Response
 import Data.Typeable
 
 data SdbMetadata 

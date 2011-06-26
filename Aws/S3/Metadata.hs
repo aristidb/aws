@@ -2,7 +2,7 @@
 module Aws.S3.Metadata
 where
   
-import Aws.Metadata
+import Aws.Response
 import Data.Typeable
 
 data S3Metadata

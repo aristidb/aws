@@ -2,7 +2,7 @@
 module Aws.S3.Error
 where
 
-import           Aws.Metadata
+import           Aws.Response
 import           Aws.S3.Metadata
 import           Aws.Xml
 import           Data.Typeable
