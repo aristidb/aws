@@ -6,6 +6,7 @@ where
 import           Data.IORef
 import           Data.Monoid
 import qualified Control.Exception       as E
+import qualified Control.Failure         as F
 import qualified Data.ByteString         as B
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
@@ -22,6 +23,9 @@ instance Monoid m => Monad (Response m) where
     Response m1 (Left e)  >>= _ = Response m1 (Left e)
     Response m1 (Right x) >>= f = let Response m2 y = f x
                                   in Response (m1 `mappend` m2) y
+
+instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
+    failure e = Response mempty (Left $ E.toException e)
 
 class ResponseIteratee a where
     type ResponseMetadata a
