@@ -14,6 +14,7 @@ import           Aws.Transaction
 import           Control.Applicative
 import           Control.Monad.Reader
 import           Data.IORef
+import           Data.Monoid
 import qualified Data.ByteString         as B
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
@@ -97,7 +98,7 @@ aws = unsafeAws
 unsafeAws
   :: (MonadAws aws,
       ResponseIteratee response,
-      Metadata (ResponseMetadata response),
+      Monoid (ResponseMetadata response),
       SignQuery request,
       ConfigurationFetch (Info request)) =>
      request -> aws response
@@ -108,7 +109,7 @@ unsafeAws request = do
   let q = signQuery request info sd
   debugPrint "String to sign" $ sqStringToSign q
   let httpRequest = queryToHttpRequest q
-  metadataRef <- liftIO $ newIORef emptyMetadata -- TODO: actually return metadata reference
+  metadataRef <- liftIO $ newIORef mempty -- TODO: actually return metadata reference
   liftIO $ HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee metadataRef)
 
 awsUri :: (SignQuery request

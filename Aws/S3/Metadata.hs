@@ -3,6 +3,8 @@ module Aws.S3.Metadata
 where
   
 import Aws.Response
+import Control.Monad
+import Data.Monoid
 import Data.Typeable
 
 data S3Metadata
@@ -12,5 +14,6 @@ data S3Metadata
       }
     deriving (Show, Typeable)
 
-instance Metadata S3Metadata where
-    emptyMetadata = S3Metadata Nothing Nothing
+instance Monoid S3Metadata where
+    mempty = S3Metadata Nothing Nothing
+    S3Metadata a1 r1 `mappend` S3Metadata a2 r2 = S3Metadata (a1 `mplus` a2) (r1 `mplus` r2)
