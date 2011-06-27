@@ -4,6 +4,7 @@ where
   
 import           Aws.Response
 import           Control.Monad.IO.Class
+import           Data.Attempt                 (Attempt(..))
 import           Data.Enumerator              ((=$))
 import           Data.IORef
 import           Data.Monoid
@@ -51,5 +52,5 @@ xmlCursorIteratee parse metadataRef _status _headers
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata
          case x of                                  
-           Left err -> En.throwError err
-           Right v -> return v
+           Failure err -> En.throwError err
+           Success v -> return v

@@ -13,8 +13,10 @@ import           Aws.SimpleDb.Info
 import           Aws.Transaction
 import           Control.Applicative
 import           Control.Monad.Reader
+import           Data.Attempt            (attemptIO)
 import           Data.IORef
 import           Data.Monoid
+import qualified Control.Exception       as E
 import qualified Data.ByteString         as B
 import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
@@ -89,19 +91,19 @@ class MonadIO aws => MonadAws aws where
 instance MonadIO m => MonadAws (AwsT m) where
     configuration = AwsT ask
 
-aws :: (Transaction request response
-       , ConfigurationFetch (Info request)
+aws :: (Transaction r a
+       , ConfigurationFetch (Info r)
        , MonadAws aws) 
-      => request -> aws response
+      => r -> aws (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
 unsafeAws
   :: (MonadAws aws,
-      ResponseIteratee response,
-      Monoid (ResponseMetadata response),
-      SignQuery request,
-      ConfigurationFetch (Info request)) =>
-     request -> aws response
+      ResponseIteratee a,
+      Monoid (ResponseMetadata a),
+      SignQuery r,
+      ConfigurationFetch (Info r)) =>
+     r -> aws (Response (ResponseMetadata a) a)
 unsafeAws request = do
   cfg <- configuration
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
@@ -109,8 +111,12 @@ unsafeAws request = do
   let q = signQuery request info sd
   debugPrint "String to sign" $ sqStringToSign q
   let httpRequest = queryToHttpRequest q
-  metadataRef <- liftIO $ newIORef mempty -- TODO: actually return metadata reference
-  liftIO $ HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee metadataRef)
+  liftIO $ do
+    metadataRef <- newIORef mempty
+    resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
+            HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee metadataRef)
+    metadata <- readIORef metadataRef
+    return $ Response metadata resp
 
 awsUri :: (SignQuery request
           , ConfigurationFetch (Info request)
