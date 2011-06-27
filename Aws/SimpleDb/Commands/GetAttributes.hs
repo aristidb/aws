@@ -2,8 +2,10 @@
 module Aws.SimpleDb.Commands.GetAttributes
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
@@ -42,10 +44,12 @@ instance SignQuery GetAttributes where
             maybeToList (("AttributeName",) <$> BU.fromString <$> gaAttributeName) ++
             (guard gaConsistentRead >> [("ConsistentRead", awsTrue)])
 
-instance SdbFromResponse GetAttributesResponse where
-    sdbFromResponse cursor = do
-      sdbCheckResponseType () "GetAttributesResponse" cursor
-      attributes <- sequence $ cursor $// Cu.laxElement "Attribute" &| readAttribute
-      return $ GetAttributesResponse attributes
+instance ResponseIteratee GetAttributesResponse where
+    type ResponseMetadata GetAttributesResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee parse
+        where parse cursor = do
+                sdbCheckResponseType () "GetAttributesResponse" cursor
+                attributes <- sequence $ cursor $// Cu.laxElement "Attribute" &| readAttribute
+                return $ GetAttributesResponse attributes
 
-instance Transaction GetAttributes (SdbResponse GetAttributesResponse)
+instance Transaction GetAttributes GetAttributesResponse

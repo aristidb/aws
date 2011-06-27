@@ -71,12 +71,12 @@ instance SignQuery GetBucket where
 instance ResponseIteratee GetBucketResponse where
     type ResponseMetadata GetBucketResponse = S3Metadata
 
-    responseIteratee = s3ResponseIteratee $ xmlCursorIteratee parse
+    responseIteratee = s3XmlResponseIteratee parse
         where parse cursor
-                  = do name <- s3Force "Missing Name" $ cursor $/ elCont "Name"
+                  = do name <- force "Missing Name" $ cursor $/ elCont "Name"
                        let delimiter = listToMaybe $ cursor $/ elCont "Delimiter"
                        let marker = listToMaybe $ cursor $/ elCont "Marker"
-                       maxKeys <- Data.Traversable.sequence . listToMaybe $ cursor $/ elCont "MaxKeys" &| s3ReadInt
+                       maxKeys <- Data.Traversable.sequence . listToMaybe $ cursor $/ elCont "MaxKeys" &| readInt
                        let prefix = listToMaybe $ cursor $/ elCont "Prefix"
                        contents <- sequence $ cursor $/ Cu.laxElement "Contents" &| parseObjectInfo
                        let commonPrefixes = cursor $/ Cu.laxElement "CommonPrefixes" &// Cu.content &| T.unpack

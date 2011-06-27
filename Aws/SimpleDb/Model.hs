@@ -1,12 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, FlexibleContexts #-}
 module Aws.SimpleDb.Model
 where
   
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Response
 import           Aws.Util
+import           Aws.Xml
 import           Control.Monad
 import           Text.XML.Enumerator.Cursor (($/), (&|))
+import qualified Control.Failure            as F
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.UTF8       as BU
 import qualified Text.XML.Enumerator.Cursor as Cu
@@ -15,10 +17,10 @@ data Attribute a
     = ForAttribute { attributeName :: String, attributeData :: a }
     deriving (Show)
 
-readAttribute :: Cu.Cursor -> Either (SdbError ()) (Attribute String)
+readAttribute :: F.Failure XmlException m => Cu.Cursor -> m (Attribute String)
 readAttribute cursor = do
-  name <- sdbForceM "Missing Name" $ cursor $/ Cu.laxElement "Name" &| decodeBase64
-  value <- sdbForceM "Missing Value" $ cursor $/ Cu.laxElement "Value" &| decodeBase64
+  name <- forceM "Missing Name" $ cursor $/ Cu.laxElement "Name" &| decodeBase64
+  value <- forceM "Missing Value" $ cursor $/ Cu.laxElement "Value" &| decodeBase64
   return $ ForAttribute name value
              
 data SetAttribute
@@ -66,9 +68,9 @@ data Item a
     = Item { itemName :: String, itemData :: a }
     deriving (Show)
 
-readItem :: Cu.Cursor -> Either (SdbError ()) (Item [Attribute String])
+readItem :: F.Failure XmlException m => Cu.Cursor -> m (Item [Attribute String])
 readItem cursor = do
-  name <- sdbForce "Missing Name" <=< sequence $ cursor $/ Cu.laxElement "Name" &| decodeBase64
+  name <- force "Missing Name" <=< sequence $ cursor $/ Cu.laxElement "Name" &| decodeBase64
   attributes <- sequence $ cursor $/ Cu.laxElement "Attribute" &| readAttribute
   return $ Item name attributes
              

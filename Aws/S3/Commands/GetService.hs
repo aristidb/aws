@@ -30,17 +30,17 @@ data GetServiceResponse
 instance ResponseIteratee GetServiceResponse where
     type ResponseMetadata GetServiceResponse = S3Metadata
 
-    responseIteratee = s3ResponseIteratee $ xmlCursorIteratee parse
+    responseIteratee = s3XmlResponseIteratee parse
         where
           parse el = do
-            owner <- s3ForceM "Missing Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
+            owner <- forceM "Missing Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
             buckets <- sequence $ el $// Cu.laxElement "Bucket" &| parseBucket
             return GetServiceResponse { gsrOwner = owner, gsrBuckets = buckets }
           
           parseBucket el = do
-            name <- s3Force "Missing owner Name" $ el $/ elCont "Name"
-            creationDateString <- s3Force "Missing owner CreationDate" $ el $/ elCont "CreationDate"
-            creationDate <- s3Force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
+            name <- force "Missing owner Name" $ el $/ elCont "Name"
+            creationDateString <- force "Missing owner CreationDate" $ el $/ elCont "CreationDate"
+            creationDate <- force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
 
 instance SignQuery GetService where

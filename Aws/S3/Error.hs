@@ -22,15 +22,6 @@ data S3Error
       , s3ErrorAccessKeyId :: Maybe String -- Error/AWSAccessKeyId
       , s3ErrorStringToSign :: Maybe B.ByteString -- Error/StringToSignBytes (hexadecimal encoding)
       }
-    | S3XmlError { 
-        s3XmlErrorMessage :: String
-      }
     deriving (Show, Typeable)
 
 instance C.Exception S3Error
-
-s3Force :: String -> [a] -> Either S3Error a
-s3Force msg = force (S3XmlError msg)
-
-s3ForceM :: String -> [Either S3Error a] -> Either S3Error a
-s3ForceM msg = forceM (S3XmlError msg)

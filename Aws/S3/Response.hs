@@ -9,6 +9,7 @@ import           Aws.Util
 import           Aws.Xml
 import           Control.Applicative
 import           Control.Monad.IO.Class
+import           Data.Attempt                 (Attempt(..), fromAttempt)
 import           Data.Char
 import           Data.Enumerator              ((=$))
 import           Data.IORef
@@ -24,29 +25,39 @@ import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
 
+s3ResponseIteratee ::
+    (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
+    -> IORef S3Metadata
+    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ResponseIteratee inner metadata status headers = do
       let headerString = fmap B8.unpack . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
       
       let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
-      liftIO $ writeIORef metadata m
+      liftIO $ tellMetadataRef metadata m
       
       if status >= HTTP.status400
         then s3ErrorResponseIteratee status headers
         else inner status headers
 
+s3XmlResponseIteratee :: 
+    (Cu.Cursor -> Response S3Metadata a)
+    -> IORef S3Metadata
+    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+s3XmlResponseIteratee parse metadataRef = s3ResponseIteratee (xmlCursorIteratee parse metadataRef) metadataRef
+
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ErrorResponseIteratee status _headers 
     = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
          let cursor = Cu.fromDocument doc
-         case parseError cursor of
-           Left invalidXml -> En.throwError invalidXml
-           Right err -> En.throwError err
+         case (parseError cursor) of
+           Success err -> En.throwError err
+           Failure otherErr -> En.throwError otherErr
     where
-      parseError :: Cu.Cursor -> Either S3Error S3Error
-      parseError root = do code <- s3Force "Missing error Code" $ root $/ elCont "Code"
-                           message <- s3Force "Missing error Message" $ root $/ elCont "Message"
+      parseError :: Cu.Cursor -> Attempt S3Error
+      parseError root = do code <- force "Missing error Code" $ root $/ elCont "Code"
+                           message <- force "Missing error Message" $ root $/ elCont "Message"
                            let resource = listToMaybe $ root $/ elCont "Resource"
                                hostId = listToMaybe $ root $/ elCont "HostId"
                                accessKeyId = listToMaybe $ root $/ elCont "AWSAccessKeyId"
@@ -72,6 +83,3 @@ s3ErrorResponseIteratee status _headers
                            | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
                            | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
                 readHex1 _                        = Nothing
-
-s3ReadInt :: Num a => String -> Either S3Error a
-s3ReadInt = readInt (S3XmlError "Integer expected")

@@ -2,8 +2,10 @@
 module Aws.SimpleDb.Commands.ListDomains
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
@@ -38,11 +40,13 @@ instance SignQuery ListDomains where
                                 , ("NextToken",) <$> BU.fromString <$> ldNextToken
                                 ]
 
-instance SdbFromResponse ListDomainsResponse where
-    sdbFromResponse cursor = do
-      sdbCheckResponseType () "ListDomainsResponse" cursor
-      let names = cursor $// elCont "DomainName"
-      let nextToken = listToMaybe $ cursor $// elCont "NextToken"
-      return $ ListDomainsResponse names nextToken
+instance ResponseIteratee ListDomainsResponse where
+    type ResponseMetadata ListDomainsResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee parse 
+        where parse cursor = do
+                sdbCheckResponseType () "ListDomainsResponse" cursor
+                let names = cursor $// elCont "DomainName"
+                let nextToken = listToMaybe $ cursor $// elCont "NextToken"
+                return $ ListDomainsResponse names nextToken
 
-instance Transaction ListDomains (SdbResponse ListDomainsResponse)
+instance Transaction ListDomains ListDomainsResponse

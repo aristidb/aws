@@ -2,14 +2,16 @@
 module Aws.SimpleDb.Commands.BatchDeleteAttributes
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
-import qualified Data.ByteString.UTF8       as BU
+import qualified Data.ByteString.UTF8  as BU
 
 data BatchDeleteAttributes
     = BatchDeleteAttributes {
@@ -33,7 +35,8 @@ instance SignQuery BatchDeleteAttributes where
             , ("DomainName", BU.fromString bdaDomainName)] ++
             queryList (itemQuery $ queryList (attributeQuery deleteAttributeQuery) "Attribute") "Item" bdaItems
 
-instance SdbFromResponse BatchDeleteAttributesResponse where
-    sdbFromResponse = sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
+instance ResponseIteratee BatchDeleteAttributesResponse where
+    type ResponseMetadata BatchDeleteAttributesResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
 
-instance Transaction BatchDeleteAttributes (SdbResponse BatchDeleteAttributesResponse)
+instance Transaction BatchDeleteAttributes BatchDeleteAttributesResponse

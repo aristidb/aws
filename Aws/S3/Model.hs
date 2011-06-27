@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, FlexibleContexts #-}
 module Aws.S3.Model
 where
 
@@ -8,6 +8,7 @@ import           Aws.Xml
 import           Data.Time
 import           System.Locale
 import           Text.XML.Enumerator.Cursor (($/), (&|))
+import qualified Control.Failure            as F
 import qualified Text.XML.Enumerator.Cursor as Cu
 
 type CanonicalUserId = String
@@ -19,9 +20,9 @@ data UserInfo
       }
     deriving (Show)
 
-parseUserInfo :: Cu.Cursor -> Either S3Error UserInfo
-parseUserInfo el = do id_ <- s3Force "Missing user ID" $ el $/ elCont "ID"
-                      displayName <- s3Force "Missing user DisplayName" $ el $/ elCont "DisplayName"
+parseUserInfo :: F.Failure XmlException m => Cu.Cursor -> m UserInfo
+parseUserInfo el = do id_ <- force "Missing user ID" $ el $/ elCont "ID"
+                      displayName <- force "Missing user DisplayName" $ el $/ elCont "DisplayName"
                       return UserInfo { userId = id_, userDisplayName = displayName }
 
 type Bucket = String
@@ -44,17 +45,17 @@ data ObjectInfo
       }
     deriving (Show)
 
-parseObjectInfo :: Cu.Cursor -> Either S3Error ObjectInfo
+parseObjectInfo :: F.Failure XmlException m => Cu.Cursor -> m ObjectInfo
 parseObjectInfo el 
-    = do key <- s3Force "Missing object Key" $ el $/ elCont "Key"
+    = do key <- force "Missing object Key" $ el $/ elCont "Key"
          let time s = case parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" s of
-                        Nothing -> Left $ S3XmlError "Invalid time"
-                        (Just v) -> Right v
-         lastModified <- s3ForceM "Missing object LastModified" $ el $/ elCont "LastModified" &| time
-         eTag <- s3Force "Missing object ETag" $ el $/ elCont "ETag"
-         size <- s3ForceM "Missing object Size" $ el $/ elCont "Size" &| s3ReadInt
-         storageClass <- s3Force "Missing object StorageClass" $ el $/ elCont "StorageClass"
-         owner <- s3ForceM "Missing object Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
+                        Nothing -> F.failure $ XmlException "Invalid time"
+                        Just v -> return v
+         lastModified <- forceM "Missing object LastModified" $ el $/ elCont "LastModified" &| time
+         eTag <- force "Missing object ETag" $ el $/ elCont "ETag"
+         size <- forceM "Missing object Size" $ el $/ elCont "Size" &| readInt
+         storageClass <- force "Missing object StorageClass" $ el $/ elCont "StorageClass"
+         owner <- forceM "Missing object Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
          return ObjectInfo{
                       objectKey          = key
                     , objectLastModified = lastModified

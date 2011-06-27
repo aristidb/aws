@@ -2,8 +2,10 @@
 module Aws.SimpleDb.Commands.Select
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
@@ -42,11 +44,13 @@ instance SignQuery Select where
             (guard sConsistentRead >> [("ConsistentRead", awsTrue)]) ++
             (guard (not $ null sNextToken) >> [("NextToken", BU.fromString sNextToken)])
 
-instance SdbFromResponse SelectResponse where
-    sdbFromResponse cursor = do
-      sdbCheckResponseType () "SelectResponse" cursor
-      items <- sequence $ cursor $// Cu.laxElement "Item" &| readItem
-      let nextToken = listToMaybe $ cursor $// elCont "NextToken"
-      return $ SelectResponse items nextToken
+instance ResponseIteratee SelectResponse where
+    type ResponseMetadata SelectResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee parse
+        where parse cursor = do
+                sdbCheckResponseType () "SelectResponse" cursor
+                items <- sequence $ cursor $// Cu.laxElement "Item" &| readItem
+                let nextToken = listToMaybe $ cursor $// elCont "NextToken"
+                return $ SelectResponse items nextToken
 
-instance Transaction Select (SdbResponse SelectResponse)
+instance Transaction Select SelectResponse

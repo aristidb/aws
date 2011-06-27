@@ -2,14 +2,16 @@
 module Aws.SimpleDb.Commands.DeleteAttributes
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
-import qualified Data.ByteString.UTF8       as BU
+import qualified Data.ByteString.UTF8  as BU
 
 data DeleteAttributes
     = DeleteAttributes {
@@ -40,7 +42,8 @@ instance SignQuery DeleteAttributes where
             queryList (attributeQuery deleteAttributeQuery) "Attribute" daAttributes ++
             queryList (attributeQuery expectedAttributeQuery) "Expected" daExpected
 
-instance SdbFromResponse DeleteAttributesResponse where
-    sdbFromResponse = sdbCheckResponseType DeleteAttributesResponse "DeleteAttributesResponse"
+instance ResponseIteratee DeleteAttributesResponse where
+    type ResponseMetadata DeleteAttributesResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType DeleteAttributesResponse "DeleteAttributesResponse"
 
-instance Transaction DeleteAttributes (SdbResponse DeleteAttributesResponse)
+instance Transaction DeleteAttributes DeleteAttributesResponse

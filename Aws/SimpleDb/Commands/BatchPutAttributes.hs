@@ -2,8 +2,10 @@
 module Aws.SimpleDb.Commands.BatchPutAttributes
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
@@ -33,7 +35,8 @@ instance SignQuery BatchPutAttributes where
             , ("DomainName", BU.fromString bpaDomainName)] ++
             queryList (itemQuery $ queryList (attributeQuery setAttributeQuery) "Attribute") "Item" bpaItems
 
-instance SdbFromResponse BatchPutAttributesResponse where
-    sdbFromResponse = sdbCheckResponseType BatchPutAttributesResponse "BatchPutAttributesResponse"
+instance ResponseIteratee BatchPutAttributesResponse where
+    type ResponseMetadata BatchPutAttributesResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType BatchPutAttributesResponse "BatchPutAttributesResponse"
 
-instance Transaction BatchPutAttributes (SdbResponse BatchPutAttributesResponse)
+instance Transaction BatchPutAttributes BatchPutAttributesResponse

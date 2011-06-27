@@ -12,9 +12,6 @@ import qualified Data.Enumerator         as En
 import qualified Network.HTTP.Enumerator as HTTP
 import qualified Network.HTTP.Types      as HTTP
   
-class WithMetadata a where
-    putMetadata :: m -> a () -> a m
-
 data Response m a = Response m (Either E.SomeException a)
     deriving (Functor)
 
@@ -29,6 +26,9 @@ instance Monoid m => Monad (Response m) where
 
 instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
     failure e = Response mempty (Left $ E.toException e)
+
+tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
+tellMetadataRef r m = modifyIORef r (`mappend` m)
 
 class ResponseIteratee a where
     type ResponseMetadata a

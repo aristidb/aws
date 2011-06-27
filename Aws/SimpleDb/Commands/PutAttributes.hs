@@ -2,8 +2,10 @@
 module Aws.SimpleDb.Commands.PutAttributes
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
@@ -40,7 +42,8 @@ instance SignQuery PutAttributes where
             queryList (attributeQuery setAttributeQuery) "Attribute" paAttributes ++
             queryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
 
-instance SdbFromResponse PutAttributesResponse where
-    sdbFromResponse = sdbCheckResponseType PutAttributesResponse "PutAttributesResponse"
+instance ResponseIteratee PutAttributesResponse where
+    type ResponseMetadata PutAttributesResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType PutAttributesResponse "PutAttributesResponse"
 
-instance Transaction PutAttributes (SdbResponse PutAttributesResponse)
+instance Transaction PutAttributes PutAttributesResponse
