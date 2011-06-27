@@ -24,16 +24,7 @@ import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
 
-data S3Response a
-    = S3Response {
-        fromS3Response :: a
-      }
-    deriving (Show)
-
-instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
-    type ResponseMetadata (S3Response a) = S3Metadata
-
-    responseIteratee metadata status headers = do
+s3ResponseIteratee inner metadata status headers = do
       let headerString = fmap B8.unpack . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
@@ -43,7 +34,7 @@ instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
       
       if status >= HTTP.status400
         then s3ErrorResponseIteratee status headers
-        else S3Response <$> s3ResponseIteratee status headers
+        else inner status headers
 
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ErrorResponseIteratee status _headers 
@@ -81,12 +72,6 @@ s3ErrorResponseIteratee status _headers
                            | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
                            | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
                 readHex1 _                        = Nothing
-
-class S3ResponseIteratee a where
-    s3ResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-
-instance S3ResponseIteratee HTTPE.Response where
-    s3ResponseIteratee = HTTPE.lbsIter
 
 s3ReadInt :: Num a => String -> Either S3Error a
 s3ReadInt = readInt (S3XmlError "Integer expected")

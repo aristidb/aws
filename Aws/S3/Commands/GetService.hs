@@ -2,8 +2,10 @@
 module Aws.S3.Commands.GetService
 where
   
+import           Aws.Response
 import           Aws.S3.Error
 import           Aws.S3.Info
+import           Aws.S3.Metadata
 import           Aws.S3.Model
 import           Aws.S3.Query
 import           Aws.S3.Response
@@ -25,8 +27,10 @@ data GetServiceResponse
       }
     deriving (Show)
 
-instance S3ResponseIteratee GetServiceResponse where
-    s3ResponseIteratee = xmlCursorIteratee parse
+instance ResponseIteratee GetServiceResponse where
+    type ResponseMetadata GetServiceResponse = S3Metadata
+
+    responseIteratee = s3ResponseIteratee $ xmlCursorIteratee parse
         where
           parse el = do
             owner <- s3ForceM "Missing Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
@@ -43,4 +47,4 @@ instance SignQuery GetService where
     type Info GetService = S3Info
     signQuery GetService = s3SignQuery S3Query { s3QBucket = Nothing, s3QSubresources = [], s3QQuery = [] }
 
-instance Transaction GetService (S3Response GetServiceResponse)
+instance Transaction GetService GetServiceResponse

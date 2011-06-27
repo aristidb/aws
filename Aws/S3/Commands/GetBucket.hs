@@ -2,8 +2,10 @@
 module Aws.S3.Commands.GetBucket
 where
 
+import           Aws.Response
 import           Aws.S3.Error
 import           Aws.S3.Info
+import           Aws.S3.Metadata
 import           Aws.S3.Model
 import           Aws.S3.Query
 import           Aws.S3.Response
@@ -66,9 +68,11 @@ instance SignQuery GetBucket where
                                             ]
                                }
 
-instance S3ResponseIteratee GetBucketResponse where
-    s3ResponseIteratee = xmlCursorIteratee parse
-        where parse cursor 
+instance ResponseIteratee GetBucketResponse where
+    type ResponseMetadata GetBucketResponse = S3Metadata
+
+    responseIteratee = s3ResponseIteratee $ xmlCursorIteratee parse
+        where parse cursor
                   = do name <- s3Force "Missing Name" $ cursor $/ elCont "Name"
                        let delimiter = listToMaybe $ cursor $/ elCont "Delimiter"
                        let marker = listToMaybe $ cursor $/ elCont "Marker"
@@ -86,4 +90,4 @@ instance S3ResponseIteratee GetBucketResponse where
                                               , gbrCommonPrefixes = commonPrefixes
                                               }
 
-instance Transaction GetBucket (S3Response GetBucketResponse)
+instance Transaction GetBucket GetBucketResponse
