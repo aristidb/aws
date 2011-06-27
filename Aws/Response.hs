@@ -18,11 +18,14 @@ class WithMetadata a where
 data Response m a = Response m (Either E.SomeException a)
     deriving (Functor)
 
+tellMetadata :: m -> Response m ()
+tellMetadata m = Response m (return ())
+
 instance Monoid m => Monad (Response m) where
     return x = Response mempty (Right x)
     Response m1 (Left e)  >>= _ = Response m1 (Left e)
     Response m1 (Right x) >>= f = let Response m2 y = f x
-                                  in Response (m1 `mappend` m2) y
+                                  in Response (m1 `mappend` m2) y -- currently using First-semantics, Last SHOULD work too
 
 instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
     failure e = Response mempty (Left $ E.toException e)
