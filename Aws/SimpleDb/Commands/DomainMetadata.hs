@@ -4,7 +4,6 @@ where
 
 import           Aws.Response
 import           Aws.Signature
-import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Query

@@ -2,9 +2,6 @@
 module Aws.S3.Error
 where
 
-import           Aws.Response
-import           Aws.S3.Metadata
-import           Aws.Xml
 import           Data.Typeable
 import qualified Control.Exception  as C
 import qualified Data.ByteString    as B

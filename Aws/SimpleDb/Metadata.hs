@@ -2,7 +2,6 @@
 module Aws.SimpleDb.Metadata
 where
   
-import Aws.Response
 import Control.Monad
 import Data.Monoid
 import Data.Typeable

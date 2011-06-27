@@ -2,8 +2,6 @@
 module Aws.S3.Model
 where
 
-import           Aws.S3.Error
-import           Aws.S3.Response
 import           Aws.Xml
 import           Data.Time
 import           System.Locale

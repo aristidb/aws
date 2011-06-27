@@ -6,16 +6,22 @@ import           Aws.Response
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Metadata
 import           Aws.Xml
-import           Control.Applicative
-import           Control.Arrow              ((+++), left)
+import           Data.IORef
 import           Data.Maybe
 import           Text.XML.Enumerator.Cursor (($|), ($/), ($//), (&|))
 import qualified Control.Failure            as F
+import qualified Data.ByteString            as B
 import qualified Data.ByteString.Base64     as Base64
 import qualified Data.ByteString.UTF8       as BU
+import qualified Data.Enumerator            as En
 import qualified Data.Text                  as T
+import qualified Network.HTTP.Types         as HTTP
 import qualified Text.XML.Enumerator.Cursor as Cu
 
+sdbResponseIteratee :: 
+    (Cu.Cursor -> Response SdbMetadata a) 
+    -> IORef SdbMetadata
+    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 sdbResponseIteratee inner metadataRef status headers = xmlCursorIteratee parse metadataRef status headers
     where parse cursor
               = do let requestId' = listToMaybe $ cursor $// elCont "RequestID"

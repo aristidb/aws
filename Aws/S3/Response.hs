@@ -5,11 +5,9 @@ where
 import           Aws.Response
 import           Aws.S3.Error
 import           Aws.S3.Metadata
-import           Aws.Util
 import           Aws.Xml
-import           Control.Applicative
 import           Control.Monad.IO.Class
-import           Data.Attempt                 (Attempt(..), fromAttempt)
+import           Data.Attempt                 (Attempt(..))
 import           Data.Char
 import           Data.Enumerator              ((=$))
 import           Data.IORef
@@ -19,7 +17,6 @@ import           Text.XML.Enumerator.Cursor   (($/))
 import qualified Data.ByteString              as B
 import qualified Data.ByteString.Char8        as B8
 import qualified Data.Enumerator              as En
-import qualified Network.HTTP.Enumerator      as HTTPE
 import qualified Network.HTTP.Types           as HTTP
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
@@ -51,7 +48,7 @@ s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.
 s3ErrorResponseIteratee status _headers 
     = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
          let cursor = Cu.fromDocument doc
-         case (parseError cursor) of
+         case parseError cursor of
            Success err -> En.throwError err
            Failure otherErr -> En.throwError otherErr
     where
