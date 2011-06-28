@@ -12,6 +12,12 @@ data S3Authorization
     | S3AuthorizationQuery
     deriving (Show)
 
+data RequestStyle
+    = PathStyle
+    | BucketStyle
+    | VHostStyle
+    deriving (Show)
+
 data Endpoint
     = Endpoint {
         endpointHost :: B.ByteString
@@ -24,6 +30,7 @@ data S3Info
     = S3Info {
         s3Protocol :: Protocol
       , s3Endpoint :: Endpoint
+      , s3RequestStyle :: RequestStyle
       , s3Port :: Int
       , s3UseUri :: Bool
       , s3DefaultExpiry :: NominalDiffTime
@@ -77,9 +84,10 @@ s3EndpointApNorthEast
 s3 :: Protocol -> Endpoint -> Bool -> S3Info
 s3 protocol endpoint uri 
     = S3Info { 
-        s3Protocol = protocol
-      , s3Endpoint = endpoint
-      , s3Port = defaultPort protocol
-      , s3UseUri = uri
-      , s3DefaultExpiry = 15*60
-      }
+         s3Protocol = protocol
+       , s3Endpoint = endpoint
+       , s3RequestStyle = BucketStyle
+       , s3Port = defaultPort protocol
+       , s3UseUri = uri
+       , s3DefaultExpiry = 15*60
+       }

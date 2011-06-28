@@ -32,9 +32,9 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
     = SignedQuery {
         sqMethod = method
       , sqProtocol = s3Protocol
-      , sqHost = endpointHost s3Endpoint
+      , sqHost = B.intercalate "." $ catMaybes host
       , sqPort = s3Port
-      , sqPath = path
+      , sqPath = mconcat $ catMaybes path
       , sqQuery = sortedSubresources ++ s3QQuery ++ authQuery
       , sqDate = Just signatureTime
       , sqAuthorization = authorization
@@ -47,11 +47,15 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       method = Get
       contentMd5 = Nothing
       contentType = Nothing
-      path = mconcat . catMaybes $ [Just "/", s3QBucket]
+      (host, path) = case s3RequestStyle of 
+                       PathStyle   -> ([Just $ endpointHost s3Endpoint], [Just "/", s3QBucket, Just "/"])
+                       BucketStyle -> ([s3QBucket, Just $ endpointHost s3Endpoint], [Just "/"])
+                       VHostStyle  -> ([Just $ fromMaybe (endpointHost s3Endpoint) s3QBucket], [Just "/"])
       sortedSubresources = sort s3QSubresources
       canonicalizedResource = Blaze.copyByteString "/" `mappend`
                               maybe mempty Blaze.copyByteString s3QBucket `mappend`
-                              HTTP.renderQueryBuilder True sortedSubresources
+                              HTTP.renderQueryBuilder True sortedSubresources `mappend`
+                              Blaze.copyByteString "/"
       ti = case (s3UseUri, signatureTimeInfo) of
              (False, ti') -> ti'
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
