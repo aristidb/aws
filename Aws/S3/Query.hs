@@ -48,9 +48,9 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       contentMd5 = Nothing
       contentType = Nothing
       (host, path) = case s3RequestStyle of 
-                       PathStyle   -> ([Just $ endpointHost s3Endpoint], [Just "/", s3QBucket, Just "/"])
-                       BucketStyle -> ([s3QBucket, Just $ endpointHost s3Endpoint], [Just "/"])
-                       VHostStyle  -> ([Just $ fromMaybe (endpointHost s3Endpoint) s3QBucket], [Just "/"])
+                       PathStyle   -> ([Just s3Endpoint], [Just "/", s3QBucket, Just "/"])
+                       BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/"])
+                       VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/"])
       sortedSubresources = sort s3QSubresources
       canonicalizedResource = Blaze.copyByteString "/" `mappend`
                               maybe mempty Blaze.copyByteString s3QBucket `mappend`
