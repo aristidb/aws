@@ -3,7 +3,6 @@ module Aws.S3.Info
 where
 
 import           Aws.Http
-import           Aws.S3.Model
 import           Data.Time
 import qualified Data.ByteString as B
 
