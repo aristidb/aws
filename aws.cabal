@@ -121,4 +121,15 @@ Library
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   -- Build-tools:         
-  
+
+
+-- Source repository
+source-repository head
+  type: git
+  location: git://github.com/aristidb/aws.git
+  branch: master
+
+source-repository this
+  type: git
+  location: git://github.com/aristidb/aws.git
+  tag: 0.0.4
