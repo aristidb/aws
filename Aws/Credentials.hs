@@ -3,7 +3,6 @@ where
   
 import           Control.Applicative
 import           Control.Monad
-import           Control.Monad.IO.Class
 import           Control.Shortcircuit      (orM)
 import           Data.List
 import           System.Directory
@@ -19,14 +18,14 @@ data Credentials
       }
     deriving (Show)
              
-credentialsDefaultFile :: MonadIO io => io FilePath
-credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
+credentialsDefaultFile :: IO FilePath
+credentialsDefaultFile = (</> ".aws-keys") <$> getHomeDirectory
 
 credentialsDefaultKey :: String
 credentialsDefaultKey = "default"
 
-loadCredentialsFromFile :: MonadIO io => FilePath ->  String -> io (Maybe Credentials)
-loadCredentialsFromFile file key = liftIO $ do
+loadCredentialsFromFile :: FilePath ->  String -> IO (Maybe Credentials)
+loadCredentialsFromFile file key = do
   contents <- map words . lines <$> readFile file
   return $ do 
     [_key, keyID, secret] <- find (hasKey key) contents
@@ -35,18 +34,18 @@ loadCredentialsFromFile file key = liftIO $ do
         hasKey _ [] = False
         hasKey k (k2 : _) = k == k2
 
-loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
-loadCredentialsFromEnv = liftIO $ do
+loadCredentialsFromEnv :: IO (Maybe Credentials)
+loadCredentialsFromEnv = do
   env <- getEnvironment
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
   return (Credentials <$> (BU.fromString <$> keyID) <*> (BU.fromString <$> secret))
   
-loadCredentialsFromEnvOrFile :: MonadIO io => FilePath -> String -> io (Maybe Credentials)
+loadCredentialsFromEnvOrFile :: FilePath -> String -> IO (Maybe Credentials)
 loadCredentialsFromEnvOrFile file key = loadCredentialsFromEnv `orM` loadCredentialsFromFile file key
 
-loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
+loadCredentialsDefault :: IO (Maybe Credentials)
 loadCredentialsDefault = do
   file <- credentialsDefaultFile
   loadCredentialsFromEnvOrFile file credentialsDefaultKey

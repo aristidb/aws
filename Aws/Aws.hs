@@ -12,7 +12,6 @@ import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Transaction
 import           Control.Applicative
-import           Control.Monad.Reader
 import           Data.Attempt            (attemptIO)
 import           Data.IORef
 import           Data.Monoid
@@ -47,7 +46,7 @@ instance ConfigurationFetch S3Info where
     configurationFetch = s3Info
     configurationFetchUri = s3InfoUri
 
-baseConfiguration :: MonadIO io => io Configuration
+baseConfiguration :: IO Configuration
 baseConfiguration = do
   Just cr <- loadCredentialsDefault
   return Configuration {
@@ -60,74 +59,42 @@ baseConfiguration = do
                     }
 -- TODO: better error handling when credentials cannot be loaded
 
-debugConfiguration :: MonadIO io => io Configuration
+debugConfiguration :: IO Configuration
 debugConfiguration = do 
   c <- baseConfiguration
   return c { sdbInfo = sdbHttpPost sdbUsEast, sdbInfoUri = sdbHttpGet sdbUsEast  }
 
-newtype AwsT m a = AwsT { fromAwsT :: ReaderT Configuration m a }
-
-type Aws = AwsT IO
-
-runAws :: AwsT m a -> Configuration -> m a
-runAws = runReaderT . fromAwsT
-
-runAws' :: MonadIO io => AwsT io a -> io a
-runAws' a = baseConfiguration >>= runAws a
-
-runAwsDebug :: MonadIO io => AwsT io a -> io a
-runAwsDebug a = debugConfiguration >>= runAws a
-
-instance Monad m => Monad (AwsT m) where
-    return = AwsT . return
-    m >>= k = AwsT $ fromAwsT m >>= fromAwsT . k
-
-instance MonadIO m => MonadIO (AwsT m) where
-    liftIO = AwsT . liftIO
-
-class MonadIO aws => MonadAws aws where
-    configuration :: MonadAws aws => aws Configuration
-
-instance MonadIO m => MonadAws (AwsT m) where
-    configuration = AwsT ask
-
 aws :: (Transaction r a
-       , ConfigurationFetch (Info r)
-       , MonadAws aws) 
-      => r -> aws (Response (ResponseMetadata a) a)
+       , ConfigurationFetch (Info r)) 
+      => Configuration -> r -> IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
 unsafeAws
-  :: (MonadAws aws,
-      ResponseIteratee a,
+  :: (ResponseIteratee a,
       Monoid (ResponseMetadata a),
       SignQuery r,
       ConfigurationFetch (Info r)) =>
-     r -> aws (Response (ResponseMetadata a) a)
-unsafeAws request = do
-  cfg <- configuration
-  sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
+     Configuration -> r -> IO (Response (ResponseMetadata a) a)
+unsafeAws cfg request = do
+  sd <- signatureData <$> timeInfo <*> credentials $ cfg
   let info = configurationFetch cfg
   let q = signQuery request info sd
   debugPrint "String to sign" $ sqStringToSign q
   let httpRequest = queryToHttpRequest q
-  liftIO $ do
-    metadataRef <- newIORef mempty
-    resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
-            HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee metadataRef)
-    metadata <- readIORef metadataRef
-    return $ Response metadata resp
+  metadataRef <- newIORef mempty
+  resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
+          HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee metadataRef)
+  metadata <- readIORef metadataRef
+  return $ Response metadata resp
 
 awsUri :: (SignQuery request
-          , ConfigurationFetch (Info request)
-          , MonadAws aws)
-         => request -> aws B.ByteString
-awsUri request = do
-  cfg <- configuration
+          , ConfigurationFetch (Info request))
+         => Configuration -> request -> IO B.ByteString
+awsUri cfg request = do
   let ti = timeInfo cfg
       cr = credentials cfg
       info = configurationFetchUri cfg
-  sd <- liftIO $ signatureData ti cr
+  sd <- signatureData ti cr
   let q = signQuery request info sd
   debugPrint "String to sign" $ sqStringToSign q
   return $ queryToUri q
