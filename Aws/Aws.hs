@@ -10,7 +10,7 @@ import           Aws.Response
 import           Aws.S3.Info
 import           Aws.Signature
 import           Aws.SimpleDb.Info
-import           Aws.SQS.Info
+import           Aws.Sqs.Info
 import           Aws.Transaction
 import           Control.Applicative
 import           Control.Monad.Reader

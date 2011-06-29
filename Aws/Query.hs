@@ -6,6 +6,7 @@ import           Aws.Http
 import           Aws.Util
 import           Data.Maybe
 import           Data.Time
+import 	         Network.TLS
 import qualified Blaze.ByteString.Builder as Blaze
 import qualified Data.ByteString          as B
 import qualified Data.ByteString.Lazy     as L
@@ -37,7 +38,7 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.secure = case sqProtocol of
                         HTTP -> False
                         HTTPS -> True
-      , HTTP.checkCerts = const (return True) -- FIXME: actually check certificates
+      , HTTP.checkCerts = const (return CertificateUsageAccept) -- FIXME: actually check certificates
       , HTTP.host = sqHost
       , HTTP.port = sqPort
       , HTTP.path = sqPath
