@@ -89,6 +89,7 @@ Library
                        Aws.SQS.Commands,
                        Aws.SQS.Commands.ListQueues,
                        Aws.SQS.Commands.GetQueueAttributes,
+                       Aws.SQS.Commands.ChangeMessageVisibility,
                        Aws.SQS.Error,
                        Aws.SQS.Info,
                        Aws.SQS.Metadata,
