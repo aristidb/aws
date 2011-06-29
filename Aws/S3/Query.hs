@@ -16,6 +16,7 @@ import           Data.Time
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Data.ByteString                as B
+import qualified Data.ByteString.Char8          as B8
 import qualified Data.ByteString.Lazy           as L
 import qualified Network.HTTP.Types             as HTTP
 
@@ -48,14 +49,13 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       contentMd5 = Nothing
       contentType = Nothing
       (host, path) = case s3RequestStyle of 
-                       PathStyle   -> ([Just s3Endpoint], [Just "/", s3QBucket, Just "/"])
+                       PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket])
                        BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/"])
                        VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/"])
       sortedSubresources = sort s3QSubresources
-      canonicalizedResource = Blaze.copyByteString "/" `mappend`
-                              maybe mempty Blaze.copyByteString s3QBucket `mappend`
-                              HTTP.renderQueryBuilder True sortedSubresources `mappend`
-                              Blaze.copyByteString "/"
+      canonicalizedResource = Blaze8.fromChar '/' `mappend`
+                              maybe mempty (\s -> Blaze.copyByteString s `mappend` Blaze8.fromChar '/') s3QBucket `mappend`
+                              HTTP.renderQueryBuilder True sortedSubresources
       ti = case (s3UseUri, signatureTimeInfo) of
              (False, ti') -> ti'
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
