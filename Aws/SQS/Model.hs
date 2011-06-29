@@ -28,3 +28,6 @@ parseAttribute "MaximumMessageSize" = MaximumMessageSize
 parseAttribute "MessageRetentionPeriod" = MessageRetentionPeriod
 parseAttribute "QueueArn" = QueueArn
 parseAttribute x = trace(show x)(error $ unpack x) 
+
+newtype RecieptHandle = RecieptHandle Text deriving(Show,Eq)
+newtype MessageId = MessageId Text deriving(Show,Eq)
