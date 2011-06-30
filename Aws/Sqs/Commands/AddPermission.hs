@@ -1,11 +1,11 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 
-module Aws.Sqs.Commands.ChangeMessageVisibility where
+module Aws.Sqs.Commands.AddPermission where
 
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
-import qualified Aws.Sqs.Model as M
+import           Aws.Sqs.Model
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
 import           Aws.Signature
@@ -29,31 +29,35 @@ import qualified Data.ByteString.UTF8  as BU
 import qualified Data.ByteString.Char8 as B
 import Debug.Trace
 
-data ChangeMessageVisibility = ChangeMessageVisibility {
-  cmvRecieptHandle :: M.RecieptHandle,
-  cmvVisibilityTimeout :: Int,
-  cmvQueueName :: String
+data AddPermission = AddPermission{
+  apLabel :: String,
+  apPermissions :: [(String,SqsPermission)],
+  apQueueName :: QueueName
 }deriving (Show)
 
-data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse{
+data AddPermissionResponse = AddPermissionResponse{
 } deriving (Show)
 
 
-cmvParse :: Cu.Cursor -> ChangeMessageVisibilityResponse
-cmvParse el = do
-  ChangeMessageVisibilityResponse
+apParse :: Cu.Cursor -> AddPermissionResponse
+apParse el = do
+  AddPermissionResponse { }
 
-instance SqsResponseIteratee ChangeMessageVisibilityResponse where
+formatPermissions :: [(String,SqsPermission)] -> [HTTP.QueryItem]
+formatPermissions perms = 
+  concat $ zipWith(\ x y -> [(B.pack $ "AwsAccountId." ++ show y, Just $ B.pack $ fst x), 
+                             (B.pack $ "ActionName." ++ show y, Just $ B.pack $ printPermission $ snd x)]) perms [1..]
+
+instance SqsResponseIteratee AddPermissionResponse where
     sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
                                             let cursor = Cu.fromDocument doc
-                                            return $ cmvParse cursor                                  
+                                            return $ apParse cursor                                  
           
-instance SignQuery ChangeMessageVisibility  where 
-    type Info ChangeMessageVisibility  = SqsInfo
-    signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
-                                             sqsQueueName = Just cmvQueueName, 
-                                             sqsQuery = [("Action", Just "ChangeMessageVisibility"), 
-                                                         ("RecieptHandle", Just $ B.pack $ show cmvRecieptHandle),
-                                                         ("VisibilityTimout", Just $ B.pack $ show cmvVisibilityTimeout)]}
+instance SignQuery AddPermission  where 
+    type Info AddPermission  = SqsInfo
+    signQuery AddPermission {..} = sqsSignQuery SqsQuery { 
+                                             sqsQuery = [("Action", Just "AddPermission"), 
+                                                        ("QueueName", Just $ B.pack $ printQueue apQueueName),
+                                                        ("Label", Just $ B.pack apLabel)] ++ formatPermissions apPermissions}
 
-instance Transaction ChangeMessageVisibility (SqsResponse ChangeMessageVisibilityResponse)
+instance Transaction AddPermission (SqsResponse AddPermissionResponse)

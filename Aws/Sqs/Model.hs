@@ -44,6 +44,15 @@ data MessageAttribute =
   | ApproximateFirstReceiveTimestamp
   deriving(Show,Eq,Enum)
 
+data SqsPermission =
+  PermissionAll
+  | SendMessage
+  | RecieveMessage
+  | DeleteMessage
+  | ChangeMessageVisibility
+  | GetQueueAttributes
+  deriving (Show, Enum, Eq)
+
 parseAttribute :: T.Text -> QueueAttribute
 parseAttribute "ApproximateNumberOfMessages" = ApproximateNumberOfMessages 
 parseAttribute "ApproximateNumberOfMessagesNotVisible" = ApproximateNumberOfMessagesNotVisible
@@ -77,6 +86,13 @@ printMessageAttribute SenderId = "SenderId"
 printMessageAttribute SentTimestamp = "SentTimestamp"
 printMessageAttribute ApproximateReceiveCount = "ApproximateReceiveCount"
 printMessageAttribute ApproximateFirstReceiveTimestamp = "ApproximateFirstRecieveTimestamp"
+
+printPermission PermissionAll = "*"
+printPermission SendMessage = "SendMessage"
+printPermission RecieveMessage = "ReceiveMessage"
+printPermission DeleteMessage = "DeleteMessage"
+printPermission ChangeMessageVisibility = "ChangeMessageVisibility"
+printPermission GetQueueAttributes = "GetQueueAttributes"
 
 newtype RecieptHandle = RecieptHandle T.Text deriving(Show,Eq)
 newtype MessageId = MessageId T.Text deriving(Show,Eq)

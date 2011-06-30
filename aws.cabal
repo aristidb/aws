@@ -87,6 +87,7 @@ Library
                        Aws.SimpleDb.Response,
                        Aws.Sqs,
                        Aws.Sqs.Commands,
+                       Aws.Sqs.Commands.AddPermission,
                        Aws.Sqs.Commands.ListQueues,
                        Aws.Sqs.Commands.GetQueueAttributes,
                        Aws.Sqs.Commands.ChangeMessageVisibility,

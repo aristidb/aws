@@ -5,7 +5,7 @@ module Aws.Sqs.Commands.GetQueueAttributes where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
-import           Aws.Sqs.Model
+import qualified Aws.Sqs.Model as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
 import           Aws.Signature
@@ -31,16 +31,16 @@ import Debug.Trace
 
 data GetQueueAttributes = GetQueueAttributes {
   gqaQueueName :: String,
-  gqaAttributes :: [QueueAttribute]
+  gqaAttributes :: [M.QueueAttribute]
 }deriving (Show)
 
 data GetQueueAttributesResponse = GetQueueAttributesResponse{
-  gqarAttributes :: [(QueueAttribute,T.Text)]
+  gqarAttributes :: [(M.QueueAttribute,T.Text)]
 } deriving (Show)
 
-parseAttributes :: Cu.Cursor -> (QueueAttribute, T.Text)
+parseAttributes :: Cu.Cursor -> (M.QueueAttribute, T.Text)
 parseAttributes el =
-  (parseAttribute $ head $ el $/ Cu.laxElement "Name" &/ Cu.content, 
+  (M.parseAttribute $ head $ el $/ Cu.laxElement "Name" &/ Cu.content, 
    head $ el $/ Cu.laxElement "Value" &/ Cu.content)
 
 gqarParse :: Cu.Cursor -> GetQueueAttributesResponse
@@ -53,12 +53,12 @@ instance SqsResponseIteratee GetQueueAttributesResponse where
                                             let cursor = Cu.fromDocument doc
                                             return $ gqarParse cursor                                  
 
-formatAttributes :: [QueueAttribute] -> [HTTP.QueryItem]
+formatAttributes :: [M.QueueAttribute] -> [HTTP.QueryItem]
 formatAttributes attrs =
   case length attrs of
     0 -> undefined
     1 -> [("AttributeName", Just $ B.pack $ show $ attrs !! 0)]
-    _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ B.pack $ printQueueAttribute x) ) attrs [1..]
+    _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ B.pack $ M.printQueueAttribute x) ) attrs [1..]
           
 instance SignQuery GetQueueAttributes where 
     type Info GetQueueAttributes = SqsInfo
