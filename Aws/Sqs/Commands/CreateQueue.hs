@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 
-module Aws.Sqs.Commands.ChangeMessageVisibility where
+module Aws.Sqs.Commands.CreateQueue where
 
 import           Aws.Response
 import           Aws.Sqs.Error
@@ -29,31 +29,33 @@ import qualified Data.ByteString.UTF8  as BU
 import qualified Data.ByteString.Char8 as B
 import Debug.Trace
 
-data CreateQueue = CreateQueue
-  cqVisibilityTimeout :: Maybe Int,
+data CreateQueue = CreateQueue{
+  cqDefaultVisibilityTimeout :: Maybe Int,
   cqQueueName :: String
 }deriving (Show)
 
 data CreateQueueResponse = CreateQueueResponse{
-  cqrQueueUrl :: Text
+  cqrQueueUrl :: T.Text
 } deriving (Show)
 
 
 cqParse :: Cu.Cursor -> CreateQueueResponse
 cqParse el = do
-  let url = head $ Cu.laxElement "CreateQueueResponse" &/ Cu.laxElement "CreateQueueResult" $/ Cu.laxElement "QueueUrl" $| Cu.content $ el
-  CreateQueueResponse(cqrQueueUrl = url)
+  let url = head $ Cu.laxElement "CreateQueueResponse" &/ Cu.laxElement "CreateQueueResult" &/ Cu.laxElement "QueueUrl" &| Cu.content $ el
+  CreateQueueResponse { cqrQueueUrl = (head url) }
 
-instance SqsResponseIteratee ChangeMessageVisibilityResponse where
+instance SqsResponseIteratee CreateQueueResponse where
     sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
                                             let cursor = Cu.fromDocument doc
                                             return $ cqParse cursor                                  
           
-instance SignQuery ChangeMessageVisibility  where 
-    type Info ChangeMessageVisibility  = SqsInfo
-    signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
+instance SignQuery CreateQueue  where 
+    type Info CreateQueue  = SqsInfo
+    signQuery CreateQueue {..} = sqsSignQuery SqsQuery { 
                                              sqsQuery = [("Action", Just "CreateQueue"), 
-                                                         ("QueueName", Just $ B.pack cqQueueName),
-                                                         ("VisibilityTimout", Just $ B.pack $ show cmvVisibilityTimeout)]}
+                                                        ("QueueName", Just $ B.pack cqQueueName)] ++ 
+                                                        catMaybes [("DefaultVisibilityTimeout",) <$> case cqDefaultVisibilityTimeout of
+                                                                                                       Just x -> Just $ Just $ B.pack $ show x
+                                                                                                       Nothing -> Nothing]}
 
-instance Transaction ChangeMessageVisibility (SqsResponse ChangeMessageVisibilityResponse)
+instance Transaction CreateQueue (SqsResponse CreateQueueResponse)

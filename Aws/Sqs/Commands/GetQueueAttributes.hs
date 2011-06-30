@@ -58,7 +58,7 @@ formatAttributes attrs =
   case length attrs of
     0 -> undefined
     1 -> [("AttributeName", Just $ B.pack $ show $ attrs !! 0)]
-    _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ B.pack $ show x) ) attrs [1..]
+    _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ B.pack $ printQueueAttribute x) ) attrs [1..]
           
 instance SignQuery GetQueueAttributes where 
     type Info GetQueueAttributes = SqsInfo
