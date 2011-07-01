@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 
-module Aws.Sqs.Commands.ChangeMessageVisibility where
+module Aws.Sqs.Commands.SendMessage where
 
 import           Aws.Response
 import           Aws.Sqs.Error
@@ -29,31 +29,36 @@ import qualified Data.ByteString.UTF8  as BU
 import qualified Data.ByteString.Char8 as B
 import Debug.Trace
 
-data ChangeMessageVisibility = ChangeMessageVisibility {
-  cmvReceiptHandle :: M.ReceiptHandle,
-  cmvVisibilityTimeout :: Int,
-  cmvQueueName :: String
+data SendMessage = SendMessage{
+  smMessage :: T.Text,
+  smQueueName :: M.QueueName 
 }deriving (Show)
 
-data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse{
+data SendMessageResponse = SendMessageResponse{
+  smrMD5OfMessageBody :: T.Text,
+  smrMessageId :: M.MessageId
 } deriving (Show)
 
 
-cmvParse :: Cu.Cursor -> ChangeMessageVisibilityResponse
-cmvParse el = do
-  ChangeMessageVisibilityResponse
+smParse :: Cu.Cursor -> SendMessageResponse
+smParse el = do SendMessageResponse { smrMD5OfMessageBody = md5, smrMessageId = mid }
+  where
+    md5 = head $ head $ Cu.laxElement "SendMessageResponse" &/ Cu.laxElement "SendMessageResult" &/ Cu.laxElement "MD5OfMessageBody" &| Cu.content $ el
+    mid = M.MessageId $ head $ head $ Cu.laxElement "SendMessageResponse" &/ Cu.laxElement "SendMessageResult" &/ Cu.laxElement "MessageId" &| Cu.content $ el
 
-instance SqsResponseIteratee ChangeMessageVisibilityResponse where
+instance SqsResponseIteratee SendMessageResponse where
     sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
                                             let cursor = Cu.fromDocument doc
-                                            return $ cmvParse cursor                                  
+                                            return $ smParse cursor                                  
           
-instance SignQuery ChangeMessageVisibility  where 
-    type Info ChangeMessageVisibility  = SqsInfo
-    signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
-                                             sqsQueueName = Just cmvQueueName, 
-                                             sqsQuery = [("Action", Just "ChangeMessageVisibility"), 
-                                                         ("ReceiptHandle", Just $ B.pack $ show cmvReceiptHandle),
-                                                         ("VisibilityTimout", Just $ B.pack $ show cmvVisibilityTimeout)]}
+instance SignQuery SendMessage  where 
+    type Info SendMessage  = SqsInfo
+    signQuery SendMessage {..} = sqsSignQuery SqsQuery { 
+                                             sqsQuery = [("Action", Just "SendMessage"), 
+                                                        ("QueueName", Just $ B.pack $ M.printQueue smQueueName),
+                                                        ("MessageBody", Just $ B.pack $ show smMessage )]} 
 
-instance Transaction ChangeMessageVisibility (SqsResponse ChangeMessageVisibilityResponse)
+instance Transaction SendMessage (SqsResponse SendMessageResponse)
+
+
+

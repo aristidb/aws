@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 
-module Aws.Sqs.Commands.ChangeMessageVisibility where
+module Aws.Sqs.Commands.DeleteMessage where
 
 import           Aws.Response
 import           Aws.Sqs.Error
@@ -29,31 +29,31 @@ import qualified Data.ByteString.UTF8  as BU
 import qualified Data.ByteString.Char8 as B
 import Debug.Trace
 
-data ChangeMessageVisibility = ChangeMessageVisibility {
-  cmvReceiptHandle :: M.ReceiptHandle,
-  cmvVisibilityTimeout :: Int,
-  cmvQueueName :: String
+data DeleteMessage = DeleteMessage{
+  dmReceiptHandle :: M.ReceiptHandle,
+  dmQueueName :: M.QueueName 
 }deriving (Show)
 
-data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse{
+data DeleteMessageResponse = DeleteMessageResponse{
 } deriving (Show)
 
 
-cmvParse :: Cu.Cursor -> ChangeMessageVisibilityResponse
-cmvParse el = do
-  ChangeMessageVisibilityResponse
+dmParse :: Cu.Cursor -> DeleteMessageResponse
+dmParse el = do
+  DeleteMessageResponse { }
 
-instance SqsResponseIteratee ChangeMessageVisibilityResponse where
+instance SqsResponseIteratee DeleteMessageResponse where
     sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
                                             let cursor = Cu.fromDocument doc
-                                            return $ cmvParse cursor                                  
+                                            return $ dmParse cursor                                  
           
-instance SignQuery ChangeMessageVisibility  where 
-    type Info ChangeMessageVisibility  = SqsInfo
-    signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
-                                             sqsQueueName = Just cmvQueueName, 
-                                             sqsQuery = [("Action", Just "ChangeMessageVisibility"), 
-                                                         ("ReceiptHandle", Just $ B.pack $ show cmvReceiptHandle),
-                                                         ("VisibilityTimout", Just $ B.pack $ show cmvVisibilityTimeout)]}
+instance SignQuery DeleteMessage  where 
+    type Info DeleteMessage  = SqsInfo
+    signQuery DeleteMessage {..} = sqsSignQuery SqsQuery { 
+                                             sqsQuery = [("Action", Just "DeleteMessage"), 
+                                                        ("QueueName", Just $ B.pack $ M.printQueue dmQueueName),
+                                                        ("ReceiptHandle", Just $ B.pack $ show dmReceiptHandle )]} 
 
-instance Transaction ChangeMessageVisibility (SqsResponse ChangeMessageVisibilityResponse)
+instance Transaction DeleteMessage (SqsResponse DeleteMessageResponse)
+
+

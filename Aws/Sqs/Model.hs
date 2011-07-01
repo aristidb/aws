@@ -94,5 +94,5 @@ printPermission DeleteMessage = "DeleteMessage"
 printPermission ChangeMessageVisibility = "ChangeMessageVisibility"
 printPermission GetQueueAttributes = "GetQueueAttributes"
 
-newtype RecieptHandle = RecieptHandle T.Text deriving(Show,Eq)
+newtype ReceiptHandle = ReceiptHandle T.Text deriving(Show,Eq)
 newtype MessageId = MessageId T.Text deriving(Show,Eq)

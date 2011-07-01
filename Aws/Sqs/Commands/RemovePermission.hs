@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 
-module Aws.Sqs.Commands.ChangeMessageVisibility where
+module Aws.Sqs.Commands.RemovePermission where
 
 import           Aws.Response
 import           Aws.Sqs.Error
@@ -29,31 +29,32 @@ import qualified Data.ByteString.UTF8  as BU
 import qualified Data.ByteString.Char8 as B
 import Debug.Trace
 
-data ChangeMessageVisibility = ChangeMessageVisibility {
-  cmvReceiptHandle :: M.ReceiptHandle,
-  cmvVisibilityTimeout :: Int,
-  cmvQueueName :: String
+data RemovePermission = RemovePermission{
+  rpLabel :: String,
+  rpQueueName :: M.QueueName 
 }deriving (Show)
 
-data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse{
+data RemovePermissionResponse = RemovePermissionResponse{
 } deriving (Show)
 
 
-cmvParse :: Cu.Cursor -> ChangeMessageVisibilityResponse
-cmvParse el = do
-  ChangeMessageVisibilityResponse
+rpParse :: Cu.Cursor -> RemovePermissionResponse
+rpParse el = do
+  RemovePermissionResponse { }
 
-instance SqsResponseIteratee ChangeMessageVisibilityResponse where
+instance SqsResponseIteratee RemovePermissionResponse where
     sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
                                             let cursor = Cu.fromDocument doc
-                                            return $ cmvParse cursor                                  
+                                            return $ rpParse cursor                
           
-instance SignQuery ChangeMessageVisibility  where 
-    type Info ChangeMessageVisibility  = SqsInfo
-    signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
-                                             sqsQueueName = Just cmvQueueName, 
-                                             sqsQuery = [("Action", Just "ChangeMessageVisibility"), 
-                                                         ("ReceiptHandle", Just $ B.pack $ show cmvReceiptHandle),
-                                                         ("VisibilityTimout", Just $ B.pack $ show cmvVisibilityTimeout)]}
+instance SignQuery RemovePermission  where 
+    type Info RemovePermission  = SqsInfo
+    signQuery RemovePermission {..} = sqsSignQuery SqsQuery { 
+                                             sqsQuery = [("Action", Just "RemovePermission"), 
+                                                        ("QueueName", Just $ B.pack $ M.printQueue rpQueueName),
+                                                        ("Label", Just $ B.pack $ rpLabel )]} 
 
-instance Transaction ChangeMessageVisibility (SqsResponse ChangeMessageVisibilityResponse)
+instance Transaction RemovePermission (SqsResponse RemovePermissionResponse)
+
+
+
