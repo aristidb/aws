@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 
-module Aws.Sqs.Commands.RecieveMessage where
+module Aws.Sqs.Commands.ReceiveMessage where
 
 import           Aws.Response
 import           Aws.Sqs.Error
@@ -29,7 +29,7 @@ import qualified Data.ByteString.UTF8  as BU
 import qualified Data.ByteString.Char8 as B
 import Debug.Trace
 
-data RecieveMessage = RecieveMessage{ 
+data ReceiveMessage = ReceiveMessage{ 
   rmVisibilityTimeout :: Maybe Int,
   rmAttributes :: [M.MessageAttribute],
   rmMaxNumberOfMessages :: Maybe Int,
@@ -38,13 +38,13 @@ data RecieveMessage = RecieveMessage{
 
 data Message = Message{
   mMessageId :: T.Text,
-  mRecieptHandle :: M.RecieptHandle,
+  mRecieptHandle :: M.ReceiptHandle,
   mMD5OfBody :: T.Text,
   mBody :: T.Text,
   mAttributes :: [(M.MessageAttribute,T.Text)]
 } deriving(Show)
 
-data RecieveMessageResponse = RecieveMessageResponse{
+data ReceiveMessageResponse = ReceiveMessageResponse{
   rmrMessages :: [Message]
 } deriving (Show)
 
@@ -64,15 +64,15 @@ mParse el = do
       mAttributes = attributes}
   where
     id = head $ head $ Cu.laxElement "MessageId" &| Cu.content $ el
-    rh = M.RecieptHandle $ head $ head $ Cu.laxElement "RecieptHandle" &| Cu.content $ el
+    rh = M.ReceiptHandle $ head $ head $ Cu.laxElement "ReceiptHandle" &| Cu.content $ el
     md5 = head $ head $Cu.laxElement "MD5OfBody" &| Cu.content $ el
     body = head $ head $ Cu.laxElement "Body" &| Cu.content $el
     attributes = Cu.laxElement "Attribute" &| parseMAttributes $ el
 
-rmParse :: Cu.Cursor -> RecieveMessageResponse
+rmParse :: Cu.Cursor -> ReceiveMessageResponse
 rmParse el = do
-  let messages = Cu.laxElement "RecieveMessageResponse" &/ Cu.laxElement "RecieveMessageResult" &/ Cu.laxElement "Message" &| mParse $ el
-  RecieveMessageResponse{ rmrMessages = messages }
+  let messages = Cu.laxElement "ReceiveMessageResponse" &/ Cu.laxElement "ReceiveMessageResult" &/ Cu.laxElement "Message" &| mParse $ el
+  ReceiveMessageResponse{ rmrMessages = messages }
 
 formatMAttributes :: [M.MessageAttribute] -> [HTTP.QueryItem]
 formatMAttributes attrs =
@@ -81,15 +81,15 @@ formatMAttributes attrs =
     1 -> [("AttributeName", Just $ B.pack $ show $ attrs !! 0)]
     _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ B.pack $ M.printMessageAttribute x) ) attrs [1..]
 
-instance SqsResponseIteratee RecieveMessageResponse where
+instance SqsResponseIteratee ReceiveMessageResponse where
     sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
                                             let cursor = Cu.fromDocument doc
                                             return $ rmParse cursor                                  
           
-instance SignQuery RecieveMessage  where 
-    type Info RecieveMessage  = SqsInfo
-    signQuery RecieveMessage {..} = sqsSignQuery SqsQuery { 
-                                             sqsQuery = [("Action", Just "RecieveMessage"), 
+instance SignQuery ReceiveMessage  where 
+    type Info ReceiveMessage  = SqsInfo
+    signQuery ReceiveMessage {..} = sqsSignQuery SqsQuery { 
+                                             sqsQuery = [("Action", Just "ReceiveMessage"), 
                                                          ("QueueName", Just $ B.pack $ M.printQueue rmQueueName)] ++
                                                          catMaybes[("VisibilityTimeout",) <$> case rmVisibilityTimeout of
                                                                                                 Just x -> Just $ Just $ B.pack $ show x
@@ -99,4 +99,4 @@ instance SignQuery RecieveMessage  where
                                                                                                   Nothing -> Nothing]
                                                          ++ formatMAttributes rmAttributes}
 
-instance Transaction RecieveMessage (SqsResponse RecieveMessageResponse)
+instance Transaction ReceiveMessage (SqsResponse ReceiveMessageResponse)
