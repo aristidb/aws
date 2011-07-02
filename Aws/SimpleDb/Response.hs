@@ -12,7 +12,6 @@ import           Text.XML.Enumerator.Cursor (($|), ($/), ($//), (&|))
 import qualified Control.Failure            as F
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Base64     as Base64
-import qualified Data.ByteString.UTF8       as BU
 import qualified Data.Enumerator            as En
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T

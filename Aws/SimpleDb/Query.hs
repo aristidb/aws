@@ -13,7 +13,6 @@ import           Data.Monoid
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Data.ByteString                as B
-import qualified Data.ByteString.Lazy           as L
 import qualified Network.HTTP.Types             as HTTP
 
 sdbSignQuery :: [(B.ByteString, B.ByteString)] -> SdbInfo -> SignatureData -> SignedQuery

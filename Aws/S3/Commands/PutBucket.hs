@@ -10,8 +10,6 @@ import           Aws.S3.Query
 import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
-import qualified Data.ByteString.UTF8         as BU
-import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import qualified Network.HTTP.Enumerator      as HTTPE
 import qualified Text.XML.Enumerator.Resolved as XML

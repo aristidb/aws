@@ -15,7 +15,6 @@ import           Data.Maybe
 import           Data.Word
 import           Text.XML.Enumerator.Cursor   (($/))
 import qualified Data.ByteString              as B
-import qualified Data.ByteString.Char8        as B8
 import qualified Data.Enumerator              as En
 import qualified Data.Text.Encoding           as T
 import qualified Network.HTTP.Types           as HTTP

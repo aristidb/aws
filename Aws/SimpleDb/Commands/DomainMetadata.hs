@@ -13,7 +13,6 @@ import           Aws.Xml
 import           Data.Time
 import           Data.Time.Clock.POSIX
 import           Text.XML.Enumerator.Cursor (($//), (&|))
-import qualified Data.ByteString.UTF8       as BU
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 

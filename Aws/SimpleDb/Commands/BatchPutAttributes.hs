@@ -11,7 +11,6 @@ import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
-import qualified Data.ByteString.UTF8  as BU
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 

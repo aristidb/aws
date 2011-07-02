@@ -9,7 +9,6 @@ import           Data.Monoid
 import           Data.Time
 import qualified Blaze.ByteString.Builder as Blaze
 import qualified Data.ByteString          as B
-import qualified Data.ByteString.Lazy     as L
 import qualified Data.ByteString.UTF8     as BU
 import qualified Network.HTTP.Enumerator  as HTTP
 import qualified Network.HTTP.Types       as HTTP

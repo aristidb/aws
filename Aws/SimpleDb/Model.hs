@@ -9,7 +9,6 @@ import           Control.Monad
 import           Text.XML.Enumerator.Cursor (($/), (&|))
 import qualified Control.Failure            as F
 import qualified Data.ByteString            as B
-import qualified Data.ByteString.UTF8       as BU
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Text.XML.Enumerator.Cursor as Cu

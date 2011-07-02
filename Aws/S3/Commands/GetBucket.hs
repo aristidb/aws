@@ -17,7 +17,6 @@ import           Control.Arrow              (second)
 import           Data.ByteString.Char8      ({- IsString -})
 import           Data.Maybe
 import           Text.XML.Enumerator.Cursor (($/), (&|), (&//))
-import qualified Data.ByteString.UTF8       as BU
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Data.Traversable
