@@ -9,7 +9,8 @@ import           Data.Monoid
 import           Data.Time
 import qualified Blaze.ByteString.Builder as Blaze
 import qualified Data.ByteString          as B
-import qualified Data.ByteString.UTF8     as BU
+import qualified Data.Text                as T
+import qualified Data.Text.Encoding       as T
 import qualified Network.HTTP.Enumerator  as HTTP
 import qualified Network.HTTP.Types       as HTTP
 
@@ -65,7 +66,7 @@ queryToUri SignedQuery{..}
          HTTP -> "http://"
          HTTPS -> "https://"
       , sqHost
-      , if sqPort == defaultPort sqProtocol then "" else BU.fromString $ ':' : show sqPort
+      , if sqPort == defaultPort sqProtocol then "" else T.encodeUtf8 . T.pack $ ':' : show sqPort
       , sqPath
       , HTTP.renderQuery True sqQuery
       ]

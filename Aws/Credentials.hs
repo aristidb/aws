@@ -10,7 +10,6 @@ import           System.Directory
 import           System.Environment
 import           System.FilePath
 import qualified Data.ByteString      as B
-import qualified Data.ByteString.UTF8 as BU
 import qualified Data.Text            as T
 import qualified Data.Text.Encoding   as T
 import qualified Data.Text.IO         as T
@@ -44,7 +43,7 @@ loadCredentialsFromEnv = do
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
-  return (Credentials <$> (BU.fromString <$> keyID) <*> (BU.fromString <$> secret))
+  return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) <*> (T.encodeUtf8 . T.pack <$> secret))
   
 loadCredentialsFromEnvOrFile :: FilePath -> T.Text -> IO (Maybe Credentials)
 loadCredentialsFromEnvOrFile file key = loadCredentialsFromEnv `orM` loadCredentialsFromFile file key
