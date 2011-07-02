@@ -34,7 +34,7 @@ data CannedAcl
     | AclLogDeliveryWrite
     deriving (Show)
 
-writeCannedAcl :: CannedAcl -> String
+writeCannedAcl :: CannedAcl -> T.Text
 writeCannedAcl AclPrivate                = "private"
 writeCannedAcl AclPublicRead             = "public-read"
 writeCannedAcl AclPublicReadWrite        = "public-read-write"

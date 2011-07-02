@@ -2,14 +2,15 @@
 module Aws.S3.Metadata
 where
   
-import Control.Monad
-import Data.Monoid
-import Data.Typeable
+import           Control.Monad
+import           Data.Monoid
+import           Data.Typeable
+import qualified Data.Text     as T
 
 data S3Metadata
     = S3Metadata {
-        s3MAmzId2 :: Maybe String
-      , s3MRequestId :: Maybe String
+        s3MAmzId2 :: Maybe T.Text
+      , s3MRequestId :: Maybe T.Text
       }
     deriving (Show, Typeable)
 

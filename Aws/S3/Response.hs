@@ -17,6 +17,7 @@ import           Text.XML.Enumerator.Cursor   (($/))
 import qualified Data.ByteString              as B
 import qualified Data.ByteString.Char8        as B8
 import qualified Data.Enumerator              as En
+import qualified Data.Text.Encoding           as T
 import qualified Network.HTTP.Types           as HTTP
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
@@ -27,7 +28,7 @@ s3ResponseIteratee ::
     -> IORef S3Metadata
     -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ResponseIteratee inner metadata status headers = do
-      let headerString = fmap B8.unpack . flip lookup headers
+      let headerString = fmap T.decodeUtf8 . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
       
@@ -53,11 +54,11 @@ s3ErrorResponseIteratee status _headers
            Failure otherErr -> En.throwError otherErr
     where
       parseError :: Cu.Cursor -> Attempt S3Error
-      parseError root = do code <- force "Missing error Code" $ root $/ elCont "Code"
-                           message <- force "Missing error Message" $ root $/ elCont "Message"
-                           let resource = listToMaybe $ root $/ elCont "Resource"
-                               hostId = listToMaybe $ root $/ elCont "HostId"
-                               accessKeyId = listToMaybe $ root $/ elCont "AWSAccessKeyId"
+      parseError root = do code <- force "Missing error Code" $ root $/ elContent "Code"
+                           message <- force "Missing error Message" $ root $/ elContent "Message"
+                           let resource = listToMaybe $ root $/ elContent "Resource"
+                               hostId = listToMaybe $ root $/ elContent "HostId"
+                               accessKeyId = listToMaybe $ root $/ elContent "AWSAccessKeyId"
                                stringToSign = do unprocessed <- listToMaybe $ root $/ elCont "StringToSignBytes"
                                                  bytes <- mapM readHex2 $ words unprocessed
                                                  return $ B.pack bytes

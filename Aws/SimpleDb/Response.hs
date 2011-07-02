@@ -25,8 +25,8 @@ sdbResponseIteratee ::
     -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 sdbResponseIteratee inner metadataRef status headers = xmlCursorIteratee parse metadataRef status headers
     where parse cursor
-              = do let requestId' = listToMaybe $ cursor $// elCont "RequestID"
-                   let boxUsage' = listToMaybe $ cursor $// elCont "BoxUsage"
+              = do let requestId' = listToMaybe $ cursor $// elContent "RequestID"
+                   let boxUsage' = listToMaybe $ cursor $// elContent "BoxUsage"
                    tellMetadata $ SdbMetadata requestId' boxUsage'
                    case cursor $/ Cu.laxElement "Error" of
                      []      -> inner cursor

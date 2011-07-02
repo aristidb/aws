@@ -2,14 +2,15 @@
 module Aws.SimpleDb.Metadata
 where
   
-import Control.Monad
-import Data.Monoid
-import Data.Typeable
+import           Control.Monad
+import           Data.Monoid
+import           Data.Typeable
+import qualified Data.Text     as T
 
 data SdbMetadata 
     = SdbMetadata {
-        requestId :: Maybe String
-      , boxUsage :: Maybe String
+        requestId :: Maybe T.Text
+      , boxUsage :: Maybe T.Text
       }
     deriving (Show, Typeable)
 
