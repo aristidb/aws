@@ -57,6 +57,3 @@ instance SignQuery SetQueueAttributes  where
                                                         ("Attribute.Value", Just $ B.pack sqaValue)]} 
 
 instance Transaction SetQueueAttributes (SqsResponse SetQueueAttributesResponse)
-
-
-

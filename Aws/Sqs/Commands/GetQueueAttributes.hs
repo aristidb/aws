@@ -57,7 +57,7 @@ formatAttributes :: [M.QueueAttribute] -> [HTTP.QueryItem]
 formatAttributes attrs =
   case length attrs of
     0 -> undefined
-    1 -> [("AttributeName", Just $ B.pack $ show $ attrs !! 0)]
+    1 -> [("AttributeName", Just $ B.pack $ M.printQueueAttribute $ attrs !! 0)]
     _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ B.pack $ M.printQueueAttribute x) ) attrs [1..]
           
 instance SignQuery GetQueueAttributes where 
