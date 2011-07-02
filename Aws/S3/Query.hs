@@ -17,7 +17,7 @@ import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
-import qualified Data.ByteString.Lazy           as L
+import qualified Network.HTTP.Enumerator        as HTTPE
 import qualified Network.HTTP.Types             as HTTP
 
 data S3Query
@@ -25,8 +25,15 @@ data S3Query
         s3QBucket :: Maybe B.ByteString
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
+      , s3QRequestBody :: Maybe (HTTPE.RequestBody IO)
       }
-    deriving (Show)
+
+instance Show S3Query where
+    show S3Query{..} = "S3Query [ bucket: " ++ show s3QBucket ++ 
+                       " ; subresources: " ++ show s3QSubresources ++ 
+                       " ; query: " ++ show s3QQuery ++
+                       " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++ 
+                       "]"
 
 s3SignQuery :: S3Query -> S3Info -> SignatureData -> SignedQuery
 s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
@@ -41,7 +48,7 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       , sqAuthorization = authorization
       , sqContentType = contentType
       , sqContentMd5 = contentMd5
-      , sqBody = Nothing
+      , sqBody = s3QRequestBody
       , sqStringToSign = stringToSign
       }
     where

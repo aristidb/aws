@@ -65,6 +65,7 @@ instance SignQuery GetBucket where
                                             , ("max-keys",) <$> show <$> gbMaxKeys
                                             , ("prefix",) <$> gbPrefix
                                             ]
+                               , s3QRequestBody = Nothing
                                }
 
 instance ResponseIteratee GetBucketResponse where
