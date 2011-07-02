@@ -23,6 +23,25 @@ parseUserInfo el = do id_ <- force "Missing user ID" $ el $/ elCont "ID"
                       displayName <- force "Missing user DisplayName" $ el $/ elCont "DisplayName"
                       return UserInfo { userId = id_, userDisplayName = displayName }
 
+data CannedAcl
+    = AclPrivate 
+    | AclPublicRead 
+    | AclPublicReadWrite 
+    | AclAuthenticatedRead 
+    | AclBucketOwnerRead 
+    | AclBucketOwnerFullControl
+    | AclLogDeliveryWrite
+    deriving (Show)
+
+writeCannedAcl :: CannedAcl -> String
+writeCannedAcl AclPrivate                = "private"
+writeCannedAcl AclPublicRead             = "public-read"
+writeCannedAcl AclPublicReadWrite        = "public-read-write"
+writeCannedAcl AclAuthenticatedRead      = "authenticated-read"
+writeCannedAcl AclBucketOwnerRead        = "bucket-owner-read"
+writeCannedAcl AclBucketOwnerFullControl = "bucket-owner-full-control"
+writeCannedAcl AclLogDeliveryWrite       = "log-delivery-write"
+
 type Bucket = String
 
 data BucketInfo
