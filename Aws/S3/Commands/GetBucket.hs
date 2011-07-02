@@ -67,6 +67,7 @@ instance SignQuery GetBucket where
                                             , ("max-keys",) . T.pack . show <$> gbMaxKeys
                                             , ("prefix",) <$> gbPrefix
                                             ]
+                               , s3QAmzHeaders = []
                                , s3QRequestBody = Nothing
                                }
 

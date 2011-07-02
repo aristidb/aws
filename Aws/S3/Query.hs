@@ -9,6 +9,7 @@ import           Aws.Query
 import           Aws.S3.Info
 import           Aws.Signature
 import           Aws.Util
+import           Data.Function
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
@@ -17,6 +18,7 @@ import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
+import qualified Data.CaseInsensitive           as CI
 import qualified Network.HTTP.Enumerator        as HTTPE
 import qualified Network.HTTP.Types             as HTTP
 
@@ -26,6 +28,7 @@ data S3Query
       , s3QBucket :: Maybe B.ByteString
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
+      , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QRequestBody :: Maybe (HTTPE.RequestBody IO)
       }
 
@@ -51,12 +54,18 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       , sqAuthorization = authorization
       , sqContentType = contentType
       , sqContentMd5 = contentMd5
+      , sqAmzHeaders = amzHeaders
       , sqBody = s3QRequestBody
       , sqStringToSign = stringToSign
       }
     where
       contentMd5 = Nothing
       contentType = Nothing
+      amzHeaders = merge $ sortBy (compare `on` (CI.foldedCase . fst)) s3QAmzHeaders
+          where merge (x1@(k1,v1):x2@(k2,v2):xs) = if k1 == k2
+                                                   then (k1, B8.intercalate "," [v1, v2]):merge xs
+                                                   else x1:x2:merge xs
+                merge xs = xs
       (host, path) = case s3RequestStyle of 
                        PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket])
                        BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/"])
@@ -77,9 +86,10 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
                        , [Blaze.copyByteString $ case ti of
                                                    AbsoluteTimestamp time -> fmtRfc822Time time
                                                    AbsoluteExpires time -> fmtTimeEpochSeconds time]
-                       , [] -- canonicalized AMZ headers
+                       , map amzHeader amzHeaders
                        , [canonicalizedResource]
                        ]
+          where amzHeader (k, v) = Blaze.copyByteString (CI.foldedCase k) `mappend` Blaze8.fromChar ':' `mappend` Blaze.copyByteString v
       (authorization, authQuery) = case ti of
                                  AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
                                  AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ makeAuthQuery time)

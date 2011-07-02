@@ -46,6 +46,13 @@ instance ResponseIteratee GetServiceResponse where
 
 instance SignQuery GetService where
     type Info GetService = S3Info
-    signQuery GetService = s3SignQuery S3Query { s3QMethod = Get, s3QBucket = Nothing, s3QSubresources = [], s3QQuery = [], s3QRequestBody = Nothing }
+    signQuery GetService = s3SignQuery S3Query { 
+                                s3QMethod = Get
+                              , s3QBucket = Nothing
+                              , s3QSubresources = []
+                              , s3QQuery = []
+                              , s3QAmzHeaders = [] 
+                              , s3QRequestBody = Nothing 
+                              }
 
 instance Transaction GetService GetServiceResponse

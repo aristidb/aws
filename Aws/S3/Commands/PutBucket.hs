@@ -17,7 +17,7 @@ import qualified Text.XML.Enumerator.Resolved as XML
 data PutBucket
     = PutBucket {
         pbBucket :: Bucket
-      , pbCannedAcl :: CannedAcl
+      , pbCannedAcl :: Maybe CannedAcl
       , pbLocationConstraint :: LocationConstraint
       }
     deriving (Show)
@@ -34,6 +34,9 @@ instance SignQuery PutBucket where
                                            , s3QBucket       = Just $ T.encodeUtf8 pbBucket
                                            , s3QSubresources = []
                                            , s3QQuery        = []
+                                           , s3QAmzHeaders   = case pbCannedAcl of 
+                                                                 Nothing -> []
+                                                                 Just acl -> [("x-amz-acl", T.encodeUtf8 $ writeCannedAcl acl)]
                                            , s3QRequestBody  = Just . HTTPE.RequestBodyLBS . XML.renderLBS $
                                                                XML.Document {
                                                                         XML.documentPrologue = XML.Prologue [] Nothing []
