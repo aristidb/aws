@@ -5,6 +5,7 @@ where
 import           Aws.Http
 import           Aws.Util
 import           Data.Maybe
+import           Data.Monoid
 import           Data.Time
 import qualified Blaze.ByteString.Builder as Blaze
 import qualified Data.ByteString          as B
@@ -25,12 +26,12 @@ data SignedQuery
       , sqAuthorization :: Maybe B.ByteString
       , sqContentType :: Maybe B.ByteString
       , sqContentMd5 :: Maybe B.ByteString
-      , sqBody :: L.ByteString
+      , sqBody :: Maybe (HTTP.RequestBody IO)
       , sqStringToSign :: B.ByteString
       }
-    deriving (Show)
+    --deriving (Show)
 
-queryToHttpRequest :: SignedQuery -> HTTP.Request m
+queryToHttpRequest :: SignedQuery -> HTTP.Request IO
 queryToHttpRequest SignedQuery{..}
     = HTTP.Request {
         HTTP.method = httpMethod sqMethod
@@ -46,9 +47,11 @@ queryToHttpRequest SignedQuery{..}
                                         , fmap (\c -> ("Content-Type", c)) contentType
                                         , fmap (\md5 -> ("Content-MD5", md5)) sqContentMd5
                                         , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
-      , HTTP.requestBody = HTTP.RequestBodyLBS $ case sqMethod of
-                                                   Get -> L.empty
-                                                   PostQuery -> Blaze.toLazyByteString $ HTTP.renderQueryBuilder False sqQuery
+      , HTTP.requestBody = case sqMethod of
+                             PostQuery -> HTTP.RequestBodyLBS . Blaze.toLazyByteString $ HTTP.renderQueryBuilder False sqQuery
+                             _         -> case sqBody of
+                                            Nothing -> HTTP.RequestBodyBuilder 0 mempty
+                                            Just x  -> x
       , HTTP.proxy = Nothing
       , HTTP.rawBody = False
       }

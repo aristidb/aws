@@ -29,7 +29,7 @@ sdbSignQuery q si sd
       , sqAuthorization = Nothing
       , sqContentType = Nothing
       , sqContentMd5 = Nothing
-      , sqBody = L.empty
+      , sqBody = Nothing
       , sqStringToSign = stringToSign
       }
     where

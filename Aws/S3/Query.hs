@@ -41,7 +41,7 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       , sqAuthorization = authorization
       , sqContentType = contentType
       , sqContentMd5 = contentMd5
-      , sqBody = L.empty
+      , sqBody = Nothing
       , sqStringToSign = stringToSign
       }
     where

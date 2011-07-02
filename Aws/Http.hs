@@ -17,8 +17,12 @@ defaultPort HTTPS = 443
 data Method
     = Get
     | PostQuery
+    | Post
+    | Put
     deriving (Show, Eq)
 
 httpMethod :: Method -> HTTP.Method
-httpMethod Get = "GET"
+httpMethod Get       = "GET"
 httpMethod PostQuery = "POST"
+httpMethod Post      = "POST"
+httpMethod Put       = "PUT"
