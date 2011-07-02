@@ -10,10 +10,12 @@ import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import qualified Data.ByteString.UTF8  as BU
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
 
 data DeleteDomain
     = DeleteDomain {
-        ddDomainName :: String
+        ddDomainName :: T.Text
       }
     deriving (Show)
 
@@ -21,12 +23,12 @@ data DeleteDomainResponse
     = DeleteDomainResponse
     deriving (Show)
              
-deleteDomain :: String -> DeleteDomain
+deleteDomain :: T.Text -> DeleteDomain
 deleteDomain name = DeleteDomain { ddDomainName = name }
              
 instance SignQuery DeleteDomain where
     type Info DeleteDomain = SdbInfo
-    signQuery DeleteDomain{..} = sdbSignQuery [("Action", "DeleteDomain"), ("DomainName", BU.fromString ddDomainName)]
+    signQuery DeleteDomain{..} = sdbSignQuery [("Action", "DeleteDomain"), ("DomainName", T.encodeUtf8 ddDomainName)]
 
 instance ResponseIteratee DeleteDomainResponse where
     type ResponseMetadata DeleteDomainResponse = SdbMetadata

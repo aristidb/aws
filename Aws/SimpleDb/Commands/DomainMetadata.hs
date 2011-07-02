@@ -14,10 +14,12 @@ import           Data.Time
 import           Data.Time.Clock.POSIX
 import           Text.XML.Enumerator.Cursor (($//), (&|))
 import qualified Data.ByteString.UTF8       as BU
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 
 data DomainMetadata
     = DomainMetadata {
-        dmDomainName :: String
+        dmDomainName :: T.Text
       }
     deriving (Show)
 
@@ -33,12 +35,12 @@ data DomainMetadataResponse
       }
     deriving (Show)
              
-domainMetadata :: String -> DomainMetadata
+domainMetadata :: T.Text -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
 instance SignQuery DomainMetadata where
     type Info DomainMetadata = SdbInfo
-    signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", BU.fromString dmDomainName)]
+    signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", T.encodeUtf8 dmDomainName)]
 
 instance ResponseIteratee DomainMetadataResponse where
     type ResponseMetadata DomainMetadataResponse = SdbMetadata

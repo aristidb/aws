@@ -10,10 +10,12 @@ import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import qualified Data.ByteString.UTF8  as BU
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
 
 data CreateDomain
     = CreateDomain {
-        cdDomainName :: String
+        cdDomainName :: T.Text
       }
     deriving (Show)
 
@@ -21,12 +23,12 @@ data CreateDomainResponse
     = CreateDomainResponse
     deriving (Show)
              
-createDomain :: String -> CreateDomain
+createDomain :: T.Text -> CreateDomain
 createDomain name = CreateDomain { cdDomainName = name }
              
 instance SignQuery CreateDomain where
     type Info CreateDomain = SdbInfo
-    signQuery CreateDomain{..} = sdbSignQuery [("Action", "CreateDomain"), ("DomainName", BU.fromString cdDomainName)]
+    signQuery CreateDomain{..} = sdbSignQuery [("Action", "CreateDomain"), ("DomainName", T.encodeUtf8 cdDomainName)]
 
 instance ResponseIteratee CreateDomainResponse where
     type ResponseMetadata CreateDomainResponse = SdbMetadata

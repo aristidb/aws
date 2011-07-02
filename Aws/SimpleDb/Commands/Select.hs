@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 module Aws.SimpleDb.Commands.Select
 where
 
@@ -12,37 +12,42 @@ import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
 import           Aws.Xml
+import           Control.Applicative
 import           Control.Monad
 import           Data.Maybe
 import           Text.XML.Enumerator.Cursor (($//), (&|))
 import qualified Data.ByteString.UTF8       as BU
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 import qualified Text.XML.Enumerator.Cursor as Cu
 
 data Select
     = Select {
-        sSelectExpression :: String
+        sSelectExpression :: T.Text
       , sConsistentRead :: Bool
-      , sNextToken :: String
+      , sNextToken :: Maybe T.Text
       }
     deriving (Show)
 
 data SelectResponse
     = SelectResponse {
-        srItems :: [Item [Attribute String]]
-      , srNextToken :: Maybe String
+        srItems :: [Item [Attribute T.Text]]
+      , srNextToken :: Maybe T.Text
       }
     deriving (Show)
 
-select :: String -> Select
-select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextToken = "" }
+select :: T.Text -> Select
+select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextToken = Nothing }
 
 instance SignQuery Select where
     type Info Select = SdbInfo
     signQuery Select{..}
-        = sdbSignQuery $
-            [("Action", "Select"), ("SelectExpression", BU.fromString sSelectExpression)] ++
-            (guard sConsistentRead >> [("ConsistentRead", awsTrue)]) ++
-            (guard (not $ null sNextToken) >> [("NextToken", BU.fromString sNextToken)])
+        = sdbSignQuery . catMaybes $
+            [ Just ("Action", "Select")
+            , Just ("SelectExpression", T.encodeUtf8 sSelectExpression)
+            , ("ConsistentRead", awsTrue) <$ guard sConsistentRead
+            , (("NextToken",) . T.encodeUtf8) <$> sNextToken
+            ]
 
 instance ResponseIteratee SelectResponse where
     type ResponseMetadata SelectResponse = SdbMetadata
@@ -50,7 +55,7 @@ instance ResponseIteratee SelectResponse where
         where parse cursor = do
                 sdbCheckResponseType () "SelectResponse" cursor
                 items <- sequence $ cursor $// Cu.laxElement "Item" &| readItem
-                let nextToken = listToMaybe $ cursor $// elCont "NextToken"
+                let nextToken = listToMaybe $ cursor $// elContent "NextToken"
                 return $ SelectResponse items nextToken
 
 instance Transaction Select SelectResponse

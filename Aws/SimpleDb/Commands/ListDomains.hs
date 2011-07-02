@@ -13,19 +13,20 @@ import           Aws.Xml
 import           Control.Applicative
 import           Data.Maybe
 import           Text.XML.Enumerator.Cursor (($//))
-import qualified Data.ByteString.UTF8       as BU
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 
 data ListDomains
     = ListDomains {
         ldMaxNumberOfDomains :: Maybe Int
-      , ldNextToken :: Maybe String
+      , ldNextToken :: Maybe T.Text
       }
     deriving (Show)
 
 data ListDomainsResponse 
     = ListDomainsResponse {
-        ldrDomainNames :: [String]
-      , ldrNextToken :: Maybe String
+        ldrDomainNames :: [T.Text]
+      , ldrNextToken :: Maybe T.Text
       }
     deriving (Show)
 
@@ -36,8 +37,8 @@ instance SignQuery ListDomains where
     type Info ListDomains = SdbInfo
     signQuery ListDomains{..} = sdbSignQuery $ catMaybes [
                                   Just ("Action", "ListDomains")
-                                , ("MaxNumberOfDomains",) <$> BU.fromString <$> show <$> ldMaxNumberOfDomains
-                                , ("NextToken",) <$> BU.fromString <$> ldNextToken
+                                , ("MaxNumberOfDomains",) . T.encodeUtf8 . T.pack . show <$> ldMaxNumberOfDomains
+                                , ("NextToken",) . T.encodeUtf8 <$> ldNextToken
                                 ]
 
 instance ResponseIteratee ListDomainsResponse where
@@ -45,8 +46,8 @@ instance ResponseIteratee ListDomainsResponse where
     responseIteratee = sdbResponseIteratee parse 
         where parse cursor = do
                 sdbCheckResponseType () "ListDomainsResponse" cursor
-                let names = cursor $// elCont "DomainName"
-                let nextToken = listToMaybe $ cursor $// elCont "NextToken"
+                let names = cursor $// elContent "DomainName"
+                let nextToken = listToMaybe $ cursor $// elContent "NextToken"
                 return $ ListDomainsResponse names nextToken
 
 instance Transaction ListDomains ListDomainsResponse

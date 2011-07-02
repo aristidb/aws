@@ -12,13 +12,15 @@ import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
 import qualified Data.ByteString.UTF8  as BU
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
 
 data PutAttributes
     = PutAttributes {
-        paItemName :: String
+        paItemName :: T.Text
       , paAttributes :: [Attribute SetAttribute]
       , paExpected :: [Attribute ExpectedAttribute]
-      , paDomainName :: String
+      , paDomainName :: T.Text
       }
     deriving (Show)
 
@@ -26,7 +28,7 @@ data PutAttributesResponse
     = PutAttributesResponse
     deriving (Show)
              
-putAttributes :: String -> [Attribute SetAttribute] -> String -> PutAttributes
+putAttributes :: T.Text -> [Attribute SetAttribute] -> T.Text -> PutAttributes
 putAttributes item attributes domain = PutAttributes { 
                                          paItemName = item
                                        , paAttributes = attributes
@@ -38,7 +40,7 @@ instance SignQuery PutAttributes where
     type Info PutAttributes = SdbInfo
     signQuery PutAttributes{..}
         = sdbSignQuery $ 
-            [("Action", "PutAttributes"), ("ItemName", BU.fromString paItemName), ("DomainName", BU.fromString paDomainName)] ++
+            [("Action", "PutAttributes"), ("ItemName", T.encodeUtf8 paItemName), ("DomainName", T.encodeUtf8 paDomainName)] ++
             queryList (attributeQuery setAttributeQuery) "Attribute" paAttributes ++
             queryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
 

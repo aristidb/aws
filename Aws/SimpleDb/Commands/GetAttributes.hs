@@ -16,32 +16,34 @@ import           Control.Monad
 import           Data.Maybe
 import           Text.XML.Enumerator.Cursor (($//), (&|))
 import qualified Data.ByteString.UTF8       as BU
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 import qualified Text.XML.Enumerator.Cursor as Cu
 
 data GetAttributes
     = GetAttributes {
-        gaItemName :: String
-      , gaAttributeName :: Maybe String
+        gaItemName :: T.Text
+      , gaAttributeName :: Maybe T.Text
       , gaConsistentRead :: Bool
-      , gaDomainName :: String
+      , gaDomainName :: T.Text
       }
     deriving (Show)
 
 data GetAttributesResponse
     = GetAttributesResponse {
-        garAttributes :: [Attribute String]
+        garAttributes :: [Attribute T.Text]
       }
     deriving (Show)
              
-getAttributes :: String -> String -> GetAttributes
+getAttributes :: T.Text -> T.Text -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
 
 instance SignQuery GetAttributes where
     type Info GetAttributes = SdbInfo
     signQuery GetAttributes{..}
         = sdbSignQuery $
-            [("Action", "GetAttributes"), ("ItemName", BU.fromString gaItemName), ("DomainName", BU.fromString gaDomainName)] ++
-            maybeToList (("AttributeName",) <$> BU.fromString <$> gaAttributeName) ++
+            [("Action", "GetAttributes"), ("ItemName", T.encodeUtf8 gaItemName), ("DomainName", T.encodeUtf8 gaDomainName)] ++
+            maybeToList (("AttributeName",) <$> T.encodeUtf8 <$> gaAttributeName) ++
             (guard gaConsistentRead >> [("ConsistentRead", awsTrue)])
 
 instance ResponseIteratee GetAttributesResponse where

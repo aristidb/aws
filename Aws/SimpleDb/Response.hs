@@ -15,6 +15,7 @@ import qualified Data.ByteString.Base64     as Base64
 import qualified Data.ByteString.UTF8       as BU
 import qualified Data.Enumerator            as En
 import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 import qualified Network.HTTP.Types         as HTTP
 import qualified Text.XML.Enumerator.Cursor as Cu
 
@@ -41,14 +42,14 @@ sdbCheckResponseType :: F.Failure XmlException m => a -> T.Text -> Cu.Cursor -> 
 sdbCheckResponseType a n c = do _ <- force ("Expected response type " ++ T.unpack n) (Cu.laxElement n c)
                                 return a
 
-decodeBase64 :: F.Failure XmlException m => Cu.Cursor -> m String
+decodeBase64 :: F.Failure XmlException m => Cu.Cursor -> m T.Text
 decodeBase64 cursor =
-  let encoded = T.unpack . T.concat $ cursor $/ Cu.content
+  let encoded = T.concat $ cursor $/ Cu.content
       encoding = listToMaybe $ cursor $| Cu.laxAttribute "encoding" &| T.toCaseFold
   in
     case encoding of
       Nothing -> return encoded
-      Just "base64" -> case fmap BU.toString $ Base64.decode . BU.fromString $ encoded of
+      Just "base64" -> case Base64.decode . T.encodeUtf8 $ encoded of
                          Left msg -> F.failure $ XmlException ("Invalid Base64 data: " ++ msg)
-                         Right x -> return x
+                         Right x -> return $ T.decodeUtf8 x
       Just actual -> F.failure $ XmlException ("Unrecognized encoding " ++ T.unpack actual)
