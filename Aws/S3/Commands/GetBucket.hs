@@ -2,6 +2,7 @@
 module Aws.S3.Commands.GetBucket
 where
 
+import           Aws.Http
 import           Aws.Response
 import           Aws.S3.Info
 import           Aws.S3.Metadata
@@ -57,7 +58,8 @@ data GetBucketResponse
 instance SignQuery GetBucket where
     type Info GetBucket = S3Info
     signQuery GetBucket {..} = s3SignQuery S3Query { 
-                                 s3QBucket = Just $ BU.fromString gbBucket
+                                 s3QMethod = Get
+                               , s3QBucket = Just $ BU.fromString gbBucket
                                , s3QSubresources = []
                                , s3QQuery = HTTP.simpleQueryToQuery $ map (second BU.fromString) $ catMaybes [
                                               ("delimiter",) <$> gbDelimiter

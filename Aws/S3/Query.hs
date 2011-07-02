@@ -22,14 +22,17 @@ import qualified Network.HTTP.Types             as HTTP
 
 data S3Query
     = S3Query {
-        s3QBucket :: Maybe B.ByteString
+        s3QMethod :: Method
+      , s3QBucket :: Maybe B.ByteString
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QRequestBody :: Maybe (HTTPE.RequestBody IO)
       }
 
 instance Show S3Query where
-    show S3Query{..} = "S3Query [ bucket: " ++ show s3QBucket ++ 
+    show S3Query{..} = "S3Query [" ++
+                       " method: " ++ show s3QMethod ++
+                       " ; bucket: " ++ show s3QBucket ++ 
                        " ; subresources: " ++ show s3QSubresources ++ 
                        " ; query: " ++ show s3QQuery ++
                        " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++ 
@@ -38,7 +41,7 @@ instance Show S3Query where
 s3SignQuery :: S3Query -> S3Info -> SignatureData -> SignedQuery
 s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
     = SignedQuery {
-        sqMethod = method
+        sqMethod = s3QMethod
       , sqProtocol = s3Protocol
       , sqHost = B.intercalate "." $ catMaybes host
       , sqPort = s3Port
@@ -52,7 +55,6 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       , sqStringToSign = stringToSign
       }
     where
-      method = Get
       contentMd5 = Nothing
       contentType = Nothing
       (host, path) = case s3RequestStyle of 
@@ -69,7 +71,7 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
              (True, AbsoluteExpires time) -> AbsoluteExpires time
       sig = signature signatureCredentials HmacSHA1 stringToSign
       stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
-                       [[Blaze.copyByteString $ httpMethod method]
+                       [[Blaze.copyByteString $ httpMethod s3QMethod]
                        , [maybe mempty Blaze.copyByteString contentMd5]
                        , [maybe mempty Blaze.copyByteString contentType]
                        , [Blaze.copyByteString $ case ti of

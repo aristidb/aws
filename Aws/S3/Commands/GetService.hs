@@ -2,6 +2,7 @@
 module Aws.S3.Commands.GetService
 where
   
+import           Aws.Http
 import           Aws.Response
 import           Aws.S3.Info
 import           Aws.S3.Metadata
@@ -44,6 +45,6 @@ instance ResponseIteratee GetServiceResponse where
 
 instance SignQuery GetService where
     type Info GetService = S3Info
-    signQuery GetService = s3SignQuery S3Query { s3QBucket = Nothing, s3QSubresources = [], s3QQuery = [], s3QRequestBody = Nothing }
+    signQuery GetService = s3SignQuery S3Query { s3QMethod = Get, s3QBucket = Nothing, s3QSubresources = [], s3QQuery = [], s3QRequestBody = Nothing }
 
 instance Transaction GetService GetServiceResponse
