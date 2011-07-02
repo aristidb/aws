@@ -25,6 +25,9 @@ newtype XmlException = XmlException { xmlErrorMessage :: String }
 
 instance C.Exception XmlException
 
+elContent :: T.Text -> Cursor -> [T.Text]
+elContent name = laxElement name &/ content
+
 elCont :: T.Text -> Cursor -> [String]
 elCont name = laxElement name &/ content &| T.unpack
 
@@ -33,6 +36,11 @@ force = Cu.force . XmlException
 
 forceM :: F.Failure XmlException m => String -> [m a] -> m a
 forceM = Cu.forceM . XmlException
+
+textReadInt :: (F.Failure XmlException m, Num a) => T.Text -> m a
+textReadInt s = case reads $ T.unpack s of
+                  [(n,"")] -> return $ fromInteger n
+                  _        -> F.failure $ XmlException "Invalid Integer"
 
 readInt :: (F.Failure XmlException m, Num a) => String -> m a
 readInt s = case reads s of

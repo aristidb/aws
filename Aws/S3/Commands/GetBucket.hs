@@ -19,6 +19,7 @@ import           Data.Maybe
 import           Text.XML.Enumerator.Cursor (($/), (&|), (&//))
 import qualified Data.ByteString.UTF8       as BU
 import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 import qualified Data.Traversable
 import qualified Network.HTTP.Types         as HTTP
 import qualified Text.XML.Enumerator.Cursor as Cu
@@ -26,10 +27,10 @@ import qualified Text.XML.Enumerator.Cursor as Cu
 data GetBucket
     = GetBucket {
         gbBucket    :: Bucket
-      , gbDelimiter :: Maybe String
-      , gbMarker    :: Maybe String
+      , gbDelimiter :: Maybe T.Text
+      , gbMarker    :: Maybe T.Text
       , gbMaxKeys   :: Maybe Int
-      , gbPrefix    :: Maybe String
+      , gbPrefix    :: Maybe T.Text
       }
     deriving (Show)
 
@@ -46,12 +47,12 @@ getBucket bucket
 data GetBucketResponse
     = GetBucketResponse {
         gbrName           :: Bucket
-      , gbrDelimiter      :: Maybe String
-      , gbrMarker         :: Maybe String
+      , gbrDelimiter      :: Maybe T.Text
+      , gbrMarker         :: Maybe T.Text
       , gbrMaxKeys        :: Maybe Int
-      , gbrPrefix         :: Maybe String
+      , gbrPrefix         :: Maybe T.Text
       , gbrContents       :: [ObjectInfo]
-      , gbrCommonPrefixes :: [String]
+      , gbrCommonPrefixes :: [T.Text]
       }
     deriving (Show)
 
@@ -59,12 +60,12 @@ instance SignQuery GetBucket where
     type Info GetBucket = S3Info
     signQuery GetBucket {..} = s3SignQuery S3Query { 
                                  s3QMethod = Get
-                               , s3QBucket = Just $ BU.fromString gbBucket
+                               , s3QBucket = Just $ T.encodeUtf8 gbBucket
                                , s3QSubresources = []
-                               , s3QQuery = HTTP.simpleQueryToQuery $ map (second BU.fromString) $ catMaybes [
+                               , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
                                               ("delimiter",) <$> gbDelimiter
                                             , ("marker",) <$> gbMarker
-                                            , ("max-keys",) <$> show <$> gbMaxKeys
+                                            , ("max-keys",) . T.pack . show <$> gbMaxKeys
                                             , ("prefix",) <$> gbPrefix
                                             ]
                                , s3QRequestBody = Nothing
@@ -75,13 +76,13 @@ instance ResponseIteratee GetBucketResponse where
 
     responseIteratee = s3XmlResponseIteratee parse
         where parse cursor
-                  = do name <- force "Missing Name" $ cursor $/ elCont "Name"
-                       let delimiter = listToMaybe $ cursor $/ elCont "Delimiter"
-                       let marker = listToMaybe $ cursor $/ elCont "Marker"
-                       maxKeys <- Data.Traversable.sequence . listToMaybe $ cursor $/ elCont "MaxKeys" &| readInt
-                       let prefix = listToMaybe $ cursor $/ elCont "Prefix"
+                  = do name <- force "Missing Name" $ cursor $/ elContent "Name"
+                       let delimiter = listToMaybe $ cursor $/ elContent "Delimiter"
+                       let marker = listToMaybe $ cursor $/ elContent "Marker"
+                       maxKeys <- Data.Traversable.sequence . listToMaybe $ cursor $/ elContent "MaxKeys" &| textReadInt
+                       let prefix = listToMaybe $ cursor $/ elContent "Prefix"
                        contents <- sequence $ cursor $/ Cu.laxElement "Contents" &| parseObjectInfo
-                       let commonPrefixes = cursor $/ Cu.laxElement "CommonPrefixes" &// Cu.content &| T.unpack
+                       let commonPrefixes = cursor $/ Cu.laxElement "CommonPrefixes" &// Cu.content
                        return GetBucketResponse{
                                                 gbrName           = name
                                               , gbrDelimiter      = delimiter

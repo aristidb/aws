@@ -16,6 +16,7 @@ import           Data.Maybe
 import           Data.Time.Format
 import           System.Locale
 import           Text.XML.Enumerator.Cursor (($/), ($//), (&|))
+import qualified Data.Text                  as T
 import qualified Text.XML.Enumerator.Cursor as Cu
 
 data GetService = GetService
@@ -38,8 +39,8 @@ instance ResponseIteratee GetServiceResponse where
             return GetServiceResponse { gsrOwner = owner, gsrBuckets = buckets }
           
           parseBucket el = do
-            name <- force "Missing owner Name" $ el $/ elCont "Name"
-            creationDateString <- force "Missing owner CreationDate" $ el $/ elCont "CreationDate"
+            name <- force "Missing owner Name" $ el $/ elContent "Name"
+            creationDateString <- force "Missing owner CreationDate" $ el $/ elContent "CreationDate" &| T.unpack
             creationDate <- force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
 

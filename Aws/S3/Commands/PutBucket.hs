@@ -12,6 +12,7 @@ import           Aws.Signature
 import           Aws.Transaction
 import qualified Data.ByteString.UTF8         as BU
 import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as T
 import qualified Network.HTTP.Enumerator      as HTTPE
 import qualified Text.XML.Enumerator.Resolved as XML
 
@@ -32,7 +33,7 @@ instance SignQuery PutBucket where
 
     signQuery PutBucket{..} = s3SignQuery (S3Query {
                                              s3QMethod       = Put
-                                           , s3QBucket       = Just $ BU.fromString pbBucket
+                                           , s3QBucket       = Just $ T.encodeUtf8 pbBucket
                                            , s3QSubresources = []
                                            , s3QQuery        = []
                                            , s3QRequestBody  = Just . HTTPE.RequestBodyLBS . XML.renderLBS $
@@ -49,7 +50,7 @@ instance SignQuery PutBucket where
                                 XML.NodeElement (XML.Element {
                                                           XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}LocationConstraint"
                                                         , XML.elementAttributes = []
-                                                        , XML.elementNodes = [XML.NodeContent $ T.pack pbLocationConstraint]
+                                                        , XML.elementNodes = [XML.NodeContent pbLocationConstraint]
                                                         })
                                ]
                              }
