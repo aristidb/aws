@@ -10,6 +10,8 @@ import           Aws.S3.Query
 import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
+import           Control.Monad
+import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import qualified Network.HTTP.Enumerator      as HTTPE
 import qualified Text.XML.Enumerator.Resolved as XML
@@ -37,23 +39,25 @@ instance SignQuery PutBucket where
                                            , s3QAmzHeaders   = case pbCannedAcl of 
                                                                  Nothing -> []
                                                                  Just acl -> [("x-amz-acl", T.encodeUtf8 $ writeCannedAcl acl)]
-                                           , s3QRequestBody  = Just . HTTPE.RequestBodyLBS . XML.renderLBS $
-                                                               XML.Document {
-                                                                        XML.documentPrologue = XML.Prologue [] Nothing []
-                                                                      , XML.documentRoot = root
-                                                                      , XML.documentEpilogue = []
-                                                                      }
+                                           , s3QRequestBody
+                                               = guard (not . T.null $ pbLocationConstraint) >>
+                                                 (Just . HTTPE.RequestBodyLBS . XML.renderLBS) 
+                                                 XML.Document {
+                                                          XML.documentPrologue = XML.Prologue [] Nothing []
+                                                        , XML.documentRoot = root
+                                                        , XML.documentEpilogue = []
+                                                        }
                                            })
         where root = XML.Element {
                                XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}CreateBucketConfiguration"
                              , XML.elementAttributes = []
                              , XML.elementNodes = [
-                                XML.NodeElement (XML.Element {
-                                                          XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}LocationConstraint"
-                                                        , XML.elementAttributes = []
-                                                        , XML.elementNodes = [XML.NodeContent pbLocationConstraint]
-                                                        })
-                               ]
+                                                   XML.NodeElement (XML.Element {
+                                                                             XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}LocationConstraint"
+                                                                           , XML.elementAttributes = []
+                                                                           , XML.elementNodes = [XML.NodeContent pbLocationConstraint]
+                                                                           })
+                                                  ]
                              }
 
 instance ResponseIteratee PutBucketResponse where
