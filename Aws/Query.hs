@@ -13,6 +13,7 @@ import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
 import qualified Network.HTTP.Enumerator  as HTTP
 import qualified Network.HTTP.Types       as HTTP
+import qualified Network.TLS              as TLS
 
 data SignedQuery 
     = SignedQuery {
@@ -39,7 +40,7 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.secure = case sqProtocol of
                         HTTP -> False
                         HTTPS -> True
-      , HTTP.checkCerts = const (return True) -- FIXME: actually check certificates
+      , HTTP.checkCerts = const (return TLS.CertificateUsageAccept) -- FIXME: actually check certificates
       , HTTP.host = sqHost
       , HTTP.port = sqPort
       , HTTP.path = sqPath
