@@ -2,7 +2,6 @@
 module Aws.Sqs.Response
 where
 
-import           Aws.Metadata
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Metadata

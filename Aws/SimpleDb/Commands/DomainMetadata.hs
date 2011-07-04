@@ -2,21 +2,23 @@
 module Aws.SimpleDb.Commands.DomainMetadata
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
-import           Control.Applicative
-import           Control.Monad.Compose.Class
+import           Aws.Xml
 import           Data.Time
 import           Data.Time.Clock.POSIX
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8        as BU
+import           Text.XML.Enumerator.Cursor (($//), (&|))
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 
 data DomainMetadata
     = DomainMetadata {
-        dmDomainName :: String
+        dmDomainName :: T.Text
       }
     deriving (Show)
 
@@ -32,23 +34,26 @@ data DomainMetadataResponse
       }
     deriving (Show)
              
-domainMetadata :: String -> DomainMetadata
+domainMetadata :: T.Text -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
 instance SignQuery DomainMetadata where
     type Info DomainMetadata = SdbInfo
-    signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", BU.fromString dmDomainName)]
+    signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", T.encodeUtf8 dmDomainName)]
 
-instance SdbFromResponse DomainMetadataResponse where
-    sdbFromResponse = do
-      testElementNameUI "DomainMetadataResponse"
-      dmrTimestamp <- posixSecondsToUTCTime . fromInteger <$> readContent <<< findElementNameUI "Timestamp"
-      dmrItemCount <- readContent <<< findElementNameUI "ItemCount"
-      dmrAttributeValueCount <- readContent <<< findElementNameUI "AttributeValueCount"
-      dmrAttributeNameCount <- readContent <<< findElementNameUI "AttributeNameCount"
-      dmrItemNamesSizeBytes <- readContent <<< findElementNameUI "ItemNamesSizeBytes"
-      dmrAttributeValuesSizeBytes <- readContent <<< findElementNameUI "AttributeValuesSizeBytes"
-      dmrAttributeNamesSizeBytes <- readContent <<< findElementNameUI "AttributeNamesSizeBytes"
-      return DomainMetadataResponse{..}
+instance ResponseIteratee DomainMetadataResponse where
+    type ResponseMetadata DomainMetadataResponse = SdbMetadata
 
-instance Transaction DomainMetadata (SdbResponse DomainMetadataResponse)
+    responseIteratee = sdbResponseIteratee parse
+        where parse cursor = do
+                sdbCheckResponseType () "DomainMetadataResponse" cursor
+                dmrTimestamp <- forceM "Timestamp expected" $ cursor $// elCont "Timestamp" &| (fmap posixSecondsToUTCTime . readInt)
+                dmrItemCount <- forceM "ItemCount expected" $ cursor $// elCont "ItemCount" &| readInt
+                dmrAttributeValueCount <- forceM "AttributeValueCount expected" $ cursor $// elCont "AttributeValueCount" &| readInt
+                dmrAttributeNameCount <- forceM "AttributeNameCount expected" $ cursor $// elCont "AttributeNameCount" &| readInt
+                dmrItemNamesSizeBytes <- forceM "ItemNamesSizeBytes expected" $ cursor $// elCont "ItemNamesSizeBytes" &| readInt
+                dmrAttributeValuesSizeBytes <- forceM "AttributeValuesSizeBytes expected" $ cursor $// elCont "AttributeValuesSizeBytes" &| readInt
+                dmrAttributeNamesSizeBytes <- forceM "AttributeNamesSizeBytes expected" $ cursor $// elCont "AttributeNamesSizeBytes" &| readInt
+                return DomainMetadataResponse{..}
+
+instance Transaction DomainMetadata DomainMetadataResponse

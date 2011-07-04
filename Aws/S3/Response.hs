@@ -1,70 +1,63 @@
-{-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables, RecordWildCards #-}
+{-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables, RecordWildCards, TypeFamilies #-}
 module Aws.S3.Response
 where
 
-import           Aws.Metadata
 import           Aws.Response
 import           Aws.S3.Error
 import           Aws.S3.Metadata
-import           Aws.Util
 import           Aws.Xml
-import           Control.Applicative
-import           Control.Monad.Compose.Class
+import           Control.Monad.IO.Class
+import           Data.Attempt                 (Attempt(..))
 import           Data.Char
 import           Data.Enumerator              ((=$))
+import           Data.IORef
 import           Data.Maybe
 import           Data.Word
-import           Text.XML.Enumerator.Cursor   (($/), (&|), (&/))
+import           Text.XML.Enumerator.Cursor   (($/))
 import qualified Data.ByteString              as B
-import qualified Data.ByteString.Char8        as B8
 import qualified Data.Enumerator              as En
-import qualified Data.Text                    as T
-import qualified Network.HTTP.Enumerator      as HTTPE
+import qualified Data.Text.Encoding           as T
 import qualified Network.HTTP.Types           as HTTP
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
 
-data S3Response a
-    = S3Response {
-        fromS3Response :: a
-      , s3AmzId2 :: String
-      , s3RequestId :: String
-      }
-    deriving (Show)
-
-instance (S3ResponseIteratee a) => ResponseIteratee (S3Response a) where
-    responseIteratee status headers = do
-      let headerString = fromMaybe "" . fmap B8.unpack . flip lookup headers
+s3ResponseIteratee ::
+    (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
+    -> IORef S3Metadata
+    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+s3ResponseIteratee inner metadata status headers = do
+      let headerString = fmap T.decodeUtf8 . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
       
-      specific <- tryError $ if status >= HTTP.status400
-                             then s3ErrorResponseIteratee status headers
-                             else s3ResponseIteratee status headers
+      let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
+      liftIO $ tellMetadataRef metadata m
       
-      case specific of
-        Left (err :: S3Error) -> En.throwError (setMetadata m err)
-            where m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
-        Right resp -> return S3Response {
-                                        fromS3Response = resp
-                                      , s3AmzId2 = amzId2
-                                      , s3RequestId = requestId
-                                      }
+      if status >= HTTP.status400
+        then s3ErrorResponseIteratee status headers
+        else inner status headers
+
+s3XmlResponseIteratee :: 
+    (Cu.Cursor -> Response S3Metadata a)
+    -> IORef S3Metadata
+    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+s3XmlResponseIteratee parse metadataRef = s3ResponseIteratee (xmlCursorIteratee parse metadataRef) metadataRef
 
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            case parseError cursor of
-                                              Left invalidXml -> En.throwError invalidXml
-                                              Right err -> En.throwError err
+s3ErrorResponseIteratee status _headers 
+    = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
+         let cursor = Cu.fromDocument doc
+         case parseError cursor of
+           Success err -> En.throwError err
+           Failure otherErr -> En.throwError otherErr
     where
-      parseError :: Cu.Cursor -> Either S3Error S3Error
-      parseError root = do code <- s3Force "Missing error Code" $ root $/ elCont "Code"
-                           message <- s3Force "Missing error Message" $ root $/ elCont "Message"
-                           let resource = listToMaybe $ root $/ elCont "Resource"
-                               hostId = listToMaybe $ root $/ elCont "HostId"
-                               accessKeyId = listToMaybe $ root $/ elCont "AWSAccessKeyId"
+      parseError :: Cu.Cursor -> Attempt S3Error
+      parseError root = do code <- force "Missing error Code" $ root $/ elContent "Code"
+                           message <- force "Missing error Message" $ root $/ elContent "Message"
+                           let resource = listToMaybe $ root $/ elContent "Resource"
+                               hostId = listToMaybe $ root $/ elContent "HostId"
+                               accessKeyId = listToMaybe $ root $/ elContent "AWSAccessKeyId"
                                stringToSign = do unprocessed <- listToMaybe $ root $/ elCont "StringToSignBytes"
                                                  bytes <- mapM readHex2 $ words unprocessed
                                                  return $ B.pack bytes
@@ -76,7 +69,6 @@ s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEnti
                                       , s3ErrorHostId = hostId
                                       , s3ErrorAccessKeyId = accessKeyId
                                       , s3ErrorStringToSign = stringToSign
-                                      , s3ErrorMetadata = Nothing
                                       }
           where readHex2 :: [Char] -> Maybe Word8
                 readHex2 [c1,c2] = do n1 <- readHex1 c1
@@ -88,9 +80,3 @@ s3ErrorResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEnti
                            | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
                            | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
                 readHex1 _                        = Nothing
-
-class S3ResponseIteratee a where
-    s3ResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-
-instance S3ResponseIteratee HTTPE.Response where
-    s3ResponseIteratee = HTTPE.lbsIter

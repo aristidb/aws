@@ -2,21 +2,22 @@
 module Aws.SimpleDb.Commands.BatchDeleteAttributes
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
-import           Control.Applicative
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8  as BU
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
 
 data BatchDeleteAttributes
     = BatchDeleteAttributes {
         bdaItems :: [Item [Attribute DeleteAttribute]]
-      , bdaDomainName :: String
+      , bdaDomainName :: T.Text
       }
     deriving (Show)
 
@@ -24,7 +25,7 @@ data BatchDeleteAttributesResponse
     = BatchDeleteAttributesResponse
     deriving (Show)
              
-batchDeleteAttributes :: [Item [Attribute DeleteAttribute]] -> String -> BatchDeleteAttributes
+batchDeleteAttributes :: [Item [Attribute DeleteAttribute]] -> T.Text -> BatchDeleteAttributes
 batchDeleteAttributes items domain = BatchDeleteAttributes { bdaItems = items, bdaDomainName = domain }
 
 instance SignQuery BatchDeleteAttributes where
@@ -32,10 +33,11 @@ instance SignQuery BatchDeleteAttributes where
     signQuery BatchDeleteAttributes{..}
         = sdbSignQuery $ 
             [("Action", "BatchDeleteAttributes")
-            , ("DomainName", BU.fromString bdaDomainName)] ++
+            , ("DomainName", T.encodeUtf8 bdaDomainName)] ++
             queryList (itemQuery $ queryList (attributeQuery deleteAttributeQuery) "Attribute") "Item" bdaItems
 
-instance SdbFromResponse BatchDeleteAttributesResponse where
-    sdbFromResponse = BatchDeleteAttributesResponse <$ testElementNameUI "BatchDeleteAttributesResponse"
+instance ResponseIteratee BatchDeleteAttributesResponse where
+    type ResponseMetadata BatchDeleteAttributesResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
 
-instance Transaction BatchDeleteAttributes (SdbResponse BatchDeleteAttributesResponse)
+instance Transaction BatchDeleteAttributes BatchDeleteAttributesResponse

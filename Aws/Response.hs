@@ -1,32 +1,40 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DeriveDataTypeable #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DeriveDataTypeable, DeriveFunctor, TypeFamilies #-}
 
 module Aws.Response
 where
   
-import           Control.Monad.Compose.Class
-import           Control.Monad.Error.Class
-import           Control.Monad.Reader.Class
-import           Text.XML.Monad
-import qualified Control.Exception           as C
-import qualified Data.ByteString             as B
-import qualified Data.ByteString.Lazy.UTF8   as BLU
-import qualified Data.Enumerator             as En
-import qualified Network.HTTP.Enumerator     as HTTP
-import qualified Network.HTTP.Types          as HTTP
-import qualified Text.XML.Light              as XL
+import           Data.IORef
+import           Data.Monoid
+import           Data.Attempt            (Attempt(..))
+import qualified Control.Exception       as E
+import qualified Control.Failure         as F
+import qualified Data.ByteString         as B
+import qualified Data.Enumerator         as En
+import qualified Network.HTTP.Enumerator as HTTP
+import qualified Network.HTTP.Types      as HTTP
+  
+data Response m a = Response m (Attempt a)
+    deriving (Show, Functor)
+
+tellMetadata :: m -> Response m ()
+tellMetadata m = Response m (return ())
+
+instance Monoid m => Monad (Response m) where
+    return x = Response mempty (Success x)
+    Response m1 (Failure e) >>= _ = Response m1 (Failure e)
+    Response m1 (Success x) >>= f = let Response m2 y = f x
+                                    in Response (m1 `mappend` m2) y -- currently using First-semantics, Last SHOULD work too
+
+instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
+    failure e = Response mempty (F.failure e)
+
+tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
+tellMetadataRef r m = modifyIORef r (`mappend` m)
 
 class ResponseIteratee a where
-    responseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+    type ResponseMetadata a
+    responseIteratee :: IORef (ResponseMetadata a) -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
     
 instance ResponseIteratee HTTP.Response where
-    responseIteratee = HTTP.lbsIter
-
-xmlResponseIteratee :: C.Exception e => Xml e HTTP.Response a -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-xmlResponseIteratee xml status headers = do
-  body <- HTTP.lbsIter status headers
-  case runXml xml body of
-    Left e -> En.throwError e
-    Right a -> return a
-
-parseXmlResponse :: (FromXmlError e, Error e) => Xml e HTTP.Response XL.Element
-parseXmlResponse = parseXMLDoc <<< asks (BLU.toString . HTTP.responseBody)
+    type ResponseMetadata HTTP.Response = ()
+    responseIteratee _ = HTTP.lbsIter

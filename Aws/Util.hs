@@ -9,8 +9,9 @@ import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Time
 import           System.Locale
 import qualified Data.ByteString       as B
-import qualified Data.ByteString.UTF8  as BU
 import qualified Data.Enumerator       as En
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
 
 tryError :: (Exception e, Monad m) => En.Iteratee a m b -> En.Iteratee a m (Either e b)
 tryError m = En.catchError (fmap Right m) h
@@ -20,9 +21,9 @@ tryError m = En.catchError (fmap Right m) h
 
 queryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> [(B.ByteString, B.ByteString)]
 queryList f prefix xs = concat $ zipWith combine prefixList (map f xs)
-    where prefixList = map (dot prefix . BU.fromString . show) [(1 :: Int) ..]
+    where prefixList = map (dot prefix . T.encodeUtf8 . T.pack . show) [(1 :: Int) ..]
           combine pf = map $ first (pf `dot`)
-          dot x y = B.concat [x, BU.fromString ".", y]
+          dot x y = B.concat [x, ".", y]
 
 awsBool :: Bool -> B.ByteString
 awsBool True = "true"
@@ -35,13 +36,19 @@ awsFalse :: B.ByteString
 awsFalse = awsBool False
 
 fmtTime :: String -> UTCTime -> B.ByteString
-fmtTime s t = BU.fromString $ formatTime defaultTimeLocale s t
+fmtTime s t = T.encodeUtf8 . T.pack $ formatTime defaultTimeLocale s t
+
+rfc822Time :: String
+rfc822Time = "%a, %_d %b %Y %H:%M:%S GMT"
 
 fmtRfc822Time :: UTCTime -> B.ByteString
-fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"
+fmtRfc822Time = fmtTime rfc822Time
+
+amzTime :: String
+amzTime = "%Y-%m-%dT%H:%M:%S"
 
 fmtAmzTime :: UTCTime -> B.ByteString
-fmtAmzTime = fmtTime "%Y-%m-%dT%H:%M:%S"
+fmtAmzTime = fmtTime amzTime
 
 fmtTimeEpochSeconds :: UTCTime -> B.ByteString
 fmtTimeEpochSeconds = fmtTime "%s"

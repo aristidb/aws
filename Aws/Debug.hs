@@ -1,7 +1,5 @@
 module Aws.Debug
 where
   
-import Control.Monad.IO.Class
-
-debugPrint :: (MonadIO io, Show a) => String -> a -> io ()
-debugPrint p v = liftIO . putStrLn $ "AWS Debug: " ++ p ++ " - " ++ show v
+debugPrint :: (Show a) => String -> a -> IO ()
+debugPrint p v = putStrLn $ "AWS Debug: " ++ p ++ " - " ++ show v

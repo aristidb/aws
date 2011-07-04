@@ -1,62 +1,54 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, OverloadedStrings, TypeFamilies #-}
 module Aws.SimpleDb.Response
 where
 
-import           Aws.Metadata
 import           Aws.Response
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Metadata
-import           Control.Applicative
-import           Control.Arrow               ((+++))
-import           Control.Monad.Compose.Class
-import           Data.Char
-import           Text.XML.Monad
-import qualified Data.ByteString.Base64      as Base64
-import qualified Data.ByteString.UTF8        as BU
-import qualified Text.XML.Light              as XL
+import           Aws.Xml
+import           Data.IORef
+import           Data.Maybe
+import           Text.XML.Enumerator.Cursor (($|), ($/), ($//), (&|))
+import qualified Control.Failure            as F
+import qualified Data.ByteString            as B
+import qualified Data.ByteString.Base64     as Base64
+import qualified Data.Enumerator            as En
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
+import qualified Network.HTTP.Types         as HTTP
+import qualified Text.XML.Enumerator.Cursor as Cu
 
-data SdbResponse a
-    = SdbResponse { 
-        fromSdbResponse :: a
-      , sdbResponseMetadata :: SdbMetadata
-      }
-    deriving (Show)
-
-instance Functor SdbResponse where
-    fmap f (SdbResponse a m) = SdbResponse (f a) m
-
-instance (SdbFromResponse a) => ResponseIteratee (SdbResponse a) where
-    responseIteratee status headers = xmlResponseIteratee (fromXml <<< parseXmlResponse) status headers
-        where fromXml :: SdbFromResponse a => Xml SdbError XL.Element (SdbResponse a)
-              fromXml = do
-                     requestId' <- strContent <<< findElementNameUI "RequestID"
-                     boxUsage' <- tryMaybe $ strContent <<< findElementNameUI "BoxUsage"
-                     let metadata = SdbMetadata requestId' boxUsage'
-                     innerTry <- try $ fromXmlInner
-                     inner <- case innerTry of
-                       Left err -> raise $ setMetadata metadata err
-                       Right response -> return response
-                     return $ SdbResponse inner metadata
-              fromXmlInner :: SdbFromResponse a => Xml SdbError XL.Element a
-              fromXmlInner = do
-                     xmlError <- tryMaybe $ findElementNameUI "Error"
-                     case xmlError of
-                       Just err -> mapply fromError err
-                       Nothing -> sdbFromResponse
-              fromError :: Xml SdbError XL.Element a
-              fromError = do
-                     errCode <- strContent <<< findElementNameUI "Code"
-                     errMessage <- strContent <<< findElementNameUI "Message"
-                     raise $ SdbError status errCode errMessage Nothing
+sdbResponseIteratee :: 
+    (Cu.Cursor -> Response SdbMetadata a) 
+    -> IORef SdbMetadata
+    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+sdbResponseIteratee inner metadataRef status headers = xmlCursorIteratee parse metadataRef status headers
+    where parse cursor
+              = do let requestId' = listToMaybe $ cursor $// elContent "RequestID"
+                   let boxUsage' = listToMaybe $ cursor $// elContent "BoxUsage"
+                   tellMetadata $ SdbMetadata requestId' boxUsage'
+                   case cursor $/ Cu.laxElement "Error" of
+                     []      -> inner cursor
+                     (err:_) -> fromError err
+          fromError cursor = do errCode <- force "Missing Error Code" $ cursor $// elCont "Code"
+                                errMessage <- force "Missing Error Message" $ cursor $// elCont "Message"
+                                F.failure $ SdbError status errCode errMessage
 
 class SdbFromResponse a where
-    sdbFromResponse :: Xml SdbError XL.Element a
+    sdbFromResponse :: Cu.Cursor -> Response SdbMetadata a
 
-decodeBase64 :: Xml SdbError XL.Element String
-decodeBase64 = do
-  encoded <- strContent
-  encoding <- tryMaybe $ findAttr (XL.unqual "encoding")
-  raisesXml $ case map toLower <$> encoding of
-                Nothing -> Right encoded
-                Just "base64" -> (EncodingError . ("Invalid Base64 data: "++) +++ BU.toString) . Base64.decode . BU.fromString $ encoded
-                Just actual -> Left $ UnexpectedAttributeValueQ actual "base64"
+sdbCheckResponseType :: F.Failure XmlException m => a -> T.Text -> Cu.Cursor -> m a
+sdbCheckResponseType a n c = do _ <- force ("Expected response type " ++ T.unpack n) (Cu.laxElement n c)
+                                return a
+
+decodeBase64 :: F.Failure XmlException m => Cu.Cursor -> m T.Text
+decodeBase64 cursor =
+  let encoded = T.concat $ cursor $/ Cu.content
+      encoding = listToMaybe $ cursor $| Cu.laxAttribute "encoding" &| T.toCaseFold
+  in
+    case encoding of
+      Nothing -> return encoded
+      Just "base64" -> case Base64.decode . T.encodeUtf8 $ encoded of
+                         Left msg -> F.failure $ XmlException ("Invalid Base64 data: " ++ msg)
+                         Right x -> return $ T.decodeUtf8 x
+      Just actual -> F.failure $ XmlException ("Unrecognized encoding " ++ T.unpack actual)

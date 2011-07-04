@@ -2,23 +2,24 @@
 module Aws.SimpleDb.Commands.DeleteAttributes
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
 import           Aws.Util
-import           Control.Applicative
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8  as BU
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
 
 data DeleteAttributes
     = DeleteAttributes {
-        daItemName :: String
+        daItemName :: T.Text
       , daAttributes :: [Attribute DeleteAttribute]
       , daExpected :: [Attribute ExpectedAttribute]
-      , daDomainName :: String
+      , daDomainName :: T.Text
       }
     deriving (Show)
 
@@ -26,7 +27,7 @@ data DeleteAttributesResponse
     = DeleteAttributesResponse
     deriving (Show)
              
-deleteAttributes :: String -> [Attribute DeleteAttribute] -> String -> DeleteAttributes
+deleteAttributes :: T.Text -> [Attribute DeleteAttribute] -> T.Text -> DeleteAttributes
 deleteAttributes item attributes domain = DeleteAttributes { 
                                          daItemName = item
                                        , daAttributes = attributes
@@ -38,11 +39,12 @@ instance SignQuery DeleteAttributes where
     type Info DeleteAttributes = SdbInfo
     signQuery DeleteAttributes{..}
         = sdbSignQuery $ 
-            [("Action", "DeleteAttributes"), ("ItemName", BU.fromString daItemName), ("DomainName", BU.fromString daDomainName)] ++
+            [("Action", "DeleteAttributes"), ("ItemName", T.encodeUtf8 daItemName), ("DomainName", T.encodeUtf8 daDomainName)] ++
             queryList (attributeQuery deleteAttributeQuery) "Attribute" daAttributes ++
             queryList (attributeQuery expectedAttributeQuery) "Expected" daExpected
 
-instance SdbFromResponse DeleteAttributesResponse where
-    sdbFromResponse = DeleteAttributesResponse <$ testElementNameUI "DeleteAttributesResponse"
+instance ResponseIteratee DeleteAttributesResponse where
+    type ResponseMetadata DeleteAttributesResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType DeleteAttributesResponse "DeleteAttributesResponse"
 
-instance Transaction DeleteAttributes (SdbResponse DeleteAttributesResponse)
+instance Transaction DeleteAttributes DeleteAttributesResponse

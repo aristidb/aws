@@ -2,28 +2,31 @@
 module Aws.SimpleDb.Commands.ListDomains
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
 import           Aws.Transaction
+import           Aws.Xml
 import           Control.Applicative
-import           Control.Monad.Compose.Class
 import           Data.Maybe
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8        as BU
+import           Text.XML.Enumerator.Cursor (($//))
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
 
 data ListDomains
     = ListDomains {
         ldMaxNumberOfDomains :: Maybe Int
-      , ldNextToken :: Maybe String
+      , ldNextToken :: Maybe T.Text
       }
     deriving (Show)
 
 data ListDomainsResponse 
     = ListDomainsResponse {
-        ldrDomainNames :: [String]
-      , ldrNextToken :: Maybe String
+        ldrDomainNames :: [T.Text]
+      , ldrNextToken :: Maybe T.Text
       }
     deriving (Show)
 
@@ -34,15 +37,17 @@ instance SignQuery ListDomains where
     type Info ListDomains = SdbInfo
     signQuery ListDomains{..} = sdbSignQuery $ catMaybes [
                                   Just ("Action", "ListDomains")
-                                , ("MaxNumberOfDomains",) <$> BU.fromString <$> show <$> ldMaxNumberOfDomains
-                                , ("NextToken",) <$> BU.fromString <$> ldNextToken
+                                , ("MaxNumberOfDomains",) . T.encodeUtf8 . T.pack . show <$> ldMaxNumberOfDomains
+                                , ("NextToken",) . T.encodeUtf8 <$> ldNextToken
                                 ]
 
-instance SdbFromResponse ListDomainsResponse where
-    sdbFromResponse = do
-      testElementNameUI "ListDomainsResponse"
-      names <- inList strContent <<< findElementsNameUI "DomainName"
-      nextToken <- tryMaybe $ strContent <<< findElementNameUI "NextToken"
-      return $ ListDomainsResponse names nextToken
+instance ResponseIteratee ListDomainsResponse where
+    type ResponseMetadata ListDomainsResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee parse 
+        where parse cursor = do
+                sdbCheckResponseType () "ListDomainsResponse" cursor
+                let names = cursor $// elContent "DomainName"
+                let nextToken = listToMaybe $ cursor $// elContent "NextToken"
+                return $ ListDomainsResponse names nextToken
 
-instance Transaction ListDomains (SdbResponse ListDomainsResponse)
+instance Transaction ListDomains ListDomainsResponse

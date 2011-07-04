@@ -4,24 +4,21 @@ module Aws.Sqs.Model where
 import Data.Maybe
 import qualified Data.Text as T
 import Debug.Trace
-import Text.Regex
 
 data QueueName = QueueName{
-  qName :: String,
-  qAccountNumber :: String
+  qName :: T.Text,
+  qAccountNumber :: T.Text
 } deriving(Show)
 
-urlRegex = mkRegex "/([0-9]+)/([a-zA-Z0-9]+)/"
 
-parseQueue :: String -> QueueName
+parseQueue :: T.Text -> QueueName
 parseQueue url = QueueName{qAccountNumber = validMatches !! 0, qName = validMatches !! 1}
   where
-    matches = matchRegex urlRegex url
-    validMatches = case matches of
-                    Just(x) -> x
-                    Nothing -> []
+    let urlParts = T.splitOn "/" url
+ 
 
-printQueue queue = "/" ++ (qAccountNumber queue) ++ "/" ++ (qName queue) ++ "/"
+printQueueName :: QueueName -> T.Text
+printQueueName queue = "/" ++ (qAccountNumber queue) ++ "/" ++ (qName queue) ++ "/"
 
 data QueueAttribute =
   QueueAll
@@ -53,18 +50,19 @@ data SqsPermission =
   | GetQueueAttributes
   deriving (Show, Enum, Eq)
 
-parseAttribute :: T.Text -> QueueAttribute
-parseAttribute "ApproximateNumberOfMessages" = ApproximateNumberOfMessages 
-parseAttribute "ApproximateNumberOfMessagesNotVisible" = ApproximateNumberOfMessagesNotVisible
-parseAttribute "VisibilityTimeout" = VisibilityTimeout
-parseAttribute "CreatedTimestamp" = CreatedTimestamp
-parseAttribute "LastModifiedTimestamp" = LastModifiedTimestamp
-parseAttribute "Policy" = Policy
-parseAttribute "MaximumMessageSize" = MaximumMessageSize
-parseAttribute "MessageRetentionPeriod" = MessageRetentionPeriod
-parseAttribute "QueueArn" = QueueArn
-parseAttribute x = trace(show x)(error $ T.unpack x) 
+parseQueueAttribute :: T.Text -> QueueAttribute
+parseQueueAttribute "ApproximateNumberOfMessages" = ApproximateNumberOfMessages 
+parseQueueAttribute "ApproximateNumberOfMessagesNotVisible" = ApproximateNumberOfMessagesNotVisible
+parseQueueAttribute "VisibilityTimeout" = VisibilityTimeout
+parseQueueAttribute "CreatedTimestamp" = CreatedTimestamp
+parseQueueAttribute "LastModifiedTimestamp" = LastModifiedTimestamp
+parseQueueAttribute "Policy" = Policy
+parseQueueAttribute "MaximumMessageSize" = MaximumMessageSize
+parseQueueAttribute "MessageRetentionPeriod" = MessageRetentionPeriod
+parseQueueAttribute "QueueArn" = QueueArn
+parseQueueAttribute x = trace(show x)(error $ T.unpack x) 
 
+printQueueAttribute :: QueueAttribute -> T.Text
 printQueueAttribute QueueAll = "All"
 printQueueAttribute ApproximateNumberOfMessages = "ApproximateNumberOfMessages"
 printQueueAttribute ApproximateNumberOfMessagesNotVisible = "ApproximateNumberOfMessagesNotVisible"
@@ -76,11 +74,13 @@ printQueueAttribute MaximumMessageSize = "MaximumMessageSize"
 printQueueAttribute MessageRetentionPeriod = "MessageRetentionPeriod"
 printQueueAttribute QueueArn = "QueueArn"
 
+parseMessageAttribute :: T.Text -> MessageAttribute
 parseMessageAttribute "SenderId" = SenderId
 parseMessageAttribute "SentTimestamp" = SentTimestamp
 parseMessageAttribute "ApproximateReceiveCount" = ApproximateReceiveCount
 parseMessageAttribute "ApproximateFirstReceiveTimestamp" = ApproximateFirstReceiveTimestamp
 
+printMessageAttribute :: MessageAttribute -> T.Text
 printMessageAttribute MessageAll = "All"
 printMessageAttribute SenderId = "SenderId"
 printMessageAttribute SentTimestamp = "SentTimestamp"

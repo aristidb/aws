@@ -1,8 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses #-}
-module Aws.Sqs.Error
-where
+module Aws.Sqs.Error where
 
-import           Aws.Metadata
 import           Aws.Sqs.Metadata
 import           Aws.Xml
 import           Data.Typeable

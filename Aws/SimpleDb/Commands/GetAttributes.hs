@@ -2,8 +2,10 @@
 module Aws.SimpleDb.Commands.GetAttributes
 where
 
+import           Aws.Response
 import           Aws.Signature
 import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Model
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
@@ -11,41 +13,44 @@ import           Aws.Transaction
 import           Aws.Util
 import           Control.Applicative
 import           Control.Monad
-import           Control.Monad.Compose.Class
 import           Data.Maybe
-import           Text.XML.Monad
-import qualified Data.ByteString.UTF8        as BU
+import           Text.XML.Enumerator.Cursor (($//), (&|))
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
+import qualified Text.XML.Enumerator.Cursor as Cu
 
 data GetAttributes
     = GetAttributes {
-        gaItemName :: String
-      , gaAttributeName :: Maybe String
+        gaItemName :: T.Text
+      , gaAttributeName :: Maybe T.Text
       , gaConsistentRead :: Bool
-      , gaDomainName :: String
+      , gaDomainName :: T.Text
       }
     deriving (Show)
 
 data GetAttributesResponse
     = GetAttributesResponse {
-        garAttributes :: [Attribute String]
+        garAttributes :: [Attribute T.Text]
       }
     deriving (Show)
              
-getAttributes :: String -> String -> GetAttributes
+getAttributes :: T.Text -> T.Text -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
 
 instance SignQuery GetAttributes where
     type Info GetAttributes = SdbInfo
     signQuery GetAttributes{..}
         = sdbSignQuery $
-            [("Action", "GetAttributes"), ("ItemName", BU.fromString gaItemName), ("DomainName", BU.fromString gaDomainName)] ++
-            maybeToList (("AttributeName",) <$> BU.fromString <$> gaAttributeName) ++
+            [("Action", "GetAttributes"), ("ItemName", T.encodeUtf8 gaItemName), ("DomainName", T.encodeUtf8 gaDomainName)] ++
+            maybeToList (("AttributeName",) <$> T.encodeUtf8 <$> gaAttributeName) ++
             (guard gaConsistentRead >> [("ConsistentRead", awsTrue)])
 
-instance SdbFromResponse GetAttributesResponse where
-    sdbFromResponse = do
-      testElementNameUI "GetAttributesResponse"
-      attributes <- inList readAttribute <<< findElementsNameUI "Attribute"
-      return $ GetAttributesResponse attributes
+instance ResponseIteratee GetAttributesResponse where
+    type ResponseMetadata GetAttributesResponse = SdbMetadata
+    responseIteratee = sdbResponseIteratee parse
+        where parse cursor = do
+                sdbCheckResponseType () "GetAttributesResponse" cursor
+                attributes <- sequence $ cursor $// Cu.laxElement "Attribute" &| readAttribute
+                return $ GetAttributesResponse attributes
 
-instance Transaction GetAttributes (SdbResponse GetAttributesResponse)
+instance Transaction GetAttributes GetAttributesResponse

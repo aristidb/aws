@@ -1,16 +1,18 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Aws.Credentials
 where
   
 import           Control.Applicative
 import           Control.Monad
-import           Control.Monad.IO.Class
-import           Control.Shortcircuit      (orM)
+import           Control.Shortcircuit (orM)
 import           Data.List
 import           System.Directory
 import           System.Environment
 import           System.FilePath
-import qualified Data.ByteString           as B
-import qualified Data.ByteString.UTF8      as BU
+import qualified Data.ByteString      as B
+import qualified Data.Text            as T
+import qualified Data.Text.Encoding   as T
+import qualified Data.Text.IO         as T
 
 data Credentials
     = Credentials {
@@ -19,34 +21,34 @@ data Credentials
       }
     deriving (Show)
              
-credentialsDefaultFile :: MonadIO io => io FilePath
-credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
+credentialsDefaultFile :: IO FilePath
+credentialsDefaultFile = (</> ".aws-keys") <$> getHomeDirectory
 
-credentialsDefaultKey :: String
+credentialsDefaultKey :: T.Text
 credentialsDefaultKey = "default"
 
-loadCredentialsFromFile :: MonadIO io => FilePath ->  String -> io (Maybe Credentials)
-loadCredentialsFromFile file key = liftIO $ do
-  contents <- map words . lines <$> readFile file
+loadCredentialsFromFile :: FilePath -> T.Text -> IO (Maybe Credentials)
+loadCredentialsFromFile file key = do
+  contents <- map T.words . T.lines <$> T.readFile file
   return $ do 
     [_key, keyID, secret] <- find (hasKey key) contents
-    return Credentials { accessKeyID = BU.fromString keyID, secretAccessKey = BU.fromString secret }
+    return Credentials { accessKeyID = T.encodeUtf8 keyID, secretAccessKey = T.encodeUtf8 secret }
       where
         hasKey _ [] = False
         hasKey k (k2 : _) = k == k2
 
-loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
-loadCredentialsFromEnv = liftIO $ do
+loadCredentialsFromEnv :: IO (Maybe Credentials)
+loadCredentialsFromEnv = do
   env <- getEnvironment
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
-  return (Credentials <$> (BU.fromString <$> keyID) <*> (BU.fromString <$> secret))
+  return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) <*> (T.encodeUtf8 . T.pack <$> secret))
   
-loadCredentialsFromEnvOrFile :: MonadIO io => FilePath -> String -> io (Maybe Credentials)
+loadCredentialsFromEnvOrFile :: FilePath -> T.Text -> IO (Maybe Credentials)
 loadCredentialsFromEnvOrFile file key = loadCredentialsFromEnv `orM` loadCredentialsFromFile file key
 
-loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
+loadCredentialsDefault :: IO (Maybe Credentials)
 loadCredentialsDefault = do
   file <- credentialsDefaultFile
   loadCredentialsFromEnvOrFile file credentialsDefaultKey
