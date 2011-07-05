@@ -5,6 +5,7 @@ module Aws.Sqs.Commands.ListQueues where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
+import           Aws.Sqs.Metadata
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
 import           Aws.Signature
@@ -28,7 +29,7 @@ import qualified Data.ByteString.UTF8  as BU
 import Debug.Trace
 
 data ListQueues = ListQueues {
-  lqQueueNamePrefix :: Maybe String
+  lqQueueNamePrefix :: Maybe T.Text
 }deriving (Show)
 
 data ListQueuesResponse = ListQueuesResponse{
@@ -37,18 +38,13 @@ data ListQueuesResponse = ListQueuesResponse{
 
 listQueues = ListQueues(Nothing)
 
-parse :: Cu.Cursor -> ListQueuesResponse
-parse el = do
-  let queues = Cu.laxElement "ListQueuesResponse" &/ Cu.laxElement "ListQueuesResult" &/ Cu.laxElement "QueueUrl" &/ Cu.content $ el
-  ListQueuesResponse { lqrQueueUrls = queues }
-
-instance SqsResponseIteratee ListQueuesResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = trace  (show $ XML.prettyLBS doc) (Cu.fromDocument doc)
-                                            
-                                            return $ parse cursor                                  
-
-
+instance ResponseIteratee ListQueuesResponse where
+    type ResponseMetadata ListQueuesResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+      where
+        parse el = do 
+            let queues = concat $ sequence $ el $// Cu.laxElement "QueueUrl" &| Cu.content
+            return ListQueuesResponse { lqrQueueUrls = queues }
           
 instance SignQuery ListQueues where 
     type Info ListQueues = SqsInfo
@@ -56,9 +52,9 @@ instance SignQuery ListQueues where
                                               sqsQueueName = Nothing, 
                                               sqsQuery = HTTP.simpleQueryToQuery $ map (second BU.fromString) $ catMaybes [
                                               ("Action",) <$> Just("ListQueues") ,
-                                              ("QueueNamePrefix",) <$> lqQueueNamePrefix
-                                            ]
- }
+                                              ("QueueNamePrefix",) <$> case lqQueueNamePrefix of
+                                                                         Just x  -> Just $ T.unpack x
+                                                                         Nothing -> Nothing]}
 
-instance Transaction ListQueues (SqsResponse ListQueuesResponse)
+instance Transaction ListQueues ListQueuesResponse
 

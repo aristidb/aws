@@ -5,7 +5,8 @@ module Aws.Sqs.Commands.DeleteMessage where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
-import qualified Aws.Sqs.Model as M
+import           Aws.Sqs.Metadata
+import qualified Aws.Sqs.Model                as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
 import           Aws.Signature
@@ -24,9 +25,9 @@ import qualified Data.Text                    as T
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
-import qualified Network.HTTP.Types    as HTTP
-import qualified Data.ByteString.UTF8  as BU
-import qualified Data.ByteString.Char8 as B
+import qualified Network.HTTP.Types           as HTTP
+import qualified Data.ByteString.UTF8         as BU
+import qualified Data.ByteString.Char8        as B
 import Debug.Trace
 
 data DeleteMessage = DeleteMessage{
@@ -42,18 +43,19 @@ dmParse :: Cu.Cursor -> DeleteMessageResponse
 dmParse el = do
   DeleteMessageResponse { }
 
-instance SqsResponseIteratee DeleteMessageResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            return $ dmParse cursor                                  
+instance ResponseIteratee DeleteMessageResponse where
+    type ResponseMetadata DeleteMessageResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+      where
+        parse el = do return DeleteMessageResponse {}
           
 instance SignQuery DeleteMessage  where 
     type Info DeleteMessage  = SqsInfo
     signQuery DeleteMessage {..} = sqsSignQuery SqsQuery { 
                                              sqsQuery = [("Action", Just "DeleteMessage"), 
-                                                        ("QueueName", Just $ B.pack $ M.printQueue dmQueueName),
+                                                        ("QueueName", Just $ B.pack $ T.unpack $ M.printQueueName dmQueueName),
                                                         ("ReceiptHandle", Just $ B.pack $ show dmReceiptHandle )]} 
 
-instance Transaction DeleteMessage (SqsResponse DeleteMessageResponse)
+instance Transaction DeleteMessage DeleteMessageResponse
 
 

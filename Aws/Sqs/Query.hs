@@ -7,6 +7,7 @@ import           Aws.Http
 import           Aws.Query
 import           Aws.Signature
 import           Aws.Sqs.Info
+import           Aws.Sqs.Model
 import           Aws.Signature
 import           Aws.Util
 import           Data.List
@@ -21,11 +22,12 @@ import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as BC
 import qualified Data.ByteString.Lazy           as L
+import qualified Data.Text                      as T
 import qualified Network.HTTP.Types             as HTTP
 import Debug.Trace
 
 data SqsQuery = SqsQuery{
-  sqsQueueName :: Maybe String,
+  sqsQueueName :: Maybe QueueName,
   sqsQuery :: HTTP.Query
 }
 
@@ -40,7 +42,7 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
       , sqQuery = signedQuery
       , sqDate = Just signatureTime
       , sqAuthorization = Nothing 
-      , sqBody = L.empty
+      , sqBody = Nothing
       , sqStringToSign = stringToSign
       , sqContentType = Nothing
       , sqContentMd5 = Nothing
@@ -48,7 +50,7 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
     where
       method = PostQuery
       path = case sqsQueueName of
-                Just x -> B.concat ["/", BC.pack x, "/"]
+                Just x -> B.concat ["/", BC.pack $ T.unpack $ printQueueName x, "/"]
                 Nothing -> "/"
       expandedQuery = sortBy (comparing fst) 
                        ( sqsQuery ++ [ ("AWSAccessKeyId", Just(accessKeyID signatureCredentials)), 

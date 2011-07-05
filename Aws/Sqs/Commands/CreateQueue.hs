@@ -5,6 +5,7 @@ module Aws.Sqs.Commands.CreateQueue where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
+import           Aws.Sqs.Metadata
 import           Aws.Sqs.Model
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
@@ -31,7 +32,7 @@ import Debug.Trace
 
 data CreateQueue = CreateQueue{
   cqDefaultVisibilityTimeout :: Maybe Int,
-  cqQueueName :: String
+  cqQueueName :: T.Text
 }deriving (Show)
 
 data CreateQueueResponse = CreateQueueResponse{
@@ -39,23 +40,21 @@ data CreateQueueResponse = CreateQueueResponse{
 } deriving (Show)
 
 
-cqParse :: Cu.Cursor -> CreateQueueResponse
-cqParse el = do
-  let url = head $ Cu.laxElement "CreateQueueResponse" &/ Cu.laxElement "CreateQueueResult" &/ Cu.laxElement "QueueUrl" &| Cu.content $ el
-  CreateQueueResponse { cqrQueueUrl = (head url) }
-
-instance SqsResponseIteratee CreateQueueResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            return $ cqParse cursor                                  
+instance ResponseIteratee CreateQueueResponse where
+    type ResponseMetadata CreateQueueResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+      where 
+        parse el = do 
+          let url = T.concat $ concat $ force "Missing Queue Url" $ el $// Cu.laxElement "QueueUrl" &| Cu.content
+          return CreateQueueResponse{ cqrQueueUrl = url}
           
 instance SignQuery CreateQueue  where 
     type Info CreateQueue  = SqsInfo
     signQuery CreateQueue {..} = sqsSignQuery SqsQuery { 
                                              sqsQuery = [("Action", Just "CreateQueue"), 
-                                                        ("QueueName", Just $ B.pack cqQueueName)] ++ 
+                                                        ("QueueName", Just $ B.pack $ T.unpack cqQueueName)] ++ 
                                                         catMaybes [("DefaultVisibilityTimeout",) <$> case cqDefaultVisibilityTimeout of
                                                                                                        Just x -> Just $ Just $ B.pack $ show x
                                                                                                        Nothing -> Nothing]}
 
-instance Transaction CreateQueue (SqsResponse CreateQueueResponse)
+instance Transaction CreateQueue CreateQueueResponse

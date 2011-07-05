@@ -5,6 +5,7 @@ module Aws.Sqs.Commands.AddPermission where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
+import           Aws.Sqs.Metadata
 import           Aws.Sqs.Model
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
@@ -30,8 +31,8 @@ import qualified Data.ByteString.Char8 as B
 import Debug.Trace
 
 data AddPermission = AddPermission{
-  apLabel :: String,
-  apPermissions :: [(String,SqsPermission)],
+  apLabel :: T.Text,
+  apPermissions :: [(T.Text,SqsPermission)],
   apQueueName :: QueueName
 }deriving (Show)
 
@@ -39,25 +40,23 @@ data AddPermissionResponse = AddPermissionResponse{
 } deriving (Show)
 
 
-apParse :: Cu.Cursor -> AddPermissionResponse
-apParse el = do
-  AddPermissionResponse { }
-
-formatPermissions :: [(String,SqsPermission)] -> [HTTP.QueryItem]
+formatPermissions :: [(T.Text,SqsPermission)] -> [HTTP.QueryItem]
 formatPermissions perms = 
-  concat $ zipWith(\ x y -> [(B.pack $ "AwsAccountId." ++ show y, Just $ B.pack $ fst x), 
+  concat $ zipWith(\ x y -> [(B.pack $ "AwsAccountId." ++ show y, Just $ B.pack $ T.unpack $ fst x), 
                              (B.pack $ "ActionName." ++ show y, Just $ B.pack $ printPermission $ snd x)]) perms [1..]
 
-instance SqsResponseIteratee AddPermissionResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            return $ apParse cursor                                  
-          
+instance ResponseIteratee AddPermissionResponse where
+    type ResponseMetadata AddPermissionResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+       where
+         parse el = do
+           return AddPermissionResponse {}
+        
 instance SignQuery AddPermission  where 
     type Info AddPermission  = SqsInfo
     signQuery AddPermission {..} = sqsSignQuery SqsQuery { 
                                              sqsQuery = [("Action", Just "AddPermission"), 
-                                                        ("QueueName", Just $ B.pack $ printQueue apQueueName),
-                                                        ("Label", Just $ B.pack apLabel)] ++ formatPermissions apPermissions}
+                                                        ("QueueName", Just $ B.pack $ T.unpack $ printQueueName apQueueName),
+                                                        ("Label", Just $ B.pack $ T.unpack apLabel)] ++ formatPermissions apPermissions}
 
-instance Transaction AddPermission (SqsResponse AddPermissionResponse)
+instance Transaction AddPermission AddPermissionResponse

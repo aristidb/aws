@@ -12,13 +12,13 @@ data QueueName = QueueName{
 
 
 parseQueue :: T.Text -> QueueName
-parseQueue url = QueueName{qAccountNumber = validMatches !! 0, qName = validMatches !! 1}
+parseQueue url = QueueName{qAccountNumber = urlParts !! 3, qName = urlParts !! 4}
   where
-    let urlParts = T.splitOn "/" url
+    urlParts = T.splitOn "/" url
  
 
 printQueueName :: QueueName -> T.Text
-printQueueName queue = "/" ++ (qAccountNumber queue) ++ "/" ++ (qName queue) ++ "/"
+printQueueName queue = T.concat ["/", (qAccountNumber queue), "/", (qName queue), "/"]
 
 data QueueAttribute =
   QueueAll

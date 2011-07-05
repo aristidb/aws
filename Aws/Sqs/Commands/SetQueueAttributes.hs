@@ -31,7 +31,7 @@ import Debug.Trace
 
 data SetQueueAttributes = SetQueueAttributes{
   sqaAttribute :: M.QueueAttribute,
-  sqaValue :: String,
+  sqaValue :: T.Text,
   sqaQueueName :: M.QueueName 
 }deriving (Show)
 

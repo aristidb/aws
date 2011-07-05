@@ -5,6 +5,7 @@ module Aws.Sqs.Commands.ChangeMessageVisibility where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
+import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
@@ -32,7 +33,7 @@ import Debug.Trace
 data ChangeMessageVisibility = ChangeMessageVisibility {
   cmvReceiptHandle :: M.ReceiptHandle,
   cmvVisibilityTimeout :: Int,
-  cmvQueueName :: String
+  cmvQueueName :: M.QueueName
 }deriving (Show)
 
 data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse{
@@ -43,11 +44,12 @@ cmvParse :: Cu.Cursor -> ChangeMessageVisibilityResponse
 cmvParse el = do
   ChangeMessageVisibilityResponse
 
-instance SqsResponseIteratee ChangeMessageVisibilityResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            return $ cmvParse cursor                                  
-          
+instance ResponseIteratee ChangeMessageVisibilityResponse where
+    type ResponseMetadata ChangeMessageVisibilityResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+      where 
+        parse el = do return ChangeMessageVisibilityResponse{}
+    
 instance SignQuery ChangeMessageVisibility  where 
     type Info ChangeMessageVisibility  = SqsInfo
     signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
@@ -56,4 +58,4 @@ instance SignQuery ChangeMessageVisibility  where
                                                          ("ReceiptHandle", Just $ B.pack $ show cmvReceiptHandle),
                                                          ("VisibilityTimout", Just $ B.pack $ show cmvVisibilityTimeout)]}
 
-instance Transaction ChangeMessageVisibility (SqsResponse ChangeMessageVisibilityResponse)
+instance Transaction ChangeMessageVisibility ChangeMessageVisibilityResponse

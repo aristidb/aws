@@ -5,6 +5,7 @@ module Aws.Sqs.Commands.DeleteQueue where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
+import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
@@ -36,23 +37,16 @@ data DeleteQueue = DeleteQueue{
 data DeleteQueueResponse = DeleteQueueResponse{
 } deriving (Show)
 
-
-dqParse :: Cu.Cursor -> DeleteQueueResponse
-dqParse el = do
-  DeleteQueueResponse { }
-
-instance SqsResponseIteratee DeleteQueueResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            return $ dqParse cursor                                  
+instance ResponseIteratee DeleteQueueResponse where
+    type ResponseMetadata DeleteQueueResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+      where
+        parse el = do return DeleteQueueResponse{}
           
 instance SignQuery DeleteQueue  where 
     type Info DeleteQueue  = SqsInfo
     signQuery DeleteQueue {..} = sqsSignQuery SqsQuery { 
                                              sqsQuery = [("Action", Just "DeleteQueue"), 
-                                                        ("QueueName", Just $ B.pack $ M.printQueue dqQueueName)]}
+                                                        ("QueueName", Just $ B.pack $ T.unpack $ M.printQueueName dqQueueName)]}
 
-instance Transaction DeleteQueue (SqsResponse DeleteQueueResponse)
-
-
-
+instance Transaction DeleteQueue DeleteQueueResponse
