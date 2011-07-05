@@ -52,8 +52,8 @@ data ReceiveMessageResponse = ReceiveMessageResponse{
 
 readMessageAttribute :: F.Failure XmlException m => Cu.Cursor -> m (M.MessageAttribute,T.Text)
 readMessageAttribute cursor = do
-  name <- forceM "Missing Name" $ cursor $/ Cu.laxElement "Name" &|  Cu.content
-  value <- forceM "Missing Value" $ cursor $/ Cu.laxElement "Value" &| Cu.content
+  name <- force "Missing Name" $ cursor $/ Cu.laxElement "Name" &/ Cu.content
+  value <- force "Missing Value" $ cursor $/ Cu.laxElement "Value" &/ Cu.content
   return ( M.parseMessageAttribute name, value)
 
 
@@ -63,10 +63,10 @@ readMessageAttribute cursor = do
 
 readMessage cursor = do
   attributes <- sequence $ force "Missing Attributes" $ cursor $/ Cu.laxElement "Attribute" &| readMessageAttribute
-  id <- force "Missing Message Id" $ cursor $/ Cu.laxElement "MessageId" &| Cu.content
-  rh <- force "Missing Reciept Handle" cursor $/ Cu.laxElement "ReceiptHandle" &| M.ReceiptHandle $ Cu.content
-  md5 <- force "Missing MD5 Signature" $ cursor $/ Cu.laxElement "MD5OfBody" &| Cu.content
-  body <- force "Missing Body" $ cursor $ Cu.laxElement "Body" &| Cu.content
+  id <- force "Missing Message Id" $ cursor $/ Cu.laxElement "MessageId" &/ Cu.content
+  rh <- force "Missing Reciept Handle" $ cursor $/ Cu.laxElement "ReceiptHandle" &/ Cu.content &| M.ReceiptHandle
+  md5 <- force "Missing MD5 Signature" $ cursor $/ Cu.laxElement "MD5OfBody" &/ Cu.content
+  body <- force "Missing Body" $ cursor $/ Cu.laxElement "Body" &/ Cu.content
 
   return Message{ mMessageId = id, mRecieptHandle = rh, mMD5OfBody = md5, mBody = body, mAttributes = attributes}
 
