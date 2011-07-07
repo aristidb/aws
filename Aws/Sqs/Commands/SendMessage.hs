@@ -5,6 +5,7 @@ module Aws.Sqs.Commands.SendMessage where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
+import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
@@ -21,6 +22,7 @@ import           System.Locale
 import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|), ($|))
 import qualified Data.Enumerator              as En
 import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as TE
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
@@ -39,26 +41,23 @@ data SendMessageResponse = SendMessageResponse{
   smrMessageId :: M.MessageId
 } deriving (Show)
 
+instance ResponseIteratee SendMessageResponse where
+    type ResponseMetadata SendMessageResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+      where 
+        parse el = do
+          md5 <- force "Missing MD5 Signature" $ el $// Cu.laxElement "MD5OfMessageBody" &/ Cu.content
+          mid <- force "Missing Message Id" $ el $// Cu.laxElement "MessageId" &/ Cu.content
+          return SendMessageResponse { smrMD5OfMessageBody = md5, smrMessageId = M.MessageId mid }
 
-smParse :: Cu.Cursor -> SendMessageResponse
-smParse el = do SendMessageResponse { smrMD5OfMessageBody = md5, smrMessageId = mid }
-  where
-    md5 = head $ head $ Cu.laxElement "SendMessageResponse" &/ Cu.laxElement "SendMessageResult" &/ Cu.laxElement "MD5OfMessageBody" &| Cu.content $ el
-    mid = M.MessageId $ head $ head $ Cu.laxElement "SendMessageResponse" &/ Cu.laxElement "SendMessageResult" &/ Cu.laxElement "MessageId" &| Cu.content $ el
-
-instance SqsResponseIteratee SendMessageResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            return $ smParse cursor                                  
-          
 instance SignQuery SendMessage  where 
     type Info SendMessage  = SqsInfo
-    signQuery SendMessage {..} = sqsSignQuery SqsQuery { 
+    signQuery SendMessage {..} = sqsSignQuery SqsQuery {
+                                             sqsQueueName = Just smQueueName,
                                              sqsQuery = [("Action", Just "SendMessage"), 
-                                                        ("QueueName", Just $ B.pack $ M.printQueue smQueueName),
-                                                        ("MessageBody", Just $ B.pack $ show smMessage )]} 
+                                                        ("MessageBody", Just $ TE.encodeUtf8 smMessage )]} 
 
-instance Transaction SendMessage (SqsResponse SendMessageResponse)
+instance Transaction SendMessage SendMessageResponse
 
 
 

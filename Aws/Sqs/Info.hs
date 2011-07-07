@@ -32,7 +32,7 @@ data SqsInfo
 sqsEndpointUsClassic :: Endpoint
 sqsEndpointUsClassic 
     = Endpoint { 
-        endpointHost = "sqs.us-east-1.amazonaws.com"
+        endpointHost = "queue.amazonaws.com"
       , endpointDefaultLocationConstraint = locationUsClassic
       , endpointAllowedLocationConstraints = [locationUsClassic
                                              , locationUsWest
@@ -44,7 +44,7 @@ sqsEndpointUsClassic
 sqsEndpointUsWest :: Endpoint
 sqsEndpointUsWest
     = Endpoint {
-        endpointHost = "sqs.us-west-1.amazonaws.com"
+        endpointHost = "us-west-1.queue.amazonaws.com"
       , endpointDefaultLocationConstraint = locationUsWest
       , endpointAllowedLocationConstraints = [locationUsWest]
       }
@@ -52,7 +52,7 @@ sqsEndpointUsWest
 sqsEndpointEu :: Endpoint
 sqsEndpointEu
     = Endpoint {
-        endpointHost = "s3-eu-west-1.amazonaws.com"
+        endpointHost = "eu-west-1.queue.amazonaws.com"
       , endpointDefaultLocationConstraint = locationEu
       , endpointAllowedLocationConstraints = [locationEu]
       }
@@ -60,7 +60,7 @@ sqsEndpointEu
 sqsEndpointApSouthEast :: Endpoint
 sqsEndpointApSouthEast
     = Endpoint {
-        endpointHost = "sqs.ap-southeast-1.amazonaws.com"
+        endpointHost = "ap-southeast-1.queue.amazonaws.com"
       , endpointDefaultLocationConstraint = locationApSouthEast
       , endpointAllowedLocationConstraints = [locationApSouthEast]
       }

@@ -36,14 +36,12 @@ data ListQueuesResponse = ListQueuesResponse{
   lqrQueueUrls :: [T.Text]
 } deriving (Show)
 
-listQueues = ListQueues(Nothing)
-
 instance ResponseIteratee ListQueuesResponse where
     type ResponseMetadata ListQueuesResponse = SqsMetadata
     responseIteratee = sqsXmlResponseIteratee parse
       where
         parse el = do 
-            let queues = concat $ sequence $ el $// Cu.laxElement "QueueUrl" &| Cu.content
+            let queues = el $// Cu.laxElement "QueueUrl" &/ Cu.content
             return ListQueuesResponse { lqrQueueUrls = queues }
           
 instance SignQuery ListQueues where 

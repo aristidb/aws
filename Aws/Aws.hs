@@ -74,7 +74,6 @@ debugConfiguration = do
 aws :: (Transaction r a
        , ConfigurationFetch (Info r)) 
       => Configuration -> r -> IO (Response (ResponseMetadata a) a)
-
 aws = unsafeAws
 
 unsafeAws
@@ -83,15 +82,12 @@ unsafeAws
       SignQuery r,
       ConfigurationFetch (Info r)) =>
      Configuration -> r -> IO (Response (ResponseMetadata a) a)
-
 unsafeAws cfg request = do
   sd <- signatureData <$> timeInfo <*> credentials $ cfg
   let info = configurationFetch cfg
   let q = signQuery request info sd
-  debugPrint "String to sign (unsafe)" $ sqStringToSign q
-  debugPrint "Resulting Url" $ queryToUri q
+  debugPrint "String to sign" $ sqStringToSign q
   let httpRequest = queryToHttpRequest q
-  liftIO $ HTTP.withManager $ En.run_ . HTTP.http httpRequest responseIteratee
   metadataRef <- newIORef mempty
   resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
           HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee metadataRef)
@@ -108,5 +104,5 @@ awsUri cfg request = do
   sd <- signatureData ti cr
   let q = signQuery request info sd
   debugPrint "String to sign" $ sqStringToSign q
-  debugPrint "Resulting Url" $ queryToUri q
   return $ queryToUri q
+

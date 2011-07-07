@@ -5,6 +5,7 @@ module Aws.Sqs.Commands.RemovePermission where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
+import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
@@ -21,6 +22,7 @@ import           System.Locale
 import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|), ($|))
 import qualified Data.Enumerator              as En
 import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as TE
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
@@ -30,31 +32,28 @@ import qualified Data.ByteString.Char8 as B
 import Debug.Trace
 
 data RemovePermission = RemovePermission{
-  rpLabel :: String,
+  rpLabel :: T.Text,
   rpQueueName :: M.QueueName 
 }deriving (Show)
 
 data RemovePermissionResponse = RemovePermissionResponse{
 } deriving (Show)
 
-
-rpParse :: Cu.Cursor -> RemovePermissionResponse
-rpParse el = do
-  RemovePermissionResponse { }
-
-instance SqsResponseIteratee RemovePermissionResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            return $ rpParse cursor                
+instance ResponseIteratee RemovePermissionResponse where
+    type ResponseMetadata RemovePermissionResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+      where 
+        parse el = do
+          return RemovePermissionResponse {}  
           
 instance SignQuery RemovePermission  where 
     type Info RemovePermission  = SqsInfo
-    signQuery RemovePermission {..} = sqsSignQuery SqsQuery { 
+    signQuery RemovePermission {..} = sqsSignQuery SqsQuery {
+                                             sqsQueueName = Just rpQueueName, 
                                              sqsQuery = [("Action", Just "RemovePermission"), 
-                                                        ("QueueName", Just $ B.pack $ M.printQueue rpQueueName),
-                                                        ("Label", Just $ B.pack $ rpLabel )]} 
+                                                        ("Label", Just $ TE.encodeUtf8 rpLabel )]} 
 
-instance Transaction RemovePermission (SqsResponse RemovePermissionResponse)
+instance Transaction RemovePermission RemovePermissionResponse
 
 
 

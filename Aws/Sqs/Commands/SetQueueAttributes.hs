@@ -5,6 +5,7 @@ module Aws.Sqs.Commands.SetQueueAttributes where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Info
+import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
@@ -21,6 +22,7 @@ import           System.Locale
 import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|), ($|))
 import qualified Data.Enumerator              as En
 import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as TE
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
@@ -38,22 +40,19 @@ data SetQueueAttributes = SetQueueAttributes{
 data SetQueueAttributesResponse = SetQueueAttributesResponse{
 } deriving (Show)
 
-
-sqarParse :: Cu.Cursor -> SetQueueAttributesResponse
-sqarParse el = do
-  SetQueueAttributesResponse { }
-
-instance SqsResponseIteratee SetQueueAttributesResponse where
-    sqsResponseIteratee status headers = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
-                                            let cursor = Cu.fromDocument doc
-                                            return $ sqarParse cursor                                  
+instance ResponseIteratee SetQueueAttributesResponse where
+    type ResponseMetadata SetQueueAttributesResponse = SqsMetadata
+    responseIteratee = sqsXmlResponseIteratee parse
+      where 
+        parse el = do
+          return SetQueueAttributesResponse {}
           
 instance SignQuery SetQueueAttributes  where 
     type Info SetQueueAttributes  = SqsInfo
     signQuery SetQueueAttributes {..} = sqsSignQuery SqsQuery { 
+                                             sqsQueueName = Just sqaQueueName,
                                              sqsQuery = [("Action", Just "SetQueueAttributes"), 
-                                                        ("QueueName", Just $ B.pack $ M.printQueue sqaQueueName),
-                                                        ("Attribute.Name", Just $ B.pack $ show $ M.printQueueAttribute sqaAttribute),
-                                                        ("Attribute.Value", Just $ B.pack sqaValue)]} 
+                                                        ("Attribute.Name", Just $ TE.encodeUtf8 $ M.printQueueAttribute sqaAttribute),
+                                                        ("Attribute.Value", Just $ TE.encodeUtf8 sqaValue)]} 
 
-instance Transaction SetQueueAttributes (SqsResponse SetQueueAttributesResponse)
+instance Transaction SetQueueAttributes SetQueueAttributesResponse

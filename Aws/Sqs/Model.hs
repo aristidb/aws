@@ -11,8 +11,8 @@ data QueueName = QueueName{
 } deriving(Show)
 
 
-parseQueue :: T.Text -> QueueName
-parseQueue url = QueueName{qAccountNumber = urlParts !! 3, qName = urlParts !! 4}
+parseQueueUrl :: T.Text -> QueueName
+parseQueueUrl url = QueueName{qAccountNumber = urlParts !! 3, qName = urlParts !! 4}
   where
     urlParts = T.splitOn "/" url
  

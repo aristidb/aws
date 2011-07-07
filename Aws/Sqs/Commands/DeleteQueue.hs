@@ -13,13 +13,10 @@ import           Aws.Signature
 import           Aws.Transaction
 import           Aws.Xml
 import           Control.Applicative
-import           Control.Arrow         (second)
 import           Control.Monad
-import           Data.Enumerator              ((=$))
 import           Data.Maybe
 import           Data.Time.Format
 import           System.Locale
-import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|), ($|))
 import qualified Data.Enumerator              as En
 import qualified Data.Text                    as T
 import qualified Text.XML.Enumerator.Cursor   as Cu
@@ -41,12 +38,12 @@ instance ResponseIteratee DeleteQueueResponse where
     type ResponseMetadata DeleteQueueResponse = SqsMetadata
     responseIteratee = sqsXmlResponseIteratee parse
       where
-        parse el = do return DeleteQueueResponse{}
+        parse _ = do return DeleteQueueResponse{}
           
 instance SignQuery DeleteQueue  where 
     type Info DeleteQueue  = SqsInfo
-    signQuery DeleteQueue {..} = sqsSignQuery SqsQuery { 
-                                             sqsQuery = [("Action", Just "DeleteQueue"), 
-                                                        ("QueueName", Just $ B.pack $ T.unpack $ M.printQueueName dqQueueName)]}
+    signQuery DeleteQueue {..} = sqsSignQuery SqsQuery {
+                                             sqsQueueName = Just dqQueueName, 
+                                             sqsQuery = [("Action", Just "DeleteQueue")]}
 
 instance Transaction DeleteQueue DeleteQueueResponse

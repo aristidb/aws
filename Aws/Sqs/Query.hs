@@ -23,6 +23,7 @@ import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as BC
 import qualified Data.ByteString.Lazy           as L
 import qualified Data.Text                      as T
+import qualified Data.Text.Encoding             as TE
 import qualified Network.HTTP.Types             as HTTP
 import Debug.Trace
 
@@ -46,11 +47,12 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
       , sqStringToSign = stringToSign
       , sqContentType = Nothing
       , sqContentMd5 = Nothing
+      , sqAmzHeaders = []
       }
     where
       method = PostQuery
       path = case sqsQueueName of
-                Just x -> B.concat ["/", BC.pack $ T.unpack $ printQueueName x, "/"]
+                Just x -> TE.encodeUtf8 $ printQueueName x
                 Nothing -> "/"
       expandedQuery = sortBy (comparing fst) 
                        ( sqsQuery ++ [ ("AWSAccessKeyId", Just(accessKeyID signatureCredentials)), 
