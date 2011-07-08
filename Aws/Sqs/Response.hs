@@ -23,6 +23,7 @@ import qualified Network.HTTP.Types           as HTTP
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
+import Debug.Trace
 
 sqsResponseIteratee ::
     (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
@@ -55,10 +56,11 @@ sqsErrorResponseIteratee status _headers
            Failure otherErr -> En.throwError otherErr
     where
       parseError :: Cu.Cursor -> Attempt SqsError
-      parseError root = do code <- force "Missing error Code" $ root $/ elContent "Code"
-                           message <- force "Missing error Message" $ root $/ elContent "Message"
-                           errorType <- force "Missing error Type" $ root $/ elContent "Type"
-                           let detail = listToMaybe $ root $/ elContent "Detail"
+      parseError root = do cursor <- force "Missing Error" $ root $/ Cu.laxElement "Error" 
+                           code <- force "Missing error Code" $ cursor $/ elContent "Code"
+                           message <- force "Missing error Message" $ cursor $/ elContent "Message"
+                           errorType <- force "Missing error Type" $ cursor $/ elContent "Type"
+                           let detail = listToMaybe $ cursor $/ elContent "Detail"
                            
                            return SqsError {
                                         sqsStatusCode = status
@@ -66,4 +68,5 @@ sqsErrorResponseIteratee status _headers
                                       , sqsErrorMessage = message
                                       , sqsErrorType = errorType
                                       , sqsErrorDetail = detail
+                                      , sqsErrorMetadata = Nothing
                                       }

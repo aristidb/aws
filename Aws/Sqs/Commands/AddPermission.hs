@@ -54,7 +54,8 @@ instance ResponseIteratee AddPermissionResponse where
         
 instance SignQuery AddPermission  where 
     type Info AddPermission  = SqsInfo
-    signQuery AddPermission {..} = sqsSignQuery SqsQuery { 
+    signQuery AddPermission {..} = sqsSignQuery SqsQuery {
+                                             sqsQueueName = Just apQueueName, 
                                              sqsQuery = [("Action", Just "AddPermission"), 
                                                         ("QueueName", Just $ B.pack $ T.unpack $ printQueueName apQueueName),
                                                         ("Label", Just $ B.pack $ T.unpack apLabel)] ++ formatPermissions apPermissions}

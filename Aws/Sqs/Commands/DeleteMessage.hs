@@ -13,21 +13,12 @@ import           Aws.Signature
 import           Aws.Transaction
 import           Aws.Xml
 import           Control.Applicative
-import           Control.Arrow         (second)
 import           Control.Monad
-import           Data.Enumerator              ((=$))
 import           Data.Maybe
-import           Data.Time.Format
-import           System.Locale
-import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|), ($|))
 import qualified Data.Enumerator              as En
 import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as TE
 import qualified Text.XML.Enumerator.Cursor   as Cu
-import qualified Text.XML.Enumerator.Parse    as XML
-import qualified Text.XML.Enumerator.Resolved as XML
-import qualified Network.HTTP.Types           as HTTP
-import qualified Data.ByteString.UTF8         as BU
-import qualified Data.ByteString.Char8        as B
 import Debug.Trace
 
 data DeleteMessage = DeleteMessage{
@@ -38,11 +29,6 @@ data DeleteMessage = DeleteMessage{
 data DeleteMessageResponse = DeleteMessageResponse{
 } deriving (Show)
 
-
-dmParse :: Cu.Cursor -> DeleteMessageResponse
-dmParse el = do
-  DeleteMessageResponse { }
-
 instance ResponseIteratee DeleteMessageResponse where
     type ResponseMetadata DeleteMessageResponse = SqsMetadata
     responseIteratee = sqsXmlResponseIteratee parse
@@ -51,10 +37,10 @@ instance ResponseIteratee DeleteMessageResponse where
           
 instance SignQuery DeleteMessage  where 
     type Info DeleteMessage  = SqsInfo
-    signQuery DeleteMessage {..} = sqsSignQuery SqsQuery { 
+    signQuery DeleteMessage {..} = sqsSignQuery SqsQuery {
+                                             sqsQueueName = Just dmQueueName, 
                                              sqsQuery = [("Action", Just "DeleteMessage"), 
-                                                        ("QueueName", Just $ B.pack $ T.unpack $ M.printQueueName dmQueueName),
-                                                        ("ReceiptHandle", Just $ B.pack $ show dmReceiptHandle )]} 
+                                                        ("ReceiptHandle", Just $ TE.encodeUtf8 $ M.printReceiptHandle dmReceiptHandle )]} 
 
 instance Transaction DeleteMessage DeleteMessageResponse
 

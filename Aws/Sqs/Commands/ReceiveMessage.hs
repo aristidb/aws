@@ -41,7 +41,7 @@ data ReceiveMessage = ReceiveMessage{
 
 data Message = Message{
   mMessageId :: T.Text,
-  mRecieptHandle :: M.ReceiptHandle,
+  mReceiptHandle :: M.ReceiptHandle,
   mMD5OfBody :: T.Text,
   mBody :: T.Text,
   mAttributes :: [(M.MessageAttribute,T.Text)]
@@ -59,14 +59,13 @@ readMessageAttribute cursor = do
 
 readMessage :: Cu.Cursor -> [Message]
 readMessage cursor = do
-  attributes :: [(M.MessageAttribute, T.Text)] <- cursor $/ Cu.laxElement "Attribute" &| readMessageAttribute
-  id :: T.Text <- force "Missing Message Id" $ cursor $/ Cu.laxElement "MessageId" &/ Cu.content
-  rh <- force "Missing Reciept Handle" $ cursor $/ Cu.laxElement "ReceiptHandle" &/ Cu.content
-  md5 <- force "Missing MD5 Signature" $ cursor $/ Cu.laxElement "MD5OfBody" &/ Cu.content
-  body <- force "Missing Body" $ cursor $/ Cu.laxElement "Body" &/ Cu.content
-
-  return Message{ mMessageId = id, mRecieptHandle = M.ReceiptHandle rh, mMD5OfBody = md5, mBody = body, mAttributes = attributes}
-
+  id :: T.Text <- force "Missing Message Id" $ cursor $// Cu.laxElement "MessageId" &/ Cu.content
+  rh <- force "Missing Reciept Handle" $ cursor $// Cu.laxElement "ReceiptHandle" &/ Cu.content
+  md5 <- force "Missing MD5 Signature" $ cursor $// Cu.laxElement "MD5OfBody" &/ Cu.content
+  body <- force "Missing Body" $ cursor $// Cu.laxElement "Body" &/ Cu.content
+  let attributes :: [(M.MessageAttribute, T.Text)] = concat $ cursor $// Cu.laxElement "Attribute" &| readMessageAttribute
+  
+  return Message{ mMessageId = id, mReceiptHandle = M.ReceiptHandle rh, mMD5OfBody = md5, mBody = body, mAttributes = attributes}
 
 formatMAttributes :: [M.MessageAttribute] -> [HTTP.QueryItem]
 formatMAttributes attrs =

@@ -96,3 +96,5 @@ printPermission GetQueueAttributes = "GetQueueAttributes"
 
 newtype ReceiptHandle = ReceiptHandle T.Text deriving(Show,Eq)
 newtype MessageId = MessageId T.Text deriving(Show,Eq)
+
+printReceiptHandle (ReceiptHandle handle) = handle 

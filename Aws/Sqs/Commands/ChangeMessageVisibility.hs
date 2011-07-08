@@ -13,22 +13,13 @@ import           Aws.Signature
 import           Aws.Transaction
 import           Aws.Xml
 import           Control.Applicative
-import           Control.Arrow         (second)
 import           Control.Monad
-import           Data.Enumerator              ((=$))
 import           Data.Maybe
-import           Data.Time.Format
-import           System.Locale
-import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|), ($|))
 import qualified Data.Enumerator              as En
 import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as TE
 import qualified Text.XML.Enumerator.Cursor   as Cu
-import qualified Text.XML.Enumerator.Parse    as XML
-import qualified Text.XML.Enumerator.Resolved as XML
-import qualified Network.HTTP.Types    as HTTP
-import qualified Data.ByteString.UTF8  as BU
-import qualified Data.ByteString.Char8 as B
-import Debug.Trace
+import qualified Data.ByteString.Char8        as B
 
 data ChangeMessageVisibility = ChangeMessageVisibility {
   cmvReceiptHandle :: M.ReceiptHandle,
@@ -39,23 +30,18 @@ data ChangeMessageVisibility = ChangeMessageVisibility {
 data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse{
 } deriving (Show)
 
-
-cmvParse :: Cu.Cursor -> ChangeMessageVisibilityResponse
-cmvParse el = do
-  ChangeMessageVisibilityResponse
-
 instance ResponseIteratee ChangeMessageVisibilityResponse where
     type ResponseMetadata ChangeMessageVisibilityResponse = SqsMetadata
     responseIteratee = sqsXmlResponseIteratee parse
       where 
-        parse el = do return ChangeMessageVisibilityResponse{}
+        parse _ = do return ChangeMessageVisibilityResponse{}
     
 instance SignQuery ChangeMessageVisibility  where 
     type Info ChangeMessageVisibility  = SqsInfo
     signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
                                              sqsQueueName = Just cmvQueueName, 
                                              sqsQuery = [("Action", Just "ChangeMessageVisibility"), 
-                                                         ("ReceiptHandle", Just $ B.pack $ show cmvReceiptHandle),
-                                                         ("VisibilityTimout", Just $ B.pack $ show cmvVisibilityTimeout)]}
+                                                         ("ReceiptHandle", Just $ TE.encodeUtf8 $ M.printReceiptHandle cmvReceiptHandle),
+                                                         ("VisibilityTimeout", Just $ B.pack $ show cmvVisibilityTimeout)]}
 
 instance Transaction ChangeMessageVisibility ChangeMessageVisibilityResponse
