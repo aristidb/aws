@@ -3,7 +3,6 @@
 module Aws.Sqs.Commands.ReceiveMessage where
 
 import           Aws.Response
-import           Aws.Sqs.Error
 import           Aws.Sqs.Info
 import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
@@ -13,24 +12,13 @@ import           Aws.Signature
 import           Aws.Transaction
 import           Aws.Xml
 import           Control.Applicative
-import           Control.Arrow         (second)
 import qualified Control.Failure            as F
-import           Control.Monad
-import           Data.Enumerator              ((=$))
 import           Data.Maybe
-import           Data.Time.Format
-import           System.Locale
-import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|), ($|))
-import qualified Data.Enumerator              as En
+import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|))
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as TE
 import qualified Text.XML.Enumerator.Cursor   as Cu
-import qualified Text.XML.Enumerator.Parse    as XML
-import qualified Text.XML.Enumerator.Resolved as XML
-import qualified Network.HTTP.Types    as HTTP
-import qualified Data.ByteString.UTF8  as BU
 import qualified Data.ByteString.Char8 as B
-import Debug.Trace
 
 data ReceiveMessage = ReceiveMessage{ 
   rmVisibilityTimeout :: Maybe Int,
@@ -59,15 +47,15 @@ readMessageAttribute cursor = do
 
 readMessage :: Cu.Cursor -> [Message]
 readMessage cursor = do
-  id :: T.Text <- force "Missing Message Id" $ cursor $// Cu.laxElement "MessageId" &/ Cu.content
+  mid :: T.Text <- force "Missing Message Id" $ cursor $// Cu.laxElement "MessageId" &/ Cu.content
   rh <- force "Missing Reciept Handle" $ cursor $// Cu.laxElement "ReceiptHandle" &/ Cu.content
   md5 <- force "Missing MD5 Signature" $ cursor $// Cu.laxElement "MD5OfBody" &/ Cu.content
   body <- force "Missing Body" $ cursor $// Cu.laxElement "Body" &/ Cu.content
   let attributes :: [(M.MessageAttribute, T.Text)] = concat $ cursor $// Cu.laxElement "Attribute" &| readMessageAttribute
   
-  return Message{ mMessageId = id, mReceiptHandle = M.ReceiptHandle rh, mMD5OfBody = md5, mBody = body, mAttributes = attributes}
+  return Message{ mMessageId = mid, mReceiptHandle = M.ReceiptHandle rh, mMD5OfBody = md5, mBody = body, mAttributes = attributes}
 
-formatMAttributes :: [M.MessageAttribute] -> [HTTP.QueryItem]
+formatMAttributes :: [M.MessageAttribute] -> [(B.ByteString, Maybe B.ByteString)]
 formatMAttributes attrs =
   case length attrs of
     0 -> []

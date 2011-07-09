@@ -63,6 +63,8 @@ baseConfiguration = do
                     , sdbInfoUri = sdbHttpsGet sdbUsEast
                     , s3Info = s3 HTTP s3EndpointUsClassic False
                     , s3InfoUri = s3 HTTP s3EndpointUsClassic True
+                    , sqsInfo = sqs HTTP sqsEndpointUsClassic False
+                    , sqsInfoUri = sqs HTTP sqsEndpointUsClassic True
                     }
 -- TODO: better error handling when credentials cannot be loaded
 

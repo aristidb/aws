@@ -7,7 +7,6 @@ import           Aws.Util
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Time
-import 	         Network.TLS
 import qualified Blaze.ByteString.Builder as Blaze
 import qualified Data.ByteString          as B
 import qualified Data.Text                as T

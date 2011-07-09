@@ -3,7 +3,6 @@
 module Aws.Sqs.Commands.ChangeMessageVisibility where
 
 import           Aws.Response
-import           Aws.Sqs.Error
 import           Aws.Sqs.Info
 import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
@@ -11,14 +10,7 @@ import           Aws.Sqs.Query
 import           Aws.Sqs.Response
 import           Aws.Signature
 import           Aws.Transaction
-import           Aws.Xml
-import           Control.Applicative
-import           Control.Monad
-import           Data.Maybe
-import qualified Data.Enumerator              as En
-import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as TE
-import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Data.ByteString.Char8        as B
 
 data ChangeMessageVisibility = ChangeMessageVisibility {

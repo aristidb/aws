@@ -5,27 +5,19 @@ module Aws.Sqs.Query where
 import           Aws.Credentials
 import           Aws.Http
 import           Aws.Query
-import           Aws.Signature
 import           Aws.Sqs.Info
 import           Aws.Sqs.Model
 import           Aws.Signature
-import           Aws.Util
 import           Data.List
-import           Data.Maybe
 import           Data.Monoid
 import           Data.Ord
 import           Data.Time
-import           Data.Time.Format
 import           System.Locale
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
-import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as BC
-import qualified Data.ByteString.Lazy           as L
-import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as TE
 import qualified Network.HTTP.Types             as HTTP
-import Debug.Trace
 
 data SqsQuery = SqsQuery{
   sqsQueueName :: Maybe QueueName,
@@ -63,11 +55,6 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
       
       expires = AbsoluteExpires $ sqsDefaultExpiry `addUTCTime` signatureTime
 
-      ti = case (sqsUseUri, signatureTimeInfo) of
-             (False, ti') -> ti'
-             (True, AbsoluteTimestamp time) -> AbsoluteExpires $ sqsDefaultExpiry `addUTCTime` time
-             (True, AbsoluteExpires time) -> AbsoluteExpires $ sqsDefaultExpiry `addUTCTime` time
-
       expiresString = formatTime defaultTimeLocale "%FT%TZ" (fromAbsoluteTimeInfo expires)
 
       sig = signature signatureCredentials HmacSHA256 stringToSign
@@ -79,7 +66,4 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
 
       signedQuery = expandedQuery ++ (HTTP.simpleQueryToQuery $ makeAuthQuery)
 
-      (authorization, authQuery) = case ti of
-                                 AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
-                                 AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ makeAuthQuery)
       makeAuthQuery = [("Signature", sig)]

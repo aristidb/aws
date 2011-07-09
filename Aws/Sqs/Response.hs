@@ -4,26 +4,20 @@ module Aws.Sqs.Response where
 import           Aws.Response
 import           Aws.Sqs.Error
 import           Aws.Sqs.Metadata
-import           Aws.Util
 import           Aws.Xml
 import           Control.Monad.IO.Class
 import           Data.Attempt                 (Attempt(..))
-import           Data.Char
 import           Data.Enumerator              ((=$))
 import           Data.IORef
 import           Data.Maybe
-import           Data.Word
-import           Text.XML.Enumerator.Cursor   (($/), (&|), (&/), ($//))
+import           Text.XML.Enumerator.Cursor   (($/))
 import qualified Data.ByteString              as B
-import qualified Data.ByteString.Char8        as B8
 import qualified Data.Enumerator              as En
 import qualified Data.Text.Encoding           as T
-import qualified Network.HTTP.Enumerator      as HTTPE
 import qualified Network.HTTP.Types           as HTTP
 import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
-import Debug.Trace
 
 sqsResponseIteratee ::
     (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
