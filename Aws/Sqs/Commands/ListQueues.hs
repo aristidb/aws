@@ -36,7 +36,7 @@ instance SignQuery ListQueues where
     type Info ListQueues = SqsInfo
     signQuery ListQueues{..} = sqsSignQuery SqsQuery { 
                                               sqsQueueName = Nothing, 
-                                              sqsQuery = [("Action", Just "ListQueue")] ++ catMaybes [
+                                              sqsQuery = [("Action", Just "ListQueues")] ++ catMaybes [
                                               ("QueueNamePrefix",) <$> case lqQueueNamePrefix of
                                                                          Just x  -> Just $ Just $ TE.encodeUtf8 x
                                                                          Nothing -> Nothing]}
