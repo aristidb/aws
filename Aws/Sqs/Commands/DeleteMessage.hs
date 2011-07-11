@@ -20,9 +20,9 @@ data DeleteMessage = DeleteMessage{
 data DeleteMessageResponse = DeleteMessageResponse{
 } deriving (Show)
 
-instance ResponseIteratee DeleteMessageResponse where
+instance ResponseIteratee r DeleteMessageResponse where
     type ResponseMetadata DeleteMessageResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where
         parse _ = do return DeleteMessageResponse {}
           

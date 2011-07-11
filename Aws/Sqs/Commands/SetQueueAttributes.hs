@@ -22,9 +22,9 @@ data SetQueueAttributes = SetQueueAttributes{
 data SetQueueAttributesResponse = SetQueueAttributesResponse{
 } deriving (Show)
 
-instance ResponseIteratee SetQueueAttributesResponse where
+instance ResponseIteratee r SetQueueAttributesResponse where
     type ResponseMetadata SetQueueAttributesResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where 
         parse _ = do
           return SetQueueAttributesResponse {}

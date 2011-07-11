@@ -18,9 +18,9 @@ data DeleteQueue = DeleteQueue{
 data DeleteQueueResponse = DeleteQueueResponse{
 } deriving (Show)
 
-instance ResponseIteratee DeleteQueueResponse where
+instance ResponseIteratee r DeleteQueueResponse where
     type ResponseMetadata DeleteQueueResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where
         parse _ = do return DeleteQueueResponse{}
           

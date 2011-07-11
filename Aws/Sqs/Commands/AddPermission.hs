@@ -30,9 +30,9 @@ formatPermissions perms =
   concat $ zipWith(\ x y -> [(B.pack $ "AwsAccountId." ++ show y, Just $ B.pack $ T.unpack $ fst x), 
                              (B.pack $ "ActionName." ++ show y, Just $ B.pack $ printPermission $ snd x)]) perms [1..]
 
-instance ResponseIteratee AddPermissionResponse where
+instance ResponseIteratee r AddPermissionResponse where
     type ResponseMetadata AddPermissionResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
        where
          parse _ = do
            return AddPermissionResponse {}

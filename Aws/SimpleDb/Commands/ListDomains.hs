@@ -41,9 +41,9 @@ instance SignQuery ListDomains where
                                 , ("NextToken",) . T.encodeUtf8 <$> ldNextToken
                                 ]
 
-instance ResponseIteratee ListDomainsResponse where
+instance ResponseIteratee r ListDomainsResponse where
     type ResponseMetadata ListDomainsResponse = SdbMetadata
-    responseIteratee = sdbResponseIteratee parse 
+    responseIteratee _ = sdbResponseIteratee parse 
         where parse cursor = do
                 sdbCheckResponseType () "ListDomainsResponse" cursor
                 let names = cursor $// elContent "DomainName"

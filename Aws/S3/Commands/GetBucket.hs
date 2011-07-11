@@ -71,10 +71,10 @@ instance SignQuery GetBucket where
                                , s3QRequestBody = Nothing
                                }
 
-instance ResponseIteratee GetBucketResponse where
+instance ResponseIteratee r GetBucketResponse where
     type ResponseMetadata GetBucketResponse = S3Metadata
 
-    responseIteratee = s3XmlResponseIteratee parse
+    responseIteratee _ = s3XmlResponseIteratee parse
         where parse cursor
                   = do name <- force "Missing Name" $ cursor $/ elContent "Name"
                        let delimiter = listToMaybe $ cursor $/ elContent "Delimiter"

@@ -21,9 +21,9 @@ data RemovePermission = RemovePermission{
 data RemovePermissionResponse = RemovePermissionResponse{
 } deriving (Show)
 
-instance ResponseIteratee RemovePermissionResponse where
+instance ResponseIteratee r RemovePermissionResponse where
     type ResponseMetadata RemovePermissionResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where 
         parse _ = do
           return RemovePermissionResponse {}  

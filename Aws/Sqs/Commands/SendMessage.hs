@@ -26,9 +26,9 @@ data SendMessageResponse = SendMessageResponse{
   smrMessageId :: M.MessageId
 } deriving (Show)
 
-instance ResponseIteratee SendMessageResponse where
+instance ResponseIteratee r SendMessageResponse where
     type ResponseMetadata SendMessageResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where 
         parse el = do
           md5 <- force "Missing MD5 Signature" $ el $// Cu.laxElement "MD5OfMessageBody" &/ Cu.content

@@ -43,8 +43,8 @@ instance SignQuery PutAttributes where
             queryList (attributeQuery setAttributeQuery) "Attribute" paAttributes ++
             queryList (attributeQuery expectedAttributeQuery) "Expected" paExpected
 
-instance ResponseIteratee PutAttributesResponse where
+instance ResponseIteratee r PutAttributesResponse where
     type ResponseMetadata PutAttributesResponse = SdbMetadata
-    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType PutAttributesResponse "PutAttributesResponse"
+    responseIteratee _ = sdbResponseIteratee $ sdbCheckResponseType PutAttributesResponse "PutAttributesResponse"
 
 instance Transaction PutAttributes PutAttributesResponse

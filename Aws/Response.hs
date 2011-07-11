@@ -31,10 +31,10 @@ instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
 tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
 tellMetadataRef r m = modifyIORef r (`mappend` m)
 
-class ResponseIteratee a where
+class ResponseIteratee r a where
     type ResponseMetadata a
-    responseIteratee :: IORef (ResponseMetadata a) -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+    responseIteratee :: r -> IORef (ResponseMetadata a) -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
     
-instance ResponseIteratee HTTP.Response where
+instance ResponseIteratee r HTTP.Response where
     type ResponseMetadata HTTP.Response = ()
-    responseIteratee _ = HTTP.lbsIter
+    responseIteratee _ _ = HTTP.lbsIter

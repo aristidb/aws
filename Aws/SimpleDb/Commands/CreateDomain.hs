@@ -29,8 +29,8 @@ instance SignQuery CreateDomain where
     type Info CreateDomain = SdbInfo
     signQuery CreateDomain{..} = sdbSignQuery [("Action", "CreateDomain"), ("DomainName", T.encodeUtf8 cdDomainName)]
 
-instance ResponseIteratee CreateDomainResponse where
+instance ResponseIteratee r CreateDomainResponse where
     type ResponseMetadata CreateDomainResponse = SdbMetadata
-    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType CreateDomainResponse "CreateDomainResponse"
+    responseIteratee _ = sdbResponseIteratee $ sdbCheckResponseType CreateDomainResponse "CreateDomainResponse"
 
 instance Transaction CreateDomain CreateDomainResponse

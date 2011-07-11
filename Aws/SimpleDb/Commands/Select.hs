@@ -48,9 +48,9 @@ instance SignQuery Select where
             , (("NextToken",) . T.encodeUtf8) <$> sNextToken
             ]
 
-instance ResponseIteratee SelectResponse where
+instance ResponseIteratee r SelectResponse where
     type ResponseMetadata SelectResponse = SdbMetadata
-    responseIteratee = sdbResponseIteratee parse
+    responseIteratee _ = sdbResponseIteratee parse
         where parse cursor = do
                 sdbCheckResponseType () "SelectResponse" cursor
                 items <- sequence $ cursor $// Cu.laxElement "Item" &| readItem

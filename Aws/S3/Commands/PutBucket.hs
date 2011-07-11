@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, TypeFamilies, OverloadedStrings, MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards, TypeFamilies, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances #-}
 module Aws.S3.Commands.PutBucket where
 
 import           Aws.Http
@@ -60,10 +60,10 @@ instance SignQuery PutBucket where
                                                   ]
                              }
 
-instance ResponseIteratee PutBucketResponse where
+instance ResponseIteratee r PutBucketResponse where
     type ResponseMetadata PutBucketResponse = S3Metadata
     
-    responseIteratee = s3ResponseIteratee inner
+    responseIteratee _ = s3ResponseIteratee inner
         where inner _status _headers = return PutBucketResponse
 
 instance Transaction PutBucket PutBucketResponse

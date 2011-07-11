@@ -41,10 +41,10 @@ instance SignQuery DomainMetadata where
     type Info DomainMetadata = SdbInfo
     signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", T.encodeUtf8 dmDomainName)]
 
-instance ResponseIteratee DomainMetadataResponse where
+instance ResponseIteratee r DomainMetadataResponse where
     type ResponseMetadata DomainMetadataResponse = SdbMetadata
 
-    responseIteratee = sdbResponseIteratee parse
+    responseIteratee _ = sdbResponseIteratee parse
         where parse cursor = do
                 sdbCheckResponseType () "DomainMetadataResponse" cursor
                 dmrTimestamp <- forceM "Timestamp expected" $ cursor $// elCont "Timestamp" &| (fmap posixSecondsToUTCTime . readInt)

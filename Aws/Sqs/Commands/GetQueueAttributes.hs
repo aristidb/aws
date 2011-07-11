@@ -31,9 +31,9 @@ parseAttributes el = do
   value <- force "Missing Value" $ el $/ Cu.laxElement "Value" &/ Cu.content
   return (M.parseQueueAttribute name, value)
 
-instance ResponseIteratee GetQueueAttributesResponse where
+instance ResponseIteratee r GetQueueAttributesResponse where
     type ResponseMetadata GetQueueAttributesResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where
         parse el = do
           let attributes = concat $ el $// Cu.laxElement "Attribute" &| parseAttributes  

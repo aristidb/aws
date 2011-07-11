@@ -62,9 +62,9 @@ formatMAttributes attrs =
     1 -> [("AttributeName", Just $ B.pack $ show $ attrs !! 0)]
     _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ TE.encodeUtf8 $ M.printMessageAttribute x) ) attrs [1..]
 
-instance ResponseIteratee ReceiveMessageResponse where
+instance ResponseIteratee r ReceiveMessageResponse where
     type ResponseMetadata ReceiveMessageResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where 
         parse el = do
           let messages = concat $ el $// Cu.laxElement "Message" &| readMessage

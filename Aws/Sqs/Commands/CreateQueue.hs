@@ -28,9 +28,9 @@ data CreateQueueResponse = CreateQueueResponse{
 } deriving (Show)
 
 
-instance ResponseIteratee CreateQueueResponse where
+instance ResponseIteratee r CreateQueueResponse where
     type ResponseMetadata CreateQueueResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where 
         parse el = do 
           url <- force "Missing Queue Url" $ el $// Cu.laxElement "QueueUrl" &/ Cu.content

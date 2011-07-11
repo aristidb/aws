@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables, RecordWildCards, TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables, RecordWildCards, TypeFamilies, RankNTypes #-}
 module Aws.S3.Response
 where
 
@@ -44,6 +44,12 @@ s3XmlResponseIteratee ::
     -> IORef S3Metadata
     -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3XmlResponseIteratee parse metadataRef = s3ResponseIteratee (xmlCursorIteratee parse metadataRef) metadataRef
+
+s3BinaryResponseIteratee ::
+  ( forall a.  HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
+  -> IORef S3Metadata
+  -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+s3BinaryResponseIteratee inner metadataRef = s3ResponseIteratee inner metadataRef 
 
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ErrorResponseIteratee status _headers 

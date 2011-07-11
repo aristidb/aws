@@ -45,9 +45,9 @@ instance SignQuery GetAttributes where
             maybeToList (("AttributeName",) <$> T.encodeUtf8 <$> gaAttributeName) ++
             (guard gaConsistentRead >> [("ConsistentRead", awsTrue)])
 
-instance ResponseIteratee GetAttributesResponse where
+instance ResponseIteratee r GetAttributesResponse where
     type ResponseMetadata GetAttributesResponse = SdbMetadata
-    responseIteratee = sdbResponseIteratee parse
+    responseIteratee _ = sdbResponseIteratee parse
         where parse cursor = do
                 sdbCheckResponseType () "GetAttributesResponse" cursor
                 attributes <- sequence $ cursor $// Cu.laxElement "Attribute" &| readAttribute

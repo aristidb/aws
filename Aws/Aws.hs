@@ -79,7 +79,7 @@ aws :: (Transaction r a
 aws = unsafeAws
 
 unsafeAws
-  :: (ResponseIteratee a,
+  :: (ResponseIteratee r a,
       Monoid (ResponseMetadata a),
       SignQuery r,
       ConfigurationFetch (Info r)) =>
@@ -92,7 +92,7 @@ unsafeAws cfg request = do
   let httpRequest = queryToHttpRequest q
   metadataRef <- newIORef mempty
   resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
-          HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee metadataRef)
+          HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee request metadataRef)
   metadata <- readIORef metadataRef
   return $ Response metadata resp
 

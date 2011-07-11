@@ -36,8 +36,8 @@ instance SignQuery BatchPutAttributes where
             , ("DomainName", T.encodeUtf8 bpaDomainName)] ++
             queryList (itemQuery $ queryList (attributeQuery setAttributeQuery) "Attribute") "Item" bpaItems
 
-instance ResponseIteratee BatchPutAttributesResponse where
+instance ResponseIteratee r BatchPutAttributesResponse where
     type ResponseMetadata BatchPutAttributesResponse = SdbMetadata
-    responseIteratee = sdbResponseIteratee $ sdbCheckResponseType BatchPutAttributesResponse "BatchPutAttributesResponse"
+    responseIteratee _ = sdbResponseIteratee $ sdbCheckResponseType BatchPutAttributesResponse "BatchPutAttributesResponse"
 
 instance Transaction BatchPutAttributes BatchPutAttributesResponse

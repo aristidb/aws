@@ -28,10 +28,10 @@ data GetServiceResponse
       }
     deriving (Show)
 
-instance ResponseIteratee GetServiceResponse where
+instance ResponseIteratee r GetServiceResponse where
     type ResponseMetadata GetServiceResponse = S3Metadata
 
-    responseIteratee = s3XmlResponseIteratee parse
+    responseIteratee _ = s3XmlResponseIteratee parse
         where
           parse el = do
             owner <- forceM "Missing Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo

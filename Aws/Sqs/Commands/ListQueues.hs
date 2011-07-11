@@ -24,9 +24,9 @@ data ListQueuesResponse = ListQueuesResponse{
   lqrQueueUrls :: [T.Text]
 } deriving (Show)
 
-instance ResponseIteratee ListQueuesResponse where
+instance ResponseIteratee r ListQueuesResponse where
     type ResponseMetadata ListQueuesResponse = SqsMetadata
-    responseIteratee = sqsXmlResponseIteratee parse
+    responseIteratee _ = sqsXmlResponseIteratee parse
       where
         parse el = do 
             let queues = el $// Cu.laxElement "QueueUrl" &/ Cu.content
