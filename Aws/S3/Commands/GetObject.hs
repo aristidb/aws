@@ -12,14 +12,14 @@ import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
 import           Control.Applicative
-import           Control.Arrow              (second)
-import           Data.ByteString.Char8      ({- IsString -})
+import           Control.Arrow         (second)
+import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
-import qualified Data.ByteString            as B
-import qualified Data.Enumerator            as En
-import qualified Data.Text                  as T
-import qualified Data.Text.Encoding         as T
-import qualified Network.HTTP.Types         as HTTP
+import qualified Data.ByteString       as B
+import qualified Data.Enumerator       as En
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
+import qualified Network.HTTP.Types    as HTTP
 
 data GetObject a
     = GetObject {
