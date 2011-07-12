@@ -22,6 +22,8 @@ import qualified Data.CaseInsensitive           as CI
 import qualified Network.HTTP.Enumerator        as HTTPE
 import qualified Network.HTTP.Types             as HTTP
 
+import Debug.Trace
+
 data S3Query
     = S3Query {
         s3QMethod :: Method
@@ -30,6 +32,7 @@ data S3Query
       , s3QQuery :: HTTP.Query
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QRequestBody :: Maybe (HTTPE.RequestBody IO)
+      , s3QPath :: Maybe B.ByteString
       }
 
 instance Show S3Query where
@@ -66,14 +69,22 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
                                                    then (k1, B8.intercalate "," [v1, v2]):merge xs
                                                    else x1:x2:merge xs
                 merge xs = xs
+      
+      maybeToByteString str =
+        case str of
+          Just x -> x
+          Nothing -> ""
+
       (host, path) = case s3RequestStyle of 
-                       PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket])
-                       BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/"])
-                       VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/"])
+                       PathStyle   -> ([Just s3Endpoint], [Just "/", Just $ B8.concat [ "/",(maybeToByteString s3QBucket), "/", maybeToByteString s3QPath]  ])
+
+                       BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", Just $ B8.concat [ maybeToByteString s3QPath] ])
+                       VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [ Just "/", Just $ B8.concat [ "/",(maybeToByteString s3QBucket), "/", maybeToByteString s3QPath]] )
       sortedSubresources = sort s3QSubresources
       canonicalizedResource = Blaze8.fromChar '/' `mappend`
                               maybe mempty (\s -> Blaze.copyByteString s `mappend` Blaze8.fromChar '/') s3QBucket `mappend`
-                              HTTP.renderQueryBuilder True sortedSubresources
+                              maybe mempty (\s -> Blaze.copyByteString s) s3QPath `mappend`
+                              HTTP.renderQueryBuilder False sortedSubresources
       ti = case (s3UseUri, signatureTimeInfo) of
              (False, ti') -> ti'
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time

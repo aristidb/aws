@@ -37,7 +37,8 @@ data GetObject = GetObject {
 }
 
 data GetObjectResponse = GetObjectResponse{
-
+  gorDeleteMarker :: Maybe Bool,
+  gorVersionId :: Maybe T.Text
 }
 
 instance SignQuery GetObject where
@@ -56,11 +57,14 @@ instance SignQuery GetObject where
                                             ]
                                , s3QAmzHeaders = []
                                , s3QRequestBody = Nothing
+                               , s3QPath = Just $ T.encodeUtf8 goObjectName
                                }
 
 instance ResponseIteratee GetObject GetObjectResponse where
     type ResponseMetadata GetObjectResponse = S3Metadata
-    responseIteratee request metadata status headers = case request of
-                                 GetObject {..} -> s3BinaryResponseIteratee (goResponseIteratee) metadata status headers
+    responseIteratee request metadata status headers = do
+                                                          case request of
+                                                            GetObject {..} -> s3BinaryResponseIteratee (goResponseIteratee) metadata status headers
+                                                          return $ GetObjectResponse Nothing Nothing
 
 instance Transaction GetObject GetObjectResponse

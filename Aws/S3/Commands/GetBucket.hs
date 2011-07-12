@@ -69,6 +69,7 @@ instance SignQuery GetBucket where
                                             ]
                                , s3QAmzHeaders = []
                                , s3QRequestBody = Nothing
+                               , s3QPath = Nothing
                                }
 
 instance ResponseIteratee r GetBucketResponse where
