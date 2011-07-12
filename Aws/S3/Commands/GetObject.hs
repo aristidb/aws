@@ -24,7 +24,7 @@ import qualified Network.HTTP.Types         as HTTP
 data GetObject a
     = GetObject {
         goBucket :: Bucket
-      , goObjectName :: T.Text
+      , goObjectName :: Object
       , goResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
       , goResponseContentType :: Maybe T.Text
       , goResponseContentLanguage :: Maybe T.Text
@@ -44,20 +44,21 @@ data GetObjectResponse a
 instance SignQuery (GetObject a) where
     type Info (GetObject a) = S3Info
     signQuery GetObject {..} = s3SignQuery S3Query { 
-                                 s3QMethod = Get
-                               , s3QBucket = Just $ T.encodeUtf8 goBucket
-                               , s3QSubresources = []
-                               , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
-                                              ("response-content-type",) <$> goResponseContentType
-                                            , ("response-content-language",) <$> goResponseContentLanguage
-                                            , ("response-expires",) <$> goResponseExpires
-                                            , ("response-cache-control",) <$> goResponseCacheControl
-                                            , ("response-content-disposition",) <$> goResponseContentDisposition
-                                            , ("response-content-encoding",) <$> goResponseContentEncoding
-                                            ]
-                               , s3QAmzHeaders = []
-                               , s3QRequestBody = Nothing
-                               }
+                                   s3QMethod = Get
+                                 , s3QBucket = Just $ T.encodeUtf8 goBucket
+                                 , s3QObject = Just $ T.encodeUtf8 goObjectName 
+                                 , s3QSubresources = []
+                                 , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
+                                               ("response-content-type",) <$> goResponseContentType
+                                              , ("response-content-language",) <$> goResponseContentLanguage
+                                              , ("response-expires",) <$> goResponseExpires
+                                              , ("response-cache-control",) <$> goResponseCacheControl
+                                              , ("response-content-disposition",) <$> goResponseContentDisposition
+                                              , ("response-content-encoding",) <$> goResponseContentEncoding
+                                              ]
+                                 , s3QAmzHeaders = []
+                                 , s3QRequestBody = Nothing
+                                 }
 
 instance ResponseIteratee (GetObject a) (GetObjectResponse a) where
     type ResponseMetadata (GetObjectResponse a) = S3Metadata

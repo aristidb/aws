@@ -52,6 +52,8 @@ data BucketInfo
       }
     deriving (Show)
 
+type Object = T.Text
+
 data ObjectInfo
     = ObjectInfo {
         objectKey          :: T.Text
