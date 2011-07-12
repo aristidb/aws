@@ -21,25 +21,28 @@ import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Network.HTTP.Types         as HTTP
 
-data GetObject 
+data GetObject a
     = GetObject {
-        goObjectName :: T.Text
-      , goBucket :: Bucket
+        goBucket :: Bucket
+      , goObjectName :: T.Text
+      , goResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
       , goResponseContentType :: Maybe T.Text
       , goResponseContentLanguage :: Maybe T.Text
       , goResponseExpires :: Maybe T.Text
       , goResponseCacheControl :: Maybe T.Text
       , goResponseContentDisposition :: Maybe T.Text
       , goResponseContentEncoding :: Maybe T.Text
-      , goResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO ()
       }
 
-data GetObjectResponse
-    = GetObjectResponse
+getObject :: Bucket -> T.Text -> (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a) -> GetObject a
+getObject b o i = GetObject b o i Nothing Nothing Nothing Nothing Nothing Nothing
+
+data GetObjectResponse a
+    = GetObjectResponse a
     deriving (Show)
 
-instance SignQuery GetObject where
-    type Info GetObject = S3Info
+instance SignQuery (GetObject a) where
+    type Info (GetObject a) = S3Info
     signQuery GetObject {..} = s3SignQuery S3Query { 
                                  s3QMethod = Get
                                , s3QBucket = Just $ T.encodeUtf8 goBucket
@@ -56,9 +59,9 @@ instance SignQuery GetObject where
                                , s3QRequestBody = Nothing
                                }
 
-instance ResponseIteratee GetObject GetObjectResponse where
-    type ResponseMetadata GetObjectResponse = S3Metadata
+instance ResponseIteratee (GetObject a) (GetObjectResponse a) where
+    type ResponseMetadata (GetObjectResponse a) = S3Metadata
     responseIteratee GetObject{..} metadata status headers
-        = GetObjectResponse <$ s3BinaryResponseIteratee (goResponseIteratee) metadata status headers
+        = GetObjectResponse <$> s3BinaryResponseIteratee (goResponseIteratee) metadata status headers
 
-instance Transaction GetObject GetObjectResponse
+instance Transaction (GetObject a) (GetObjectResponse a)

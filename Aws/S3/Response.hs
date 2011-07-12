@@ -44,9 +44,9 @@ s3XmlResponseIteratee ::
 s3XmlResponseIteratee parse metadataRef = s3ResponseIteratee (xmlCursorIteratee parse metadataRef) metadataRef
 
 s3BinaryResponseIteratee ::
-  (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO ())
+  (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
   -> IORef S3Metadata
-  -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO ()
+  -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3BinaryResponseIteratee inner metadataRef = s3ResponseIteratee inner metadataRef 
 
 s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
