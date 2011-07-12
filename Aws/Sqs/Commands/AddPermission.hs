@@ -28,7 +28,7 @@ data AddPermissionResponse = AddPermissionResponse{
 formatPermissions :: [(T.Text,SqsPermission)] -> [HTTP.QueryItem]
 formatPermissions perms = 
   concat $ zipWith(\ x y -> [(B.pack $ "AwsAccountId." ++ show y, Just $ B.pack $ T.unpack $ fst x), 
-                             (B.pack $ "ActionName." ++ show y, Just $ B.pack $ printPermission $ snd x)]) perms [1..]
+                             (B.pack $ "ActionName." ++ show y, Just $ B.pack $ T.unpack $ printPermission $ snd x)]) perms [1 :: Integer ..]
 
 instance ResponseIteratee r AddPermissionResponse where
     type ResponseMetadata AddPermissionResponse = SqsMetadata

@@ -11,7 +11,6 @@ import           Aws.S3.Query
 import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
-import           Aws.Xml
 import           Control.Applicative
 import           Control.Arrow              (second)
 import           Data.ByteString.Char8      ({- IsString -})
@@ -20,25 +19,24 @@ import qualified Data.ByteString            as B
 import qualified Data.Enumerator            as En
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Data.Traversable
 import qualified Network.HTTP.Types         as HTTP
-import qualified Text.XML.Enumerator.Cursor as Cu
 
-data GetObject = GetObject {
-  goObjectName :: T.Text,
-  goBucket :: Bucket,
-  goResponseContentType :: Maybe T.Text,
-  goResponseContentLanguage :: Maybe T.Text,
-  goResponseExpires :: Maybe T.Text,
-  goResponseCacheControl :: Maybe T.Text,
-  goResponseContentDisposition :: Maybe T.Text,
-  goResponseContentEncoding :: Maybe T.Text,
-  goResponseIteratee ::  (forall b. HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO b)
-}
+data GetObject 
+    = GetObject {
+        goObjectName :: T.Text
+      , goBucket :: Bucket
+      , goResponseContentType :: Maybe T.Text
+      , goResponseContentLanguage :: Maybe T.Text
+      , goResponseExpires :: Maybe T.Text
+      , goResponseCacheControl :: Maybe T.Text
+      , goResponseContentDisposition :: Maybe T.Text
+      , goResponseContentEncoding :: Maybe T.Text
+      , goResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO ()
+      }
 
-data GetObjectResponse = GetObjectResponse{
-
-}
+data GetObjectResponse
+    = GetObjectResponse
+    deriving (Show)
 
 instance SignQuery GetObject where
     type Info GetObject = S3Info
@@ -60,7 +58,7 @@ instance SignQuery GetObject where
 
 instance ResponseIteratee GetObject GetObjectResponse where
     type ResponseMetadata GetObjectResponse = S3Metadata
-    responseIteratee request metadata status headers = case request of
-                                 GetObject {..} -> s3BinaryResponseIteratee (goResponseIteratee) metadata status headers
+    responseIteratee GetObject{..} metadata status headers
+        = GetObjectResponse <$ s3BinaryResponseIteratee (goResponseIteratee) metadata status headers
 
 instance Transaction GetObject GetObjectResponse
