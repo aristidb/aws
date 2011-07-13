@@ -2,7 +2,6 @@
 module Aws.Sqs.Model where
 
 import           Aws.Xml
-import           Debug.Trace
 import qualified Control.Failure as F
 import qualified Data.Text       as T
 
@@ -17,7 +16,6 @@ parseQueueUrl url = QueueName{qAccountNumber = urlParts !! 3, qName = urlParts !
   where
     urlParts = T.splitOn "/" url
  
-
 printQueueName :: QueueName -> T.Text
 printQueueName queue = T.concat ["/", (qAccountNumber queue), "/", (qName queue), "/"]
 

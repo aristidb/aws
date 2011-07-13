@@ -47,8 +47,7 @@ instance SignQuery DeleteObject where
 
 instance ResponseIteratee DeleteObject DeleteObjectResponse where
     type ResponseMetadata DeleteObjectResponse = S3Metadata
-    responseIteratee _ = s3XmlResponseIteratee parse
-        where parse _ = do return $ trace "GOT IT" ( DeleteObjectResponse {})
+    responseIteratee _ _ _ _ = return $ trace ("GOT IT") DeleteObjectResponse
                 
 
 instance Transaction DeleteObject DeleteObjectResponse

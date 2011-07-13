@@ -20,6 +20,8 @@ import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
 
+import Debug.Trace
+
 newtype XmlException = XmlException { xmlErrorMessage :: String }
     deriving (Show, Typeable)
 
@@ -55,7 +57,7 @@ xmlCursorIteratee ::
     -> HTTP.ResponseHeaders 
     -> En.Iteratee B.ByteString IO a
 xmlCursorIteratee parse metadataRef _status _headers
-    = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
+    = do doc <- trace "Processing XML Response" (XML.parseBytes XML.decodeEntities =$ XML.fromEvents)
          let cursor = Cu.fromDocument doc
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata
