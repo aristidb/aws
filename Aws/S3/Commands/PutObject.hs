@@ -70,7 +70,7 @@ instance SignQuery PutObject where
                                             --                                 Nothing -> Nothing
                                             ] -- ++ map( \x -> ( T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata 
                                , s3QRequestBody = Just poRequestBody
-                               , s3QPath = Just $ T.encodeUtf8 poObjectName
+                               , s3QObject = Just $ T.encodeUtf8 poObjectName
                                }
 
 instance ResponseIteratee PutObject PutObjectResponse where

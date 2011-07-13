@@ -42,7 +42,7 @@ instance SignQuery DeleteObject where
                                , s3QQuery = []
                                , s3QAmzHeaders = []
                                , s3QRequestBody = Nothing
-                               , s3QPath = Just $ T.encodeUtf8 doObjectName
+                               , s3QObject = Just $ T.encodeUtf8 doObjectName
                                }
 
 instance ResponseIteratee DeleteObject DeleteObjectResponse where

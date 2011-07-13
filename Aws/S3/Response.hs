@@ -9,11 +9,9 @@ import           Aws.Util
 import           Aws.Xml
 import           Control.Monad.IO.Class
 import           Data.Attempt                 (Attempt(..))
-import           Data.Char
 import           Data.Enumerator              ((=$))
 import           Data.IORef
 import           Data.Maybe
-import           Data.Word
 import           Text.XML.Enumerator.Cursor   (($/))
 import qualified Data.ByteString              as B
 import qualified Data.Enumerator              as En
@@ -46,7 +44,7 @@ s3XmlResponseIteratee ::
 s3XmlResponseIteratee parse metadataRef = s3ResponseIteratee (xmlCursorIteratee parse metadataRef) metadataRef
 
 s3BinaryResponseIteratee ::
-  ( forall a.  HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
+  (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
   -> IORef S3Metadata
   -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3BinaryResponseIteratee inner metadataRef = s3ResponseIteratee inner metadataRef 

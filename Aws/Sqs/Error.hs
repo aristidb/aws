@@ -2,7 +2,6 @@
 module Aws.Sqs.Error where
 
 import           Aws.Sqs.Metadata
-import           Aws.Xml
 import           Data.Typeable
 import qualified Control.Exception  as C
 import qualified Data.Text          as T

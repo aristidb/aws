@@ -1,9 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Aws.Sqs.Model where
 
-import Data.Maybe
-import qualified Data.Text as T
-import Debug.Trace
+import           Debug.Trace
+import qualified Data.Text   as T
 
 data QueueName = QueueName{
   qName :: T.Text,
@@ -20,35 +19,35 @@ parseQueueUrl url = QueueName{qAccountNumber = urlParts !! 3, qName = urlParts !
 printQueueName :: QueueName -> T.Text
 printQueueName queue = T.concat ["/", (qAccountNumber queue), "/", (qName queue), "/"]
 
-data QueueAttribute =
-  QueueAll
-  | ApproximateNumberOfMessages
-  | ApproximateNumberOfMessagesNotVisible
-  | VisibilityTimeout
-  | CreatedTimestamp
-  | LastModifiedTimestamp
-  | Policy
-  | MaximumMessageSize
-  | MessageRetentionPeriod
-  | QueueArn
-  deriving(Show, Enum, Eq)
+data QueueAttribute
+    = QueueAll
+    | ApproximateNumberOfMessages
+    | ApproximateNumberOfMessagesNotVisible
+    | VisibilityTimeout
+    | CreatedTimestamp
+    | LastModifiedTimestamp
+    | Policy
+    | MaximumMessageSize
+    | MessageRetentionPeriod
+    | QueueArn
+    deriving(Show, Enum, Eq)
 
-data MessageAttribute = 
-  MessageAll
-  | SenderId
-  | SentTimestamp
-  | ApproximateReceiveCount
-  | ApproximateFirstReceiveTimestamp
-  deriving(Show,Eq,Enum)
+data MessageAttribute
+    = MessageAll
+    | SenderId
+    | SentTimestamp
+    | ApproximateReceiveCount
+    | ApproximateFirstReceiveTimestamp
+    deriving(Show,Eq,Enum)
 
-data SqsPermission =
-  PermissionAll
-  | SendMessage
-  | RecieveMessage
-  | DeleteMessage
-  | ChangeMessageVisibility
-  | GetQueueAttributes
-  deriving (Show, Enum, Eq)
+data SqsPermission
+    = PermissionAll
+    | SendMessage
+    | ReceiveMessage
+    | DeleteMessage
+    | ChangeMessageVisibility
+    | GetQueueAttributes
+    deriving (Show, Enum, Eq)
 
 parseQueueAttribute :: T.Text -> QueueAttribute
 parseQueueAttribute "ApproximateNumberOfMessages" = ApproximateNumberOfMessages 
@@ -61,6 +60,7 @@ parseQueueAttribute "MaximumMessageSize" = MaximumMessageSize
 parseQueueAttribute "MessageRetentionPeriod" = MessageRetentionPeriod
 parseQueueAttribute "QueueArn" = QueueArn
 parseQueueAttribute x = trace(show x)(error $ T.unpack x) 
+-- ^ FIXME: real error handling!!!
 
 printQueueAttribute :: QueueAttribute -> T.Text
 printQueueAttribute QueueAll = "All"
@@ -79,17 +79,19 @@ parseMessageAttribute "SenderId" = SenderId
 parseMessageAttribute "SentTimestamp" = SentTimestamp
 parseMessageAttribute "ApproximateReceiveCount" = ApproximateReceiveCount
 parseMessageAttribute "ApproximateFirstReceiveTimestamp" = ApproximateFirstReceiveTimestamp
+-- ^ FIXME: real error handling!!!
 
 printMessageAttribute :: MessageAttribute -> T.Text
 printMessageAttribute MessageAll = "All"
 printMessageAttribute SenderId = "SenderId"
 printMessageAttribute SentTimestamp = "SentTimestamp"
 printMessageAttribute ApproximateReceiveCount = "ApproximateReceiveCount"
-printMessageAttribute ApproximateFirstReceiveTimestamp = "ApproximateFirstRecieveTimestamp"
+printMessageAttribute ApproximateFirstReceiveTimestamp = "ApproximateFirstReceiveTimestamp"
 
+printPermission :: SqsPermission -> T.Text
 printPermission PermissionAll = "*"
 printPermission SendMessage = "SendMessage"
-printPermission RecieveMessage = "ReceiveMessage"
+printPermission ReceiveMessage = "ReceiveMessage"
 printPermission DeleteMessage = "DeleteMessage"
 printPermission ChangeMessageVisibility = "ChangeMessageVisibility"
 printPermission GetQueueAttributes = "GetQueueAttributes"
@@ -97,4 +99,5 @@ printPermission GetQueueAttributes = "GetQueueAttributes"
 newtype ReceiptHandle = ReceiptHandle T.Text deriving(Show,Eq)
 newtype MessageId = MessageId T.Text deriving(Show,Eq)
 
+printReceiptHandle :: ReceiptHandle -> T.Text
 printReceiptHandle (ReceiptHandle handle) = handle 

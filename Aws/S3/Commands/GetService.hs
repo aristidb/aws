@@ -49,6 +49,7 @@ instance SignQuery GetService where
     signQuery GetService = s3SignQuery S3Query { 
                                 s3QMethod = Get
                               , s3QBucket = Nothing
+                              , s3QObject = Nothing
                               , s3QSubresources = []
                               , s3QQuery = []
                               , s3QAmzHeaders = [] 

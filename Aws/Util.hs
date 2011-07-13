@@ -52,9 +52,9 @@ readHex2 :: [Char] -> Maybe Word8
 readHex2 [c1,c2] = do n1 <- readHex1 c1
                       n2 <- readHex1 c2
                       return . fromIntegral $ n1 * 16 + n2
+    where 
+      readHex1 c | c >= '0' && c <= '9' = Just $ ord c - ord '0'
+                 | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
+                 | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
+      readHex1 _                        = Nothing
 readHex2 _ = Nothing
-      
-readHex1 c | c >= '0' && c <= '9' = Just $ ord c - ord '0'
-           | c >= 'A' && c <= 'F' = Just $ ord c - ord 'A' + 10
-           | c >= 'a' && c <= 'f' = Just $ ord c - ord 'a' + 10
-readHex1 _                        = Nothing

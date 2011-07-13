@@ -60,6 +60,7 @@ instance SignQuery GetBucket where
     signQuery GetBucket {..} = s3SignQuery S3Query { 
                                  s3QMethod = Get
                                , s3QBucket = Just $ T.encodeUtf8 gbBucket
+                               , s3QObject = Nothing
                                , s3QSubresources = []
                                , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
                                               ("delimiter",) <$> gbDelimiter
@@ -69,7 +70,6 @@ instance SignQuery GetBucket where
                                             ]
                                , s3QAmzHeaders = []
                                , s3QRequestBody = Nothing
-                               , s3QPath = Nothing
                                }
 
 instance ResponseIteratee r GetBucketResponse where
