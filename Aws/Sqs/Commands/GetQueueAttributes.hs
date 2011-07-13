@@ -29,7 +29,8 @@ parseAttributes :: Cu.Cursor -> [(M.QueueAttribute, T.Text)]
 parseAttributes el = do
   name <- force "Missing Name" $ el $/ Cu.laxElement "Name" &/ Cu.content
   value <- force "Missing Value" $ el $/ Cu.laxElement "Value" &/ Cu.content
-  return (M.parseQueueAttribute name, value)
+  parsedName <- M.parseQueueAttribute name
+  return (parsedName, value)
 
 instance ResponseIteratee r GetQueueAttributesResponse where
     type ResponseMetadata GetQueueAttributesResponse = SqsMetadata

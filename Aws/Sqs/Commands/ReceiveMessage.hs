@@ -49,7 +49,8 @@ readMessageAttribute :: F.Failure XmlException m => Cu.Cursor -> m (M.MessageAtt
 readMessageAttribute cursor = do
   name <- force "Missing Name" $ cursor $/ Cu.laxElement "Name" &/ Cu.content
   value <- force "Missing Value" $ cursor $/ Cu.laxElement "Value" &/ Cu.content
-  return (M.parseMessageAttribute name, value)
+  parsedName <- M.parseMessageAttribute name
+  return (parsedName, value)
 
 readMessage :: Cu.Cursor -> [Message]
 readMessage cursor = do

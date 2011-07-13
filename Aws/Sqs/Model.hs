@@ -1,8 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, FlexibleContexts #-}
 module Aws.Sqs.Model where
 
+import           Aws.Xml
 import           Debug.Trace
-import qualified Data.Text   as T
+import qualified Control.Failure as F
+import qualified Data.Text       as T
 
 data QueueName = QueueName{
   qName :: T.Text,
@@ -49,18 +51,17 @@ data SqsPermission
     | GetQueueAttributes
     deriving (Show, Enum, Eq)
 
-parseQueueAttribute :: T.Text -> QueueAttribute
-parseQueueAttribute "ApproximateNumberOfMessages" = ApproximateNumberOfMessages 
-parseQueueAttribute "ApproximateNumberOfMessagesNotVisible" = ApproximateNumberOfMessagesNotVisible
-parseQueueAttribute "VisibilityTimeout" = VisibilityTimeout
-parseQueueAttribute "CreatedTimestamp" = CreatedTimestamp
-parseQueueAttribute "LastModifiedTimestamp" = LastModifiedTimestamp
-parseQueueAttribute "Policy" = Policy
-parseQueueAttribute "MaximumMessageSize" = MaximumMessageSize
-parseQueueAttribute "MessageRetentionPeriod" = MessageRetentionPeriod
-parseQueueAttribute "QueueArn" = QueueArn
-parseQueueAttribute x = trace(show x)(error $ T.unpack x) 
--- ^ FIXME: real error handling!!!
+parseQueueAttribute :: F.Failure XmlException m  => T.Text -> m QueueAttribute
+parseQueueAttribute "ApproximateNumberOfMessages" = return ApproximateNumberOfMessages 
+parseQueueAttribute "ApproximateNumberOfMessagesNotVisible" = return ApproximateNumberOfMessagesNotVisible
+parseQueueAttribute "VisibilityTimeout" = return VisibilityTimeout
+parseQueueAttribute "CreatedTimestamp" = return CreatedTimestamp
+parseQueueAttribute "LastModifiedTimestamp" = return LastModifiedTimestamp
+parseQueueAttribute "Policy" = return Policy
+parseQueueAttribute "MaximumMessageSize" = return MaximumMessageSize
+parseQueueAttribute "MessageRetentionPeriod" = return MessageRetentionPeriod
+parseQueueAttribute "QueueArn" = return QueueArn
+parseQueueAttribute x = F.failure $ XmlException ( "Invalid Attribute Name. " ++ show x)
 
 printQueueAttribute :: QueueAttribute -> T.Text
 printQueueAttribute QueueAll = "All"
@@ -74,12 +75,12 @@ printQueueAttribute MaximumMessageSize = "MaximumMessageSize"
 printQueueAttribute MessageRetentionPeriod = "MessageRetentionPeriod"
 printQueueAttribute QueueArn = "QueueArn"
 
-parseMessageAttribute :: T.Text -> MessageAttribute
-parseMessageAttribute "SenderId" = SenderId
-parseMessageAttribute "SentTimestamp" = SentTimestamp
-parseMessageAttribute "ApproximateReceiveCount" = ApproximateReceiveCount
-parseMessageAttribute "ApproximateFirstReceiveTimestamp" = ApproximateFirstReceiveTimestamp
--- ^ FIXME: real error handling!!!
+parseMessageAttribute :: F.Failure XmlException m  =>  T.Text -> m MessageAttribute
+parseMessageAttribute "SenderId" = return SenderId
+parseMessageAttribute "SentTimestamp" = return SentTimestamp
+parseMessageAttribute "ApproximateReceiveCount" = return ApproximateReceiveCount
+parseMessageAttribute "ApproximateFirstReceiveTimestamp" = return ApproximateFirstReceiveTimestamp
+parseMessageAttribute x = F.failure $ XmlException ( "Invalid Attribute Name. " ++ show x)
 
 printMessageAttribute :: MessageAttribute -> T.Text
 printMessageAttribute MessageAll = "All"
