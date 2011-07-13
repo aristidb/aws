@@ -19,6 +19,7 @@ data Method
     | PostQuery
     | Post
     | Put
+    | Delete
     deriving (Show, Eq)
 
 httpMethod :: Method -> HTTP.Method
@@ -26,3 +27,4 @@ httpMethod Get       = "GET"
 httpMethod PostQuery = "POST"
 httpMethod Post      = "POST"
 httpMethod Put       = "PUT"
+httpMethod Delete    = "DELETE"

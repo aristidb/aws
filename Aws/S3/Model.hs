@@ -43,6 +43,14 @@ writeCannedAcl AclBucketOwnerRead        = "bucket-owner-read"
 writeCannedAcl AclBucketOwnerFullControl = "bucket-owner-full-control"
 writeCannedAcl AclLogDeliveryWrite       = "log-delivery-write"
 
+data StorageClass
+    = Standard
+    | ReducedRedundancy
+    deriving (Show)
+
+writeStorageClass Standard          = "STANDARD"
+writeStorageClass ReducedRedundancy = "REDUCED_REDUNDANCY"
+
 type Bucket = T.Text
 
 data BucketInfo
