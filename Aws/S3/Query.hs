@@ -22,8 +22,6 @@ import qualified Data.CaseInsensitive           as CI
 import qualified Network.HTTP.Enumerator        as HTTPE
 import qualified Network.HTTP.Types             as HTTP
 
-import Debug.Trace
-
 data S3Query
     = S3Query {
         s3QMethod :: Method
@@ -70,11 +68,6 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
                                                    else x1:x2:merge xs
                 merge xs = xs
       
-      maybeToByteString str =
-        case str of
-          Just x -> x
-          Nothing -> ""
-
       (host, path) = case s3RequestStyle of 
                        PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, s3QObject])
                        BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", s3QObject])

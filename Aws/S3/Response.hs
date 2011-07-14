@@ -21,15 +21,12 @@ import qualified Text.XML.Enumerator.Cursor   as Cu
 import qualified Text.XML.Enumerator.Parse    as XML
 import qualified Text.XML.Enumerator.Resolved as XML
 
-import Debug.Trace
-
-
 s3ResponseIteratee ::
     (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
     -> IORef S3Metadata
     -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
 s3ResponseIteratee inner metadata status headers = do
-      let headerString = trace "Processing S3 Response" (fmap T.decodeUtf8 . flip lookup headers)
+      let headerString = fmap T.decodeUtf8 . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
       

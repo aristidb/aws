@@ -8,23 +8,17 @@ import           Aws.S3.Info
 import           Aws.S3.Metadata
 import           Aws.S3.Model
 import           Aws.S3.Query
-import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
-import           Aws.Xml
-import           Blaze.ByteString.Builder
 import           Control.Applicative
 import           Control.Arrow              (second)
 import           Data.ByteString.Char8      ({- IsString -})
 import           Data.Maybe
-import qualified Data.ByteString            as B
 import qualified Data.CaseInsensitive       as CI
-import qualified Data.Enumerator            as En
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Data.Traversable
-import qualified Network.HTTP.Types         as HTTP
 import qualified Network.HTTP.Enumerator    as HTTP
+import qualified Network.HTTP.Types         as HTTP
 
 data PutObject = PutObject {
   poObjectName :: T.Text,
@@ -75,8 +69,7 @@ instance SignQuery PutObject where
 
 instance ResponseIteratee PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
-    responseIteratee request metadata status headers = do
-                                                          return $ PutObjectResponse Nothing
+    responseIteratee _ _ _ _ = do return $ PutObjectResponse Nothing
 
 instance Transaction PutObject PutObjectResponse
 
