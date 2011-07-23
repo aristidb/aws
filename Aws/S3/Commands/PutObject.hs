@@ -31,7 +31,7 @@ data PutObject = PutObject {
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
-  poRequestBody  :: (forall m. HTTP.RequestBody m),
+  poRequestBody  :: HTTP.RequestBody IO,
   poMetadata :: [(T.Text,T.Text)]
 }
 
