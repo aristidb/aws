@@ -10,12 +10,6 @@ data QueueName = QueueName{
   qAccountNumber :: T.Text
 } deriving(Show)
 
-
-parseQueueUrl :: T.Text -> QueueName
-parseQueueUrl url = QueueName{qAccountNumber = urlParts !! 3, qName = urlParts !! 4}
-  where
-    urlParts = T.splitOn "/" url
- 
 printQueueName :: QueueName -> T.Text
 printQueueName queue = T.concat ["/", (qAccountNumber queue), "/", (qName queue), "/"]
 
