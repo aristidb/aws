@@ -48,6 +48,11 @@ data StorageClass
     | ReducedRedundancy
     deriving (Show)
 
+parseStorageClass :: F.Failure XmlException m => T.Text -> m StorageClass
+parseStorageClass "STANDARD"           = return Standard
+parseStorageClass "REDUCED_REDUNDANCY" = return ReducedRedundancy
+parseStorageClass s = F.failure . XmlException $ "Invalid Storage Class: " ++ T.unpack s
+
 writeStorageClass :: StorageClass -> T.Text
 writeStorageClass Standard          = "STANDARD"
 writeStorageClass ReducedRedundancy = "REDUCED_REDUNDANCY"
@@ -69,7 +74,7 @@ data ObjectInfo
       , objectLastModified :: UTCTime
       , objectETag         :: T.Text
       , objectSize         :: Integer
-      , objectStorageClass :: T.Text
+      , objectStorageClass :: StorageClass
       , objectOwner        :: UserInfo
       }
     deriving (Show)
@@ -83,7 +88,7 @@ parseObjectInfo el
          lastModified <- forceM "Missing object LastModified" $ el $/ Cu.laxElement "LastModified" >=> Cu.content &| time
          eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
          size <- forceM "Missing object Size" $ el $/ elContent "Size" &| textReadInt
-         storageClass <- force "Missing object StorageClass" $ el $/ elContent "StorageClass"
+         storageClass <- forceM "Missing object StorageClass" $ el $/ elContent "StorageClass" &| parseStorageClass
          owner <- forceM "Missing object Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
          return ObjectInfo{
                       objectKey          = key
