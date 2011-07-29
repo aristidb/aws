@@ -48,6 +48,7 @@ data StorageClass
     | ReducedRedundancy
     deriving (Show)
 
+writeStorageClass :: StorageClass -> T.Text
 writeStorageClass Standard          = "STANDARD"
 writeStorageClass ReducedRedundancy = "REDUCED_REDUNDANCY"
 
