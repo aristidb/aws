@@ -59,10 +59,10 @@ instance SignQuery PutObject where
                                               (CI.mk $ T.encodeUtf8 "x-amz-acl",) <$> case poAcl of
                                                                                     Just x -> Just $ T.encodeUtf8 $ writeCannedAcl x
                                                                                     Nothing -> Nothing
-                                            --, ("x-amz-storage-class",) <$> case poStorageClass of
-                                            --                                 Just x -> Just $ writeStorageClass x
-                                            --                                 Nothing -> Nothing
-                                            ] -- ++ map( \x -> ( T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata 
+                                            , ("x-amz-storage-class",) <$> case poStorageClass of
+                                                                             Just x -> Just $ writeStorageClass x
+                                                                             Nothing -> Nothing
+                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], T.encodeUtf8 $ snd x)) poMetadata 
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
                                }
