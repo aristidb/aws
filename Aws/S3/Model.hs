@@ -85,7 +85,7 @@ parseObjectInfo el
          let time s = case parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s of
                         Nothing -> F.failure $ XmlException "Invalid time"
                         Just v -> return v
-         lastModified <- forceM "Missing object LastModified" $ el $/ Cu.laxElement "LastModified" >=> Cu.content &| time
+         lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time
          eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
          size <- forceM "Missing object Size" $ el $/ elContent "Size" &| textReadInt
          storageClass <- forceM "Missing object StorageClass" $ el $/ elContent "StorageClass" &| parseStorageClass
