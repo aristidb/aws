@@ -57,6 +57,7 @@ queryToHttpRequest SignedQuery{..}
                                             Just x  -> x
       , HTTP.proxy = Nothing
       , HTTP.rawBody = False
+      , HTTP.decompress = HTTP.alwaysDecompress
       }
     where contentType = case sqMethod of
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
