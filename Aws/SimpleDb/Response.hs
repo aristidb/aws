@@ -8,21 +8,19 @@ import           Aws.SimpleDb.Metadata
 import           Aws.Xml
 import           Data.IORef
 import           Data.Maybe
-import           Text.XML.Enumerator.Cursor (($|), ($/), ($//), (&|))
+import           Text.XML.Cursor            (($|), ($/), ($//), (&|))
 import qualified Control.Failure            as F
-import qualified Data.ByteString            as B
 import qualified Data.ByteString.Base64     as Base64
-import qualified Data.Enumerator            as En
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Network.HTTP.Types         as HTTP
-import qualified Text.XML.Enumerator.Cursor as Cu
+import qualified Network.HTTP.Conduit       as HTTP
+import qualified Text.XML.Cursor            as Cu
 
-sdbResponseIteratee :: 
-    (Cu.Cursor -> Response SdbMetadata a) 
-    -> IORef SdbMetadata
-    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-sdbResponseIteratee inner metadataRef status headers = xmlCursorIteratee parse metadataRef status headers
+sdbResponseConsumer :: (Cu.Cursor -> Response SdbMetadata a)
+                    -> IORef SdbMetadata
+                    -> HTTP.ResponseConsumer IO a
+sdbResponseConsumer inner metadataRef status headers source
+    = xmlCursorConsumer parse metadataRef status headers source
     where parse cursor
               = do let requestId' = listToMaybe $ cursor $// elContent "RequestID"
                    let boxUsage' = listToMaybe $ cursor $// elContent "BoxUsage"

@@ -11,9 +11,9 @@ import           Aws.Sqs.Response
 import           Aws.Signature
 import           Aws.Transaction
 import           Aws.Xml
-import           Text.XML.Enumerator.Cursor   (($/), ($//), (&/), (&|))
+import           Text.XML.Cursor              (($/), ($//), (&/), (&|))
 import qualified Data.Text                    as T
-import qualified Text.XML.Enumerator.Cursor   as Cu
+import qualified Text.XML.Cursor              as Cu
 import qualified Data.ByteString.Char8 as B
 
 data GetQueueAttributes = GetQueueAttributes {
@@ -32,25 +32,25 @@ parseAttributes el = do
   parsedName <- M.parseQueueAttribute name
   return (parsedName, value)
 
-instance ResponseIteratee r GetQueueAttributesResponse where
+instance ResponseConsumer r GetQueueAttributesResponse where
     type ResponseMetadata GetQueueAttributesResponse = SqsMetadata
-    responseIteratee _ = sqsXmlResponseIteratee parse
+    responseConsumer _ = sqsXmlResponseConsumer parse
       where
         parse el = do
-          let attributes = concat $ el $// Cu.laxElement "Attribute" &| parseAttributes  
+          let attributes = concat $ el $// Cu.laxElement "Attribute" &| parseAttributes
           return GetQueueAttributesResponse{ gqarAttributes = attributes }
-               
+
 formatAttributes :: [M.QueueAttribute] -> [(B.ByteString, Maybe B.ByteString)]
 formatAttributes attrs =
   case length attrs of
     0 -> undefined
     1 -> [("AttributeName", Just $ B.pack $ T.unpack $ M.printQueueAttribute $ attrs !! 0)]
     _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ B.pack $ T.unpack $ M.printQueueAttribute x) ) attrs [1 :: Integer ..]
-          
-instance SignQuery GetQueueAttributes where 
+
+instance SignQuery GetQueueAttributes where
     type Info GetQueueAttributes = SqsInfo
-    signQuery GetQueueAttributes{..} = sqsSignQuery SqsQuery { 
-                                              sqsQueueName = Just gqaQueueName, 
+    signQuery GetQueueAttributes{..} = sqsSignQuery SqsQuery {
+                                              sqsQueueName = Just gqaQueueName,
                                               sqsQuery = [("Action", Just "GetQueueAttributes")] ++ (formatAttributes gqaAttributes)}
 
 instance Transaction GetQueueAttributes GetQueueAttributesResponse

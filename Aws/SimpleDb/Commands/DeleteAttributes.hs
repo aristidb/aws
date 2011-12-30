@@ -43,8 +43,8 @@ instance SignQuery DeleteAttributes where
             queryList (attributeQuery deleteAttributeQuery) "Attribute" daAttributes ++
             queryList (attributeQuery expectedAttributeQuery) "Expected" daExpected
 
-instance ResponseIteratee r DeleteAttributesResponse where
+instance ResponseConsumer r DeleteAttributesResponse where
     type ResponseMetadata DeleteAttributesResponse = SdbMetadata
-    responseIteratee _ = sdbResponseIteratee $ sdbCheckResponseType DeleteAttributesResponse "DeleteAttributesResponse"
+    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType DeleteAttributesResponse "DeleteAttributesResponse"
 
 instance Transaction DeleteAttributes DeleteAttributesResponse

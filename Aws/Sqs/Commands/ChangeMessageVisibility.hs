@@ -22,9 +22,9 @@ data ChangeMessageVisibility = ChangeMessageVisibility {
 data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse{
 } deriving (Show)
 
-instance ResponseIteratee r ChangeMessageVisibilityResponse where
+instance ResponseConsumer r ChangeMessageVisibilityResponse where
     type ResponseMetadata ChangeMessageVisibilityResponse = SqsMetadata
-    responseIteratee _ = sqsXmlResponseIteratee parse
+    responseConsumer _ = sqsXmlResponseConsumer parse
       where 
         parse _ = do return ChangeMessageVisibilityResponse{}
     

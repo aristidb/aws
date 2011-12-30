@@ -19,7 +19,7 @@ import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.CaseInsensitive           as CI
-import qualified Network.HTTP.Enumerator        as HTTPE
+import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
 
 data S3Query
@@ -30,16 +30,16 @@ data S3Query
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QAmzHeaders :: HTTP.RequestHeaders
-      , s3QRequestBody :: Maybe (HTTPE.RequestBody IO)
+      , s3QRequestBody :: Maybe (HTTP.RequestBody IO)
       }
 
 instance Show S3Query where
     show S3Query{..} = "S3Query [" ++
                        " method: " ++ show s3QMethod ++
-                       " ; bucket: " ++ show s3QBucket ++ 
-                       " ; subresources: " ++ show s3QSubresources ++ 
+                       " ; bucket: " ++ show s3QBucket ++
+                       " ; subresources: " ++ show s3QSubresources ++
                        " ; query: " ++ show s3QQuery ++
-                       " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++ 
+                       " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++
                        "]"
 
 s3SignQuery :: S3Query -> S3Info -> SignatureData -> SignedQuery
@@ -67,8 +67,8 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
                                                    then (k1, B8.intercalate "," [v1, v2]):merge xs
                                                    else x1:x2:merge xs
                 merge xs = xs
-      
-      (host, path) = case s3RequestStyle of 
+
+      (host, path) = case s3RequestStyle of
                        PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, s3QObject])
                        BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", s3QObject])
                        VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/", s3QObject])

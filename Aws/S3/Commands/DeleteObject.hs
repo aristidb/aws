@@ -24,7 +24,7 @@ data DeleteObjectResponse = DeleteObjectResponse{
 
 instance SignQuery DeleteObject where
     type Info DeleteObject = S3Info
-    signQuery DeleteObject {..} = s3SignQuery S3Query { 
+    signQuery DeleteObject {..} = s3SignQuery S3Query {
                                  s3QMethod = Delete
                                , s3QBucket = Just $ T.encodeUtf8 doBucket
                                , s3QSubresources = []
@@ -34,10 +34,10 @@ instance SignQuery DeleteObject where
                                , s3QObject = Just $ T.encodeUtf8 doObjectName
                                }
 
-instance ResponseIteratee DeleteObject DeleteObjectResponse where
+instance ResponseConsumer DeleteObject DeleteObjectResponse where
     type ResponseMetadata DeleteObjectResponse = S3Metadata
-    responseIteratee _ _ _ _ = return DeleteObjectResponse
-                
+    responseConsumer _ _ _ _ _ = return DeleteObjectResponse
+
 
 instance Transaction DeleteObject DeleteObjectResponse
 

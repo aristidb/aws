@@ -11,11 +11,11 @@ import qualified Blaze.ByteString.Builder as Blaze
 import qualified Data.ByteString          as B
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
-import qualified Network.HTTP.Enumerator  as HTTP
+import qualified Network.HTTP.Conduit     as HTTP
 import qualified Network.HTTP.Types       as HTTP
 import qualified Network.TLS              as TLS
 
-data SignedQuery 
+data SignedQuery
     = SignedQuery {
         sqMethod :: Method
       , sqProtocol :: Protocol
@@ -35,16 +35,16 @@ data SignedQuery
 
 queryToHttpRequest :: SignedQuery -> HTTP.Request IO
 queryToHttpRequest SignedQuery{..}
-    = HTTP.Request {
+    = HTTP.def {
         HTTP.method = httpMethod sqMethod
       , HTTP.secure = case sqProtocol of
                         HTTP -> False
                         HTTPS -> True
-      , HTTP.checkCerts = const (return TLS.CertificateUsageAccept) -- FIXME: actually check certificates
+      , HTTP.checkCerts = \_ _ -> return TLS.CertificateUsageAccept -- FIXME: actually check certificates
       , HTTP.host = sqHost
       , HTTP.port = sqPort
       , HTTP.path = sqPath
-      , HTTP.queryString = sqQuery
+      , HTTP.queryString = HTTP.renderQuery False sqQuery
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
                                         , fmap (\md5 -> ("Content-MD5", md5)) sqContentMd5
@@ -55,8 +55,6 @@ queryToHttpRequest SignedQuery{..}
                              _         -> case sqBody of
                                             Nothing -> HTTP.RequestBodyBuilder 0 mempty
                                             Just x  -> x
-      , HTTP.proxy = Nothing
-      , HTTP.rawBody = False
       , HTTP.decompress = HTTP.alwaysDecompress
       }
     where contentType = case sqMethod of
@@ -64,7 +62,7 @@ queryToHttpRequest SignedQuery{..}
                            _ -> sqContentType
 
 queryToUri :: SignedQuery -> B.ByteString
-queryToUri SignedQuery{..} 
+queryToUri SignedQuery{..}
     = B.concat [
        case sqProtocol of
          HTTP -> "http://"

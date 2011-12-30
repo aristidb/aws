@@ -14,10 +14,10 @@ import           Aws.Util
 import           Control.Applicative
 import           Control.Monad
 import           Data.Maybe
-import           Text.XML.Enumerator.Cursor (($//), (&|))
+import           Text.XML.Cursor            (($//), (&|))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Text.XML.Enumerator.Cursor as Cu
+import qualified Text.XML.Cursor            as Cu
 
 data GetAttributes
     = GetAttributes {
@@ -33,7 +33,7 @@ data GetAttributesResponse
         garAttributes :: [Attribute T.Text]
       }
     deriving (Show)
-             
+
 getAttributes :: T.Text -> T.Text -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
 
@@ -45,9 +45,9 @@ instance SignQuery GetAttributes where
             maybeToList (("AttributeName",) <$> T.encodeUtf8 <$> gaAttributeName) ++
             (guard gaConsistentRead >> [("ConsistentRead", awsTrue)])
 
-instance ResponseIteratee r GetAttributesResponse where
+instance ResponseConsumer r GetAttributesResponse where
     type ResponseMetadata GetAttributesResponse = SdbMetadata
-    responseIteratee _ = sdbResponseIteratee parse
+    responseConsumer _ = sdbResponseConsumer parse
         where parse cursor = do
                 sdbCheckResponseType () "GetAttributesResponse" cursor
                 attributes <- sequence $ cursor $// Cu.laxElement "Attribute" &| readAttribute
