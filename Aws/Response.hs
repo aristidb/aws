@@ -2,17 +2,14 @@
 
 module Aws.Response
 where
-  
+
 import           Data.IORef
 import           Data.Monoid
 import           Data.Attempt            (Attempt(..))
 import qualified Control.Exception       as E
 import qualified Control.Failure         as F
-import qualified Data.ByteString         as B
-import qualified Data.Enumerator         as En
-import qualified Network.HTTP.Enumerator as HTTP
-import qualified Network.HTTP.Types      as HTTP
-  
+import qualified Network.HTTP.Conduit    as HTTP
+
 data Response m a = Response m (Attempt a)
     deriving (Show, Functor)
 
@@ -31,10 +28,10 @@ instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
 tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
 tellMetadataRef r m = modifyIORef r (`mappend` m)
 
-class ResponseIteratee r a where
+class ResponseConsumer r a where
     type ResponseMetadata a
-    responseIteratee :: r -> IORef (ResponseMetadata a) -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-    
-instance ResponseIteratee r HTTP.Response where
+    responseConsumer :: r -> IORef (ResponseMetadata a) -> HTTP.ResponseConsumer IO a
+
+instance ResponseConsumer r HTTP.Response where
     type ResponseMetadata HTTP.Response = ()
-    responseIteratee _ _ = HTTP.lbsIter
+    responseConsumer _ _ = HTTP.lbsConsumer

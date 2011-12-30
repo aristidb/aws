@@ -18,8 +18,7 @@ import           Data.IORef
 import           Data.Monoid
 import qualified Control.Exception       as E
 import qualified Data.ByteString         as B
-import qualified Data.Enumerator         as En
-import qualified Network.HTTP.Enumerator as HTTP
+import qualified Network.HTTP.Conduit    as HTTP
 
 data Configuration
     = Configuration {
@@ -69,17 +68,17 @@ baseConfiguration = do
 -- TODO: better error handling when credentials cannot be loaded
 
 debugConfiguration :: IO Configuration
-debugConfiguration = do 
+debugConfiguration = do
   c <- baseConfiguration
   return c { sdbInfo = sdbHttpPost sdbUsEast, sdbInfoUri = sdbHttpGet sdbUsEast  }
 
 aws :: (Transaction r a
-       , ConfigurationFetch (Info r)) 
+       , ConfigurationFetch (Info r))
       => Configuration -> r -> IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
 unsafeAws
-  :: (ResponseIteratee r a,
+  :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
       SignQuery r,
       ConfigurationFetch (Info r)) =>
@@ -92,7 +91,7 @@ unsafeAws cfg request = do
   let httpRequest = queryToHttpRequest q
   metadataRef <- newIORef mempty
   resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
-          HTTP.withManager $ En.run_ . HTTP.httpRedirect httpRequest (responseIteratee request metadataRef)
+          HTTP.withManager $ HTTP.httpRedirect httpRequest (responseConsumer request metadataRef)
   metadata <- readIORef metadataRef
   return $ Response metadata resp
 

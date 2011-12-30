@@ -5,10 +5,10 @@ where
 import           Aws.Xml
 import           Data.Time
 import           System.Locale
-import           Text.XML.Enumerator.Cursor (($/), (&|), (>=>))
-import qualified Control.Failure            as F
-import qualified Text.XML.Enumerator.Cursor as Cu
-import qualified Data.Text                  as T
+import           Text.XML.Cursor (($/), (&|))
+import qualified Control.Failure as F
+import qualified Text.XML.Cursor as Cu
+import qualified Data.Text       as T
 
 type CanonicalUserId = T.Text
 
@@ -25,11 +25,11 @@ parseUserInfo el = do id_ <- force "Missing user ID" $ el $/ elContent "ID"
                       return UserInfo { userId = id_, userDisplayName = displayName }
 
 data CannedAcl
-    = AclPrivate 
-    | AclPublicRead 
-    | AclPublicReadWrite 
-    | AclAuthenticatedRead 
-    | AclBucketOwnerRead 
+    = AclPrivate
+    | AclPublicRead
+    | AclPublicReadWrite
+    | AclAuthenticatedRead
+    | AclBucketOwnerRead
     | AclBucketOwnerFullControl
     | AclLogDeliveryWrite
     deriving (Show)
@@ -80,7 +80,7 @@ data ObjectInfo
     deriving (Show)
 
 parseObjectInfo :: F.Failure XmlException m => Cu.Cursor -> m ObjectInfo
-parseObjectInfo el 
+parseObjectInfo el
     = do key <- force "Missing object Key" $ el $/ elContent "Key"
          let time s = case parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s of
                         Nothing -> F.failure $ XmlException "Invalid time"

@@ -16,12 +16,12 @@ import           Control.Applicative
 import           Control.Arrow              (second)
 import           Data.ByteString.Char8      ({- IsString -})
 import           Data.Maybe
-import           Text.XML.Enumerator.Cursor (($/), (&|), (&//))
+import           Text.XML.Cursor            (($/), (&|), (&//))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Data.Traversable
 import qualified Network.HTTP.Types         as HTTP
-import qualified Text.XML.Enumerator.Cursor as Cu
+import qualified Text.XML.Cursor            as Cu
 
 data GetBucket
     = GetBucket {
@@ -34,8 +34,8 @@ data GetBucket
     deriving (Show)
 
 getBucket :: Bucket -> GetBucket
-getBucket bucket 
-    = GetBucket { 
+getBucket bucket
+    = GetBucket {
         gbBucket    = bucket
       , gbDelimiter = Nothing
       , gbMarker    = Nothing
@@ -57,7 +57,7 @@ data GetBucketResponse
 
 instance SignQuery GetBucket where
     type Info GetBucket = S3Info
-    signQuery GetBucket {..} = s3SignQuery S3Query { 
+    signQuery GetBucket {..} = s3SignQuery S3Query {
                                  s3QMethod = Get
                                , s3QBucket = Just $ T.encodeUtf8 gbBucket
                                , s3QObject = Nothing
@@ -72,10 +72,10 @@ instance SignQuery GetBucket where
                                , s3QRequestBody = Nothing
                                }
 
-instance ResponseIteratee r GetBucketResponse where
+instance ResponseConsumer r GetBucketResponse where
     type ResponseMetadata GetBucketResponse = S3Metadata
 
-    responseIteratee _ = s3XmlResponseIteratee parse
+    responseConsumer _ = s3XmlResponseConsumer parse
         where parse cursor
                   = do name <- force "Missing Name" $ cursor $/ elContent "Name"
                        let delimiter = listToMaybe $ cursor $/ elContent "Delimiter"

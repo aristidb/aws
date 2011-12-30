@@ -12,7 +12,7 @@ import           Aws.Transaction
 import           Aws.Xml
 import           Control.Applicative
 import           Data.Maybe
-import           Text.XML.Enumerator.Cursor (($//))
+import           Text.XML.Cursor            (($//))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 
@@ -23,7 +23,7 @@ data ListDomains
       }
     deriving (Show)
 
-data ListDomainsResponse 
+data ListDomainsResponse
     = ListDomainsResponse {
         ldrDomainNames :: [T.Text]
       , ldrNextToken :: Maybe T.Text
@@ -32,7 +32,7 @@ data ListDomainsResponse
 
 listDomains :: ListDomains
 listDomains = ListDomains { ldMaxNumberOfDomains = Nothing, ldNextToken = Nothing }
-             
+
 instance SignQuery ListDomains where
     type Info ListDomains = SdbInfo
     signQuery ListDomains{..} = sdbSignQuery $ catMaybes [
@@ -41,9 +41,9 @@ instance SignQuery ListDomains where
                                 , ("NextToken",) . T.encodeUtf8 <$> ldNextToken
                                 ]
 
-instance ResponseIteratee r ListDomainsResponse where
+instance ResponseConsumer r ListDomainsResponse where
     type ResponseMetadata ListDomainsResponse = SdbMetadata
-    responseIteratee _ = sdbResponseIteratee parse 
+    responseConsumer _ = sdbResponseConsumer parse
         where parse cursor = do
                 sdbCheckResponseType () "ListDomainsResponse" cursor
                 let names = cursor $// elContent "DomainName"

@@ -9,53 +9,51 @@ import           Aws.Util
 import           Aws.Xml
 import           Control.Monad.IO.Class
 import           Data.Attempt                 (Attempt(..))
-import           Data.Enumerator              ((=$))
+import           Data.Conduit                 (($$))
 import           Data.IORef
 import           Data.Maybe
-import           Text.XML.Enumerator.Cursor   (($/))
+import           Text.XML.Cursor              (($/))
 import qualified Data.ByteString              as B
-import qualified Data.Enumerator              as En
+import qualified Data.Conduit                 as C
 import qualified Data.Text.Encoding           as T
+import qualified Network.HTTP.Conduit         as HTTP
 import qualified Network.HTTP.Types           as HTTP
-import qualified Text.XML.Enumerator.Cursor   as Cu
-import qualified Text.XML.Enumerator.Parse    as XML
-import qualified Text.XML.Enumerator.Resolved as XML
+import qualified Text.XML.Cursor              as Cu
+import qualified Text.XML                     as XML
 
-s3ResponseIteratee ::
-    (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
-    -> IORef S3Metadata
-    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-s3ResponseIteratee inner metadata status headers = do
+s3ResponseConsumer :: HTTP.ResponseConsumer IO a
+                   -> IORef S3Metadata
+                   -> HTTP.ResponseConsumer IO a
+s3ResponseConsumer inner metadata status headers source = do
       let headerString = fmap T.decodeUtf8 . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
-      
+
       let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
       liftIO $ tellMetadataRef metadata m
-      
+
       if status >= HTTP.status400
-        then s3ErrorResponseIteratee status headers
-        else inner status headers
+        then s3ErrorResponseConsumer status headers source
+        else inner status headers source
 
-s3XmlResponseIteratee :: 
-    (Cu.Cursor -> Response S3Metadata a)
-    -> IORef S3Metadata
-    -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-s3XmlResponseIteratee parse metadataRef = s3ResponseIteratee (xmlCursorIteratee parse metadataRef) metadataRef
+s3XmlResponseConsumer :: (Cu.Cursor -> Response S3Metadata a)
+                      -> IORef S3Metadata
+                      -> HTTP.ResponseConsumer IO a
+s3XmlResponseConsumer parse metadataRef =
+    s3ResponseConsumer (xmlCursorConsumer parse metadataRef) metadataRef
 
-s3BinaryResponseIteratee ::
-  (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a)
-  -> IORef S3Metadata
-  -> HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-s3BinaryResponseIteratee inner metadataRef = s3ResponseIteratee inner metadataRef 
+s3BinaryResponseConsumer :: HTTP.ResponseConsumer IO a
+                         -> IORef S3Metadata
+                         -> HTTP.ResponseConsumer IO a
+s3BinaryResponseConsumer inner metadataRef = s3ResponseConsumer inner metadataRef
 
-s3ErrorResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
-s3ErrorResponseIteratee status _headers 
-    = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
+s3ErrorResponseConsumer :: HTTP.ResponseConsumer IO a
+s3ErrorResponseConsumer status _headers source
+    = do doc <- source $$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
-         case parseError cursor of
-           Success err -> En.throwError err
-           Failure otherErr -> En.throwError otherErr
+         liftIO $ case parseError cursor of
+           Success err      -> C.resourceThrow err
+           Failure otherErr -> C.resourceThrow otherErr
     where
       parseError :: Cu.Cursor -> Attempt S3Error
       parseError root = do code <- force "Missing error Code" $ root $/ elContent "Code"

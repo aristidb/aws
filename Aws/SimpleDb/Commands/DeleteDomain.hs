@@ -29,8 +29,8 @@ instance SignQuery DeleteDomain where
     type Info DeleteDomain = SdbInfo
     signQuery DeleteDomain{..} = sdbSignQuery [("Action", "DeleteDomain"), ("DomainName", T.encodeUtf8 ddDomainName)]
 
-instance ResponseIteratee r DeleteDomainResponse where
+instance ResponseConsumer r DeleteDomainResponse where
     type ResponseMetadata DeleteDomainResponse = SdbMetadata
-    responseIteratee _ = sdbResponseIteratee $ sdbCheckResponseType DeleteDomainResponse "DeleteDomainResponse"
+    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType DeleteDomainResponse "DeleteDomainResponse"
 
 instance Transaction DeleteDomain DeleteDomainResponse

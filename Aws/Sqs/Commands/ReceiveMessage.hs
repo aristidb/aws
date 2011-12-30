@@ -12,15 +12,15 @@ import           Aws.Transaction
 import           Aws.Xml
 import           Control.Applicative
 import           Data.Maybe
-import           Text.XML.Enumerator.Cursor (($/), ($//), (&/), (&|))
+import           Text.XML.Cursor            (($/), ($//), (&/), (&|))
 import qualified Aws.Sqs.Model              as M
 import qualified Control.Failure            as F
 import qualified Data.ByteString.Char8      as B
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
-import qualified Text.XML.Enumerator.Cursor as Cu
+import qualified Text.XML.Cursor            as Cu
 
-data ReceiveMessage 
+data ReceiveMessage
     = ReceiveMessage {
         rmVisibilityTimeout :: Maybe Int
       , rmAttributes :: [M.MessageAttribute]
@@ -59,7 +59,7 @@ readMessage cursor = do
   md5 <- force "Missing MD5 Signature" $ cursor $// Cu.laxElement "MD5OfBody" &/ Cu.content
   body <- force "Missing Body" $ cursor $// Cu.laxElement "Body" &/ Cu.content
   let attributes :: [(M.MessageAttribute, T.Text)] = concat $ cursor $// Cu.laxElement "Attribute" &| readMessageAttribute
-  
+
   return Message{ mMessageId = mid, mReceiptHandle = M.ReceiptHandle rh, mMD5OfBody = md5, mBody = body, mAttributes = attributes}
 
 formatMAttributes :: [M.MessageAttribute] -> [(B.ByteString, Maybe B.ByteString)]
@@ -69,19 +69,19 @@ formatMAttributes attrs =
     1 -> [("AttributeName", Just $ B.pack $ show $ attrs !! 0)]
     _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ TE.encodeUtf8 $ M.printMessageAttribute x) ) attrs [1 :: Integer ..]
 
-instance ResponseIteratee r ReceiveMessageResponse where
+instance ResponseConsumer r ReceiveMessageResponse where
     type ResponseMetadata ReceiveMessageResponse = SqsMetadata
-    responseIteratee _ = sqsXmlResponseIteratee parse
-      where 
+    responseConsumer _ = sqsXmlResponseConsumer parse
+      where
         parse el = do
           let messages = concat $ el $// Cu.laxElement "Message" &| readMessage
           return ReceiveMessageResponse{ rmrMessages = messages }
-          
-instance SignQuery ReceiveMessage  where 
+
+instance SignQuery ReceiveMessage  where
     type Info ReceiveMessage  = SqsInfo
     signQuery ReceiveMessage {..} = sqsSignQuery SqsQuery {
-                                             sqsQueueName = Just rmQueueName, 
-                                             sqsQuery = [("Action", Just "ReceiveMessage")] ++ 
+                                             sqsQueueName = Just rmQueueName,
+                                             sqsQuery = [("Action", Just "ReceiveMessage")] ++
                                                          catMaybes[("VisibilityTimeout",) <$> case rmVisibilityTimeout of
                                                                                                 Just x -> Just $ Just $ B.pack $ show x
                                                                                                 Nothing -> Nothing,

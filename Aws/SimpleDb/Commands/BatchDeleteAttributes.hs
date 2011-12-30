@@ -36,8 +36,8 @@ instance SignQuery BatchDeleteAttributes where
             , ("DomainName", T.encodeUtf8 bdaDomainName)] ++
             queryList (itemQuery $ queryList (attributeQuery deleteAttributeQuery) "Attribute") "Item" bdaItems
 
-instance ResponseIteratee r BatchDeleteAttributesResponse where
+instance ResponseConsumer r BatchDeleteAttributesResponse where
     type ResponseMetadata BatchDeleteAttributesResponse = SdbMetadata
-    responseIteratee _ = sdbResponseIteratee $ sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
+    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
 
 instance Transaction BatchDeleteAttributes BatchDeleteAttributesResponse
