@@ -45,7 +45,8 @@ instance SignQuery PutObject where
                                  s3QMethod = Put
                                , s3QBucket = Just $ T.encodeUtf8 poBucket
                                , s3QSubresources = []
-                               , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
+                               , s3QQuery = []
+                               , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Content-Type",) <$> poContentType
                                             , ("Expires",) <$> case poExpires of
                                                                  Just x -> Just $ T.pack $ show x
@@ -54,15 +55,9 @@ instance SignQuery PutObject where
                                             , ("Content-Disposition",) <$> poContentDisposition
                                             , ("Content-Encoding",) <$> poContentEncoding
                                             , ("Content-MD5",) <$> poContentMD5
-                                            ]
-                               , s3QAmzHeaders = catMaybes [
-                                              (CI.mk $ T.encodeUtf8 "x-amz-acl",) <$> case poAcl of
-                                                                                    Just x -> Just $ T.encodeUtf8 $ writeCannedAcl x
-                                                                                    Nothing -> Nothing
-                                            , ("x-amz-storage-class",) <$> case poStorageClass of
-                                                                             Just x -> Just $ T.encodeUtf8 $ writeStorageClass x
-                                                                             Nothing -> Nothing
-                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], T.encodeUtf8 $ snd x)) poMetadata
+                                            , ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
+                                            , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
+                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
                                }
