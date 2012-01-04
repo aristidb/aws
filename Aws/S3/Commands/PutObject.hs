@@ -17,7 +17,7 @@ import           Data.Maybe
 import qualified Data.CaseInsensitive       as CI
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Network.HTTP.Enumerator    as HTTP
+import qualified Network.HTTP.Conduit       as HTTP
 import qualified Network.HTTP.Types         as HTTP
 
 data PutObject = PutObject {
@@ -41,7 +41,7 @@ data PutObjectResponse = PutObjectResponse{
 
 instance SignQuery PutObject where
     type Info PutObject = S3Info
-    signQuery PutObject {..} = s3SignQuery S3Query { 
+    signQuery PutObject {..} = s3SignQuery S3Query {
                                  s3QMethod = Put
                                , s3QBucket = Just $ T.encodeUtf8 poBucket
                                , s3QSubresources = []
@@ -62,14 +62,14 @@ instance SignQuery PutObject where
                                             , ("x-amz-storage-class",) <$> case poStorageClass of
                                                                              Just x -> Just $ T.encodeUtf8 $ writeStorageClass x
                                                                              Nothing -> Nothing
-                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], T.encodeUtf8 $ snd x)) poMetadata 
+                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], T.encodeUtf8 $ snd x)) poMetadata
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
                                }
 
-instance ResponseIteratee PutObject PutObjectResponse where
+instance ResponseConsumer PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
-    responseIteratee _ _ _ _ = do return $ PutObjectResponse Nothing
+    responseConsumer _ _ _ _ _ = do return $ PutObjectResponse Nothing
 
 instance Transaction PutObject PutObjectResponse
 

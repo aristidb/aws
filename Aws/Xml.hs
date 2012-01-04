@@ -1,29 +1,27 @@
 {-# LANGUAGE FlexibleContexts, DeriveDataTypeable #-}
 module Aws.Xml
 where
-  
+
 import           Aws.Response
 import           Control.Monad.IO.Class
 import           Data.Attempt                 (Attempt(..))
-import           Data.Enumerator              ((=$))
+import           Data.Conduit                 (($$))
 import           Data.IORef
 import           Data.Monoid
 import           Data.Typeable
-import           Text.XML.Enumerator.Cursor
-import qualified Control.Exception            as C
+import           Text.XML.Cursor
+import qualified Control.Exception            as E
 import qualified Control.Failure              as F
-import qualified Data.ByteString              as B
-import qualified Data.Enumerator              as En
+import qualified Data.Conduit                 as C
 import qualified Data.Text                    as T
-import qualified Network.HTTP.Types           as HTTP
-import qualified Text.XML.Enumerator.Cursor   as Cu
-import qualified Text.XML.Enumerator.Parse    as XML
-import qualified Text.XML.Enumerator.Resolved as XML
+import qualified Network.HTTP.Conduit         as HTTP
+import qualified Text.XML.Cursor              as Cu
+import qualified Text.XML                     as XML
 
 newtype XmlException = XmlException { xmlErrorMessage :: String }
     deriving (Show, Typeable)
 
-instance C.Exception XmlException
+instance E.Exception XmlException
 
 elContent :: T.Text -> Cursor -> [T.Text]
 elContent name = laxElement name &/ content
@@ -47,18 +45,16 @@ readInt s = case reads s of
               [(n,"")] -> return $ fromInteger n
               _        -> F.failure $ XmlException "Invalid Integer"
 
-xmlCursorIteratee ::
+xmlCursorConsumer ::
     (Monoid m)
     => (Cu.Cursor -> Response m a)
     -> IORef m
-    -> HTTP.Status 
-    -> HTTP.ResponseHeaders 
-    -> En.Iteratee B.ByteString IO a
-xmlCursorIteratee parse metadataRef _status _headers
-    = do doc <- XML.parseBytes XML.decodeEntities =$ XML.fromEvents
+    -> HTTP.ResponseConsumer IO a
+xmlCursorConsumer parse metadataRef _status _headers source
+    = do doc <- source $$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata
-         case x of                                  
-           Failure err -> En.throwError err
-           Success v -> return v
+         case x of
+           Failure err -> liftIO $ C.resourceThrow err
+           Success v   -> return v

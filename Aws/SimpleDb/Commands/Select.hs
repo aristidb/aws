@@ -15,10 +15,10 @@ import           Aws.Xml
 import           Control.Applicative
 import           Control.Monad
 import           Data.Maybe
-import           Text.XML.Enumerator.Cursor (($//), (&|))
+import           Text.XML.Cursor            (($//), (&|))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Text.XML.Enumerator.Cursor as Cu
+import qualified Text.XML.Cursor            as Cu
 
 data Select
     = Select {
@@ -48,9 +48,9 @@ instance SignQuery Select where
             , (("NextToken",) . T.encodeUtf8) <$> sNextToken
             ]
 
-instance ResponseIteratee r SelectResponse where
+instance ResponseConsumer r SelectResponse where
     type ResponseMetadata SelectResponse = SdbMetadata
-    responseIteratee _ = sdbResponseIteratee parse
+    responseConsumer _ = sdbResponseConsumer parse
         where parse cursor = do
                 sdbCheckResponseType () "SelectResponse" cursor
                 items <- sequence $ cursor $// Cu.laxElement "Item" &| readItem

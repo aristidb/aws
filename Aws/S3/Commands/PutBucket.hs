@@ -11,10 +11,10 @@ import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
 import           Control.Monad
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as T
-import qualified Network.HTTP.Enumerator      as HTTPE
-import qualified Text.XML.Enumerator.Resolved as XML
+import qualified Data.Text            as T
+import qualified Data.Text.Encoding   as T
+import qualified Network.HTTP.Conduit as HTTP
+import qualified Text.XML             as XML
 
 data PutBucket
     = PutBucket {
@@ -37,12 +37,12 @@ instance SignQuery PutBucket where
                                            , s3QSubresources = []
                                            , s3QQuery        = []
                                            , s3QObject         = Nothing
-                                           , s3QAmzHeaders   = case pbCannedAcl of 
+                                           , s3QAmzHeaders   = case pbCannedAcl of
                                                                  Nothing -> []
                                                                  Just acl -> [("x-amz-acl", T.encodeUtf8 $ writeCannedAcl acl)]
                                            , s3QRequestBody
                                                = guard (not . T.null $ pbLocationConstraint) >>
-                                                 (Just . HTTPE.RequestBodyLBS . XML.renderLBS) 
+                                                 (Just . HTTP.RequestBodyLBS . XML.renderLBS XML.def)
                                                  XML.Document {
                                                           XML.documentPrologue = XML.Prologue [] Nothing []
                                                         , XML.documentRoot = root
@@ -61,10 +61,10 @@ instance SignQuery PutBucket where
                                                   ]
                              }
 
-instance ResponseIteratee r PutBucketResponse where
+instance ResponseConsumer r PutBucketResponse where
     type ResponseMetadata PutBucketResponse = S3Metadata
-    
-    responseIteratee _ = s3ResponseIteratee inner
-        where inner _status _headers = return PutBucketResponse
+
+    responseConsumer _ = s3ResponseConsumer inner
+        where inner _status _headers _source = return PutBucketResponse
 
 instance Transaction PutBucket PutBucketResponse

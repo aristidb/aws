@@ -12,7 +12,7 @@ import           Aws.Transaction
 import           Aws.Xml
 import           Data.Time
 import           Data.Time.Clock.POSIX
-import           Text.XML.Enumerator.Cursor (($//), (&|))
+import           Text.XML.Cursor            (($//), (&|))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 
@@ -33,7 +33,7 @@ data DomainMetadataResponse
       , dmrAttributeNamesSizeBytes :: Integer
       }
     deriving (Show)
-             
+
 domainMetadata :: T.Text -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
@@ -41,10 +41,10 @@ instance SignQuery DomainMetadata where
     type Info DomainMetadata = SdbInfo
     signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", T.encodeUtf8 dmDomainName)]
 
-instance ResponseIteratee r DomainMetadataResponse where
+instance ResponseConsumer r DomainMetadataResponse where
     type ResponseMetadata DomainMetadataResponse = SdbMetadata
 
-    responseIteratee _ = sdbResponseIteratee parse
+    responseConsumer _ = sdbResponseConsumer parse
         where parse cursor = do
                 sdbCheckResponseType () "DomainMetadataResponse" cursor
                 dmrTimestamp <- forceM "Timestamp expected" $ cursor $// elCont "Timestamp" &| (fmap posixSecondsToUTCTime . readInt)

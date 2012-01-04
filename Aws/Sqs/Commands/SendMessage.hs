@@ -11,14 +11,14 @@ import           Aws.Sqs.Response
 import           Aws.Signature
 import           Aws.Transaction
 import           Aws.Xml
-import           Text.XML.Enumerator.Cursor   (($//), (&/))
+import           Text.XML.Cursor              (($//), (&/))
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as TE
-import qualified Text.XML.Enumerator.Cursor   as Cu
+import qualified Text.XML.Cursor              as Cu
 
 data SendMessage = SendMessage{
   smMessage :: T.Text,
-  smQueueName :: M.QueueName 
+  smQueueName :: M.QueueName
 }deriving (Show)
 
 data SendMessageResponse = SendMessageResponse{
@@ -26,21 +26,21 @@ data SendMessageResponse = SendMessageResponse{
   smrMessageId :: M.MessageId
 } deriving (Show)
 
-instance ResponseIteratee r SendMessageResponse where
+instance ResponseConsumer r SendMessageResponse where
     type ResponseMetadata SendMessageResponse = SqsMetadata
-    responseIteratee _ = sqsXmlResponseIteratee parse
-      where 
+    responseConsumer _ = sqsXmlResponseConsumer parse
+      where
         parse el = do
           md5 <- force "Missing MD5 Signature" $ el $// Cu.laxElement "MD5OfMessageBody" &/ Cu.content
           mid <- force "Missing Message Id" $ el $// Cu.laxElement "MessageId" &/ Cu.content
           return SendMessageResponse { smrMD5OfMessageBody = md5, smrMessageId = M.MessageId mid }
 
-instance SignQuery SendMessage  where 
+instance SignQuery SendMessage  where
     type Info SendMessage  = SqsInfo
     signQuery SendMessage {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Just smQueueName,
-                                             sqsQuery = [("Action", Just "SendMessage"), 
-                                                        ("MessageBody", Just $ TE.encodeUtf8 smMessage )]} 
+                                             sqsQuery = [("Action", Just "SendMessage"),
+                                                        ("MessageBody", Just $ TE.encodeUtf8 smMessage )]}
 
 instance Transaction SendMessage SendMessageResponse
 

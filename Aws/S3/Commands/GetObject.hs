@@ -15,17 +15,16 @@ import           Control.Applicative
 import           Control.Arrow         (second)
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
-import qualified Data.ByteString       as B
-import qualified Data.Enumerator       as En
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
+import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
 
 data GetObject a
     = GetObject {
         goBucket :: Bucket
       , goObjectName :: Object
-      , goResponseIteratee :: HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a
+      , goResponseConsumer :: HTTP.ResponseConsumer IO a
       , goResponseContentType :: Maybe T.Text
       , goResponseContentLanguage :: Maybe T.Text
       , goResponseExpires :: Maybe T.Text
@@ -34,7 +33,7 @@ data GetObject a
       , goResponseContentEncoding :: Maybe T.Text
       }
 
-getObject :: Bucket -> T.Text -> (HTTP.Status -> HTTP.ResponseHeaders -> En.Iteratee B.ByteString IO a) -> GetObject a
+getObject :: Bucket -> T.Text -> (HTTP.ResponseConsumer IO a) -> GetObject a
 getObject b o i = GetObject b o i Nothing Nothing Nothing Nothing Nothing Nothing
 
 data GetObjectResponse a
@@ -43,10 +42,10 @@ data GetObjectResponse a
 
 instance SignQuery (GetObject a) where
     type Info (GetObject a) = S3Info
-    signQuery GetObject {..} = s3SignQuery S3Query { 
+    signQuery GetObject {..} = s3SignQuery S3Query {
                                    s3QMethod = Get
                                  , s3QBucket = Just $ T.encodeUtf8 goBucket
-                                 , s3QObject = Just $ T.encodeUtf8 goObjectName 
+                                 , s3QObject = Just $ T.encodeUtf8 goObjectName
                                  , s3QSubresources = []
                                  , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
                                                ("response-content-type",) <$> goResponseContentType
@@ -60,9 +59,9 @@ instance SignQuery (GetObject a) where
                                  , s3QRequestBody = Nothing
                                  }
 
-instance ResponseIteratee (GetObject a) (GetObjectResponse a) where
+instance ResponseConsumer (GetObject a) (GetObjectResponse a) where
     type ResponseMetadata (GetObjectResponse a) = S3Metadata
-    responseIteratee GetObject{..} metadata status headers
-        = GetObjectResponse <$> s3BinaryResponseIteratee (goResponseIteratee) metadata status headers
+    responseConsumer GetObject{..} metadata status headers source
+        = GetObjectResponse <$> s3BinaryResponseConsumer goResponseConsumer metadata status headers source
 
 instance Transaction (GetObject a) (GetObjectResponse a)
