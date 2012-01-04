@@ -51,9 +51,7 @@ instance SignQuery PutObject where
                                , s3QQuery = []
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Content-Type",) <$> poContentType
-                                            , ("Expires",) <$> case poExpires of
-                                                                 Just x -> Just $ T.pack $ show x
-                                                                 Nothing -> Nothing
+                                            , ("Expires",) . T.pack . show <$> poExpires
                                             , ("Cache-Control",) <$> poCacheControl
                                             , ("Content-Disposition",) <$> poContentDisposition
                                             , ("Content-Encoding",) <$> poContentEncoding
