@@ -53,13 +53,15 @@ instance SignQuery PutObject where
                                , s3QContentType = poContentType
                                , s3QContentMd5 = poContentMD5
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
+                                              ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
+                                            , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
+                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
+                               , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires
                                             , ("Cache-Control",) <$> poCacheControl
                                             , ("Content-Disposition",) <$> poContentDisposition
                                             , ("Content-Encoding",) <$> poContentEncoding
-                                            , ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
-                                            , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
-                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
+                                            ]
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
                                }

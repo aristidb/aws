@@ -71,6 +71,7 @@ instance SignQuery GetBucket where
                                , s3QContentType = Nothing
                                , s3QContentMd5 = Nothing
                                , s3QAmzHeaders = []
+                               , s3QOtherHeaders = []
                                , s3QRequestBody = Nothing
                                }
 

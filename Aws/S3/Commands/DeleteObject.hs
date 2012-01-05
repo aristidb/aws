@@ -33,6 +33,7 @@ instance SignQuery DeleteObject where
                                , s3QContentType = Nothing
                                , s3QContentMd5 = Nothing
                                , s3QAmzHeaders = []
+                               , s3QOtherHeaders = []
                                , s3QRequestBody = Nothing
                                , s3QObject = Just $ T.encodeUtf8 doObjectName
                                }

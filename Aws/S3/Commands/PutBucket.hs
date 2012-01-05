@@ -42,6 +42,7 @@ instance SignQuery PutBucket where
                                            , s3QAmzHeaders   = case pbCannedAcl of
                                                                  Nothing -> []
                                                                  Just acl -> [("x-amz-acl", T.encodeUtf8 $ writeCannedAcl acl)]
+                                           , s3QOtherHeaders = []
                                            , s3QRequestBody
                                                = guard (not . T.null $ pbLocationConstraint) >>
                                                  (Just . HTTP.RequestBodyLBS . XML.renderLBS XML.def)

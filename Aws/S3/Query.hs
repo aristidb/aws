@@ -32,6 +32,7 @@ data S3Query
       , s3QContentType :: Maybe B.ByteString
       , s3QContentMd5 :: Maybe B.ByteString
       , s3QAmzHeaders :: HTTP.RequestHeaders
+      , s3QOtherHeaders :: HTTP.RequestHeaders
       , s3QRequestBody :: Maybe (HTTP.RequestBody IO)
       }
 
@@ -58,6 +59,7 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       , sqContentType = s3QContentType
       , sqContentMd5 = s3QContentMd5
       , sqAmzHeaders = amzHeaders
+      , sqOtherHeaders = s3QOtherHeaders
       , sqBody = s3QRequestBody
       , sqStringToSign = stringToSign
       }
