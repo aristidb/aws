@@ -39,9 +39,11 @@ data PutObject = PutObject {
 putObject :: T.Text -> Bucket -> HTTP.RequestBody IO -> PutObject
 putObject obj bucket body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
 
-data PutObjectResponse = PutObjectResponse{
-  porVersionId :: Maybe T.Text
-}
+data PutObjectResponse 
+  = PutObjectResponse {
+      porVersionId :: Maybe T.Text
+    }
+  deriving (Show)
 
 instance SignQuery PutObject where
     type Info PutObject = S3Info
