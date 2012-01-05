@@ -8,6 +8,7 @@ import           Aws.S3.Info
 import           Aws.S3.Metadata
 import           Aws.S3.Model
 import           Aws.S3.Query
+import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
 import           Data.ByteString.Char8      ({- IsString -})
@@ -36,7 +37,8 @@ instance SignQuery DeleteObject where
 
 instance ResponseConsumer DeleteObject DeleteObjectResponse where
     type ResponseMetadata DeleteObjectResponse = S3Metadata
-    responseConsumer _ _ _ _ _ = return DeleteObjectResponse
+    responseConsumer _ = s3ResponseConsumer $ \_ _ _ ->
+                         return DeleteObjectResponse
 
 
 instance Transaction DeleteObject DeleteObjectResponse

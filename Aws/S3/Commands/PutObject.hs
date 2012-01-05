@@ -8,6 +8,7 @@ import           Aws.S3.Info
 import           Aws.S3.Metadata
 import           Aws.S3.Model
 import           Aws.S3.Query
+import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
 import           Control.Applicative
@@ -65,7 +66,8 @@ instance SignQuery PutObject where
 
 instance ResponseConsumer PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
-    responseConsumer _ _ _ _ _ = do return $ PutObjectResponse Nothing
+    responseConsumer _ = s3ResponseConsumer $ \_ _ _ ->
+                         return $ PutObjectResponse Nothing
 
 instance Transaction PutObject PutObjectResponse
 
