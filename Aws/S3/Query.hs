@@ -64,7 +64,7 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
     where
       amzHeaders = merge $ sortBy (compare `on` fst) s3QAmzHeaders
           where merge (x1@(k1,v1):x2@(k2,v2):xs) = if k1 == k2
-                                                   then (k1, B8.intercalate "," [v1, v2]):merge xs
+                                                   then merge ((k1, B8.intercalate "," [v1, v2]) : xs)
                                                    else x1:x2:merge xs
                 merge xs = xs
 
