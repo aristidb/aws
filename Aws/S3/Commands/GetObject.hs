@@ -55,6 +55,8 @@ instance SignQuery (GetObject a) where
                                               , ("response-content-disposition",) <$> goResponseContentDisposition
                                               , ("response-content-encoding",) <$> goResponseContentEncoding
                                               ]
+                                 , s3QContentType = Nothing
+                                 , s3QContentMd5 = Nothing
                                  , s3QAmzHeaders = []
                                  , s3QRequestBody = Nothing
                                  }

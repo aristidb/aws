@@ -36,7 +36,9 @@ instance SignQuery PutBucket where
                                            , s3QBucket       = Just $ T.encodeUtf8 pbBucket
                                            , s3QSubresources = []
                                            , s3QQuery        = []
-                                           , s3QObject         = Nothing
+                                           , s3QContentType  = Nothing
+                                           , s3QContentMd5   = Nothing
+                                           , s3QObject       = Nothing
                                            , s3QAmzHeaders   = case pbCannedAcl of
                                                                  Nothing -> []
                                                                  Just acl -> [("x-amz-acl", T.encodeUtf8 $ writeCannedAcl acl)]
