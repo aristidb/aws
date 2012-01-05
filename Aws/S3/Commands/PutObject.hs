@@ -20,7 +20,6 @@ import qualified Data.CaseInsensitive       as CI
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Network.HTTP.Conduit       as HTTP
-import qualified Network.HTTP.Types         as HTTP
 
 data PutObject = PutObject {
   poObjectName :: T.Text,
