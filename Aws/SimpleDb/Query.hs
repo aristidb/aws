@@ -29,6 +29,7 @@ sdbSignQuery q si sd
       , sqContentType = Nothing
       , sqContentMd5 = Nothing
       , sqAmzHeaders = []
+      , sqOtherHeaders = []
       , sqBody = Nothing
       , sqStringToSign = stringToSign
       }

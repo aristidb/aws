@@ -8,26 +8,27 @@ import           Aws.S3.Info
 import           Aws.S3.Metadata
 import           Aws.S3.Model
 import           Aws.S3.Query
+import           Aws.S3.Response
 import           Aws.Signature
 import           Aws.Transaction
 import           Control.Applicative
 import           Control.Arrow              (second)
 import           Data.ByteString.Char8      ({- IsString -})
 import           Data.Maybe
+import qualified Data.ByteString.Char8      as B
 import qualified Data.CaseInsensitive       as CI
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Network.HTTP.Conduit       as HTTP
-import qualified Network.HTTP.Types         as HTTP
 
 data PutObject = PutObject {
   poObjectName :: T.Text,
   poBucket :: Bucket,
-  poContentType :: Maybe T.Text,
+  poContentType :: Maybe B.ByteString,
   poCacheControl :: Maybe T.Text,
   poContentDisposition :: Maybe T.Text,
   poContentEncoding :: Maybe T.Text,
-  poContentMD5 :: Maybe T.Text,
+  poContentMD5 :: Maybe B.ByteString,
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
@@ -49,23 +50,26 @@ instance SignQuery PutObject where
                                , s3QBucket = Just $ T.encodeUtf8 poBucket
                                , s3QSubresources = []
                                , s3QQuery = []
+                               , s3QContentType = poContentType
+                               , s3QContentMd5 = poContentMD5
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
-                                              ("Content-Type",) <$> poContentType
-                                            , ("Expires",) . T.pack . show <$> poExpires
+                                              ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
+                                            , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
+                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
+                               , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
+                                              ("Expires",) . T.pack . show <$> poExpires
                                             , ("Cache-Control",) <$> poCacheControl
                                             , ("Content-Disposition",) <$> poContentDisposition
                                             , ("Content-Encoding",) <$> poContentEncoding
-                                            , ("Content-MD5",) <$> poContentMD5
-                                            , ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
-                                            , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
-                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
+                                            ]
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
                                }
 
 instance ResponseConsumer PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
-    responseConsumer _ _ _ _ _ = do return $ PutObjectResponse Nothing
+    responseConsumer _ = s3ResponseConsumer $ \_ _ _ ->
+                         return $ PutObjectResponse Nothing
 
 instance Transaction PutObject PutObjectResponse
 

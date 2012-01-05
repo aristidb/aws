@@ -28,6 +28,7 @@ data SignedQuery
       , sqContentType :: Maybe B.ByteString
       , sqContentMd5 :: Maybe B.ByteString
       , sqAmzHeaders :: HTTP.RequestHeaders
+      , sqOtherHeaders :: HTTP.RequestHeaders
       , sqBody :: Maybe (HTTP.RequestBody IO)
       , sqStringToSign :: B.ByteString
       }
@@ -50,6 +51,7 @@ queryToHttpRequest SignedQuery{..}
                                         , fmap (\md5 -> ("Content-MD5", md5)) sqContentMd5
                                         , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
                               ++ sqAmzHeaders
+                              ++ sqOtherHeaders
       , HTTP.requestBody = case sqMethod of
                              PostQuery -> HTTP.RequestBodyLBS . Blaze.toLazyByteString $ HTTP.renderQueryBuilder False sqQuery
                              _         -> case sqBody of

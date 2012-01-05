@@ -52,7 +52,10 @@ instance SignQuery GetService where
                               , s3QObject = Nothing
                               , s3QSubresources = []
                               , s3QQuery = []
+                              , s3QContentType = Nothing
+                              , s3QContentMd5 = Nothing
                               , s3QAmzHeaders = []
+                              , s3QOtherHeaders = []
                               , s3QRequestBody = Nothing
                               }
 

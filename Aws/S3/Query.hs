@@ -29,7 +29,10 @@ data S3Query
       , s3QObject :: Maybe B.ByteString
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
+      , s3QContentType :: Maybe B.ByteString
+      , s3QContentMd5 :: Maybe B.ByteString
       , s3QAmzHeaders :: HTTP.RequestHeaders
+      , s3QOtherHeaders :: HTTP.RequestHeaders
       , s3QRequestBody :: Maybe (HTTP.RequestBody IO)
       }
 
@@ -53,18 +56,17 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       , sqQuery = sortedSubresources ++ s3QQuery ++ authQuery
       , sqDate = Just signatureTime
       , sqAuthorization = authorization
-      , sqContentType = contentType
-      , sqContentMd5 = contentMd5
+      , sqContentType = s3QContentType
+      , sqContentMd5 = s3QContentMd5
       , sqAmzHeaders = amzHeaders
+      , sqOtherHeaders = s3QOtherHeaders
       , sqBody = s3QRequestBody
       , sqStringToSign = stringToSign
       }
     where
-      contentMd5 = Nothing
-      contentType = Nothing
       amzHeaders = merge $ sortBy (compare `on` fst) s3QAmzHeaders
           where merge (x1@(k1,v1):x2@(k2,v2):xs) = if k1 == k2
-                                                   then (k1, B8.intercalate "," [v1, v2]):merge xs
+                                                   then merge ((k1, B8.intercalate "," [v1, v2]) : xs)
                                                    else x1:x2:merge xs
                 merge xs = xs
 
@@ -84,8 +86,8 @@ s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
       sig = signature signatureCredentials HmacSHA1 stringToSign
       stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
                        [[Blaze.copyByteString $ httpMethod s3QMethod]
-                       , [maybe mempty Blaze.copyByteString contentMd5]
-                       , [maybe mempty Blaze.copyByteString contentType]
+                       , [maybe mempty Blaze.copyByteString s3QContentMd5]
+                       , [maybe mempty Blaze.copyByteString s3QContentType]
                        , [Blaze.copyByteString $ case ti of
                                                    AbsoluteTimestamp time -> fmtRfc822Time time
                                                    AbsoluteExpires time -> fmtTimeEpochSeconds time]
