@@ -40,6 +40,7 @@ sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
       , sqContentType = Nothing
       , sqContentMd5 = Nothing
       , sqAmzHeaders = []
+      , sqOtherHeaders = []
       }
     where
       method = PostQuery
