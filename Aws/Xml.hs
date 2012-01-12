@@ -14,7 +14,6 @@ import qualified Control.Exception            as E
 import qualified Control.Failure              as F
 import qualified Data.Conduit                 as C
 import qualified Data.Text                    as T
-import qualified Network.HTTP.Conduit         as HTTP
 import qualified Text.XML.Cursor              as Cu
 import qualified Text.XML                     as XML
 
@@ -49,7 +48,7 @@ xmlCursorConsumer ::
     (Monoid m)
     => (Cu.Cursor -> Response m a)
     -> IORef m
-    -> HTTP.ResponseConsumer IO a
+    -> HTTPResponseConsumer a
 xmlCursorConsumer parse metadataRef _status _headers source
     = do doc <- source $$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc

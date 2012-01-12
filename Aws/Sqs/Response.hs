@@ -13,14 +13,13 @@ import           Data.Maybe
 import           Text.XML.Cursor              (($/))
 import qualified Data.Conduit                 as C
 import qualified Data.Text.Encoding           as T
-import qualified Network.HTTP.Conduit         as HTTP
 import qualified Network.HTTP.Types           as HTTP
 import qualified Text.XML.Cursor              as Cu
 import qualified Text.XML                     as XML
 
-sqsResponseConsumer :: HTTP.ResponseConsumer IO a
+sqsResponseConsumer :: HTTPResponseConsumer a
                     -> IORef SqsMetadata
-                    -> HTTP.ResponseConsumer IO a
+                    -> HTTPResponseConsumer a
 sqsResponseConsumer inner metadata status headers source = do
       let headerString = fmap T.decodeUtf8 . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
@@ -35,10 +34,10 @@ sqsResponseConsumer inner metadata status headers source = do
 
 sqsXmlResponseConsumer :: (Cu.Cursor -> Response SqsMetadata a)
                        -> IORef SqsMetadata
-                       -> HTTP.ResponseConsumer IO a
+                       -> HTTPResponseConsumer a
 sqsXmlResponseConsumer parse metadataRef = sqsResponseConsumer (xmlCursorConsumer parse metadataRef) metadataRef
 
-sqsErrorResponseConsumer :: HTTP.ResponseConsumer IO a
+sqsErrorResponseConsumer :: HTTPResponseConsumer a
 sqsErrorResponseConsumer status _headers source
     = do doc <- source $$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc

@@ -91,7 +91,9 @@ unsafeAws cfg request = do
   let httpRequest = queryToHttpRequest q
   metadataRef <- newIORef mempty
   resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
-          HTTP.withManager $ HTTP.httpRedirect httpRequest (responseConsumer request metadataRef)
+          HTTP.withManager $ \manager -> do
+            HTTP.Response status headers body <- HTTP.http httpRequest manager
+            responseConsumer request metadataRef status headers body
   metadata <- readIORef metadataRef
   return $ Response metadata resp
 

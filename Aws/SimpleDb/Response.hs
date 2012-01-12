@@ -13,12 +13,11 @@ import qualified Control.Failure            as F
 import qualified Data.ByteString.Base64     as Base64
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Network.HTTP.Conduit       as HTTP
 import qualified Text.XML.Cursor            as Cu
 
 sdbResponseConsumer :: (Cu.Cursor -> Response SdbMetadata a)
                     -> IORef SdbMetadata
-                    -> HTTP.ResponseConsumer IO a
+                    -> HTTPResponseConsumer a
 sdbResponseConsumer inner metadataRef status headers source
     = xmlCursorConsumer parse metadataRef status headers source
     where parse cursor
