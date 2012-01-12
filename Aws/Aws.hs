@@ -14,6 +14,7 @@ import           Aws.Sqs.Info
 import           Aws.Transaction
 import           Control.Applicative
 import           Data.Attempt            (attemptIO)
+import           Data.Conduit            (runResourceT)
 import           Data.IORef
 import           Data.Monoid
 import qualified Control.Exception       as E
@@ -74,7 +75,7 @@ debugConfiguration = do
 
 aws :: (Transaction r a
        , ConfigurationFetch (Info r))
-      => Configuration -> r -> IO (Response (ResponseMetadata a) a)
+      => Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
 unsafeAws
@@ -82,8 +83,8 @@ unsafeAws
       Monoid (ResponseMetadata a),
       SignQuery r,
       ConfigurationFetch (Info r)) =>
-     Configuration -> r -> IO (Response (ResponseMetadata a) a)
-unsafeAws cfg request = do
+     Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
+unsafeAws cfg manager request = do
   sd <- signatureData <$> timeInfo <*> credentials $ cfg
   let info = configurationFetch cfg
   let q = signQuery request info sd
@@ -91,7 +92,7 @@ unsafeAws cfg request = do
   let httpRequest = queryToHttpRequest q
   metadataRef <- newIORef mempty
   resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
-          HTTP.withManager $ \manager -> do
+          runResourceT $ do
             HTTP.Response status headers body <- HTTP.http httpRequest manager
             responseConsumer request metadataRef status headers body
   metadata <- readIORef metadataRef
