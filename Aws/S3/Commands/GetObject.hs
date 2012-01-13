@@ -17,14 +17,13 @@ import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
-import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
 
 data GetObject a
     = GetObject {
         goBucket :: Bucket
       , goObjectName :: Object
-      , goResponseConsumer :: HTTP.ResponseConsumer IO a
+      , goResponseConsumer :: HTTPResponseConsumer a
       , goResponseContentType :: Maybe T.Text
       , goResponseContentLanguage :: Maybe T.Text
       , goResponseExpires :: Maybe T.Text
@@ -33,7 +32,7 @@ data GetObject a
       , goResponseContentEncoding :: Maybe T.Text
       }
 
-getObject :: Bucket -> T.Text -> (HTTP.ResponseConsumer IO a) -> GetObject a
+getObject :: Bucket -> T.Text -> HTTPResponseConsumer a -> GetObject a
 getObject b o i = GetObject b o i Nothing Nothing Nothing Nothing Nothing Nothing
 
 data GetObjectResponse a
