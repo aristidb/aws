@@ -13,13 +13,14 @@ import           Aws.SimpleDb.Info
 import           Aws.Sqs.Info
 import           Aws.Transaction
 import           Control.Applicative
-import           Data.Attempt            (attemptIO)
-import           Data.Conduit            (runResourceT)
+import           Data.Attempt         (attemptIO)
+import           Data.Conduit         (runResourceT)
+import           Control.Monad.Trans  (liftIO)
 import           Data.IORef
 import           Data.Monoid
-import qualified Control.Exception       as E
-import qualified Data.ByteString         as B
-import qualified Network.HTTP.Conduit    as HTTP
+import qualified Control.Exception    as E
+import qualified Data.ByteString      as B
+import qualified Network.HTTP.Conduit as HTTP
 
 data Configuration
     = Configuration {
@@ -77,6 +78,11 @@ aws :: (Transaction r a
        , ConfigurationFetch (Info r))
       => Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
+
+simpleAws :: (Transaction r a
+             , ConfigurationFetch (Info r))
+            => Configuration -> r -> IO (Response (ResponseMetadata a) a)
+simpleAws cfg request = HTTP.withManager $ \manager -> liftIO $ aws cfg manager request
 
 unsafeAws
   :: (ResponseConsumer r a,
