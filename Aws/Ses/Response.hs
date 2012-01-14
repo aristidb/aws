@@ -25,6 +25,6 @@ sesResponseConsumer inner metadataRef status = xmlCursorConsumer parse metadataR
           (err:_) -> fromError err
 
       fromError cursor = do
-        errCodeStr <- force "Missing Error Code" $ cursor $// elCont "Code"
-        errMessage <- force "Missing Error Message" $ cursor $// elCont "Message"
-        F.failure $ SesError status (toSesErrorCode errCodeStr) errMessage
+        errCode    <- force "Missing Error Code"    $ cursor $// elContent "Code"
+        errMessage <- force "Missing Error Message" $ cursor $// elContent "Message"
+        F.failure $ SesError status errCode errMessage
