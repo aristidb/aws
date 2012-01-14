@@ -11,6 +11,7 @@ import           Aws.S3.Info
 import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Sqs.Info
+import           Aws.Ses.Info
 import           Aws.Transaction
 import           Control.Applicative
 import           Data.Attempt         (attemptIO)
@@ -32,6 +33,8 @@ data Configuration
       , s3InfoUri :: S3Info
       , sqsInfo :: SqsInfo
       , sqsInfoUri :: SqsInfo
+      , sesInfo :: SesInfo
+      , sesInfoUri :: SesInfo
       }
 
 class ConfigurationFetch a where
@@ -54,6 +57,10 @@ instance ConfigurationFetch SqsInfo where
     configurationFetch = sqsInfo
     configurationFetchUri = sqsInfoUri
 
+instance ConfigurationFetch SesInfo where
+    configurationFetch = sesInfo
+    configurationFetchUri = sesInfoUri
+
 baseConfiguration :: IO Configuration
 baseConfiguration = do
   Just cr <- loadCredentialsDefault
@@ -66,6 +73,8 @@ baseConfiguration = do
                     , s3InfoUri = s3 HTTP s3EndpointUsClassic True
                     , sqsInfo = sqs HTTP sqsEndpointUsClassic False
                     , sqsInfoUri = sqs HTTP sqsEndpointUsClassic True
+                    , sesInfo = sesHttpsPost sesUsEast
+                    , sesInfoUri = sesHttpsGet sesUsEast
                     }
 -- TODO: better error handling when credentials cannot be loaded
 
