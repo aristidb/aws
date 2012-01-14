@@ -58,6 +58,7 @@ queryToHttpRequest SignedQuery{..}
                                             Nothing -> HTTP.RequestBodyBuilder 0 mempty
                                             Just x  -> x
       , HTTP.decompress = HTTP.alwaysDecompress
+      , HTTP.checkStatus = \_ _ -> Nothing
       }
     where contentType = case sqMethod of
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"

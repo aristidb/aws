@@ -16,14 +16,13 @@ import           Text.XML.Cursor              (($/))
 import qualified Data.ByteString              as B
 import qualified Data.Conduit                 as C
 import qualified Data.Text.Encoding           as T
-import qualified Network.HTTP.Conduit         as HTTP
 import qualified Network.HTTP.Types           as HTTP
 import qualified Text.XML.Cursor              as Cu
 import qualified Text.XML                     as XML
 
-s3ResponseConsumer :: HTTP.ResponseConsumer IO a
+s3ResponseConsumer :: HTTPResponseConsumer a
                    -> IORef S3Metadata
-                   -> HTTP.ResponseConsumer IO a
+                   -> HTTPResponseConsumer a
 s3ResponseConsumer inner metadata status headers source = do
       let headerString = fmap T.decodeUtf8 . flip lookup headers
       let amzId2 = headerString "x-amz-id-2"
@@ -38,16 +37,16 @@ s3ResponseConsumer inner metadata status headers source = do
 
 s3XmlResponseConsumer :: (Cu.Cursor -> Response S3Metadata a)
                       -> IORef S3Metadata
-                      -> HTTP.ResponseConsumer IO a
+                      -> HTTPResponseConsumer a
 s3XmlResponseConsumer parse metadataRef =
     s3ResponseConsumer (xmlCursorConsumer parse metadataRef) metadataRef
 
-s3BinaryResponseConsumer :: HTTP.ResponseConsumer IO a
+s3BinaryResponseConsumer :: HTTPResponseConsumer a
                          -> IORef S3Metadata
-                         -> HTTP.ResponseConsumer IO a
+                         -> HTTPResponseConsumer a
 s3BinaryResponseConsumer inner metadataRef = s3ResponseConsumer inner metadataRef
 
-s3ErrorResponseConsumer :: HTTP.ResponseConsumer IO a
+s3ErrorResponseConsumer :: HTTPResponseConsumer a
 s3ErrorResponseConsumer status _headers source
     = do doc <- source $$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
