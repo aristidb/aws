@@ -51,7 +51,6 @@ Library
                        Aws,
                        Aws.Aws,
                        Aws.Credentials,
-                       Aws.Debug,
                        Aws.Http,
                        Aws.Query,
                        Aws.Response,
