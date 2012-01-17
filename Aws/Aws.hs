@@ -27,6 +27,7 @@ import qualified Network.HTTP.Conduit as HTTP
 
 data LogLevel
     = Debug
+    | Info
     | Warning
     | Error
     deriving (Show, Eq, Ord)
