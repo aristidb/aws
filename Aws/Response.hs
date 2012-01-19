@@ -4,7 +4,7 @@ module Aws.Response
 where
 
 import           Data.ByteString         (ByteString)
-import           Data.Conduit            (BufferedSource, ResourceT, ($$))
+import           Data.Conduit            (Source, ResourceT, ($$))
 import           Data.IORef
 import           Data.Monoid
 import           Data.Attempt            (Attempt(..))
@@ -35,7 +35,7 @@ tellMetadataRef r m = modifyIORef r (`mappend` m)
 
 type HTTPResponseConsumer a =  HTTP.Status
                             -> HTTP.ResponseHeaders
-                            -> BufferedSource IO ByteString
+                            -> Source IO ByteString
                             -> ResourceT IO a
 
 class ResponseConsumer r a where
