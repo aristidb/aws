@@ -67,4 +67,5 @@ signature cr ah input = Base64.encode sig
               HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
       computeSig :: Crypto.Hash c d => d -> B.ByteString
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
+      key :: HMAC.MacKey c d
       key = HMAC.MacKey (secretAccessKey cr)
