@@ -44,6 +44,14 @@ Extra-source-files:  README
 -- Constraint on the version of Cabal needed to build this package.
 Cabal-version:       >=1.8
 
+Source-repository this
+  type: git
+  location: https://github.com/aristidb/aws.git
+  tag: 0.3
+
+Source-repository head
+  type: git
+  location: https://github.com/aristidb/aws.git
 
 Library
   -- Modules exported by the library.
