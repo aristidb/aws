@@ -79,6 +79,13 @@ main = do
 
 You can also find this example in the source distribution in the ~Examples/~ folder.
 
+* Release Notes
+
+** 0.3 series
+
+- 0.3.2 :: Add awsRef / simpleAwsRef request variants for those who prefer an =IORef= over a =Data.Attempt.Attempt= value.
+           Also improve README and add simple example.
+
 * Resources
 
 - [[https://github.com/aristidb/aws][aws on Github]]
