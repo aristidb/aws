@@ -1,0 +1,29 @@
+#+TITLE: Amazon Web Services for Haskell
+
+* Introduction
+
+The 'aws' package attempts to provide support for using Amazon Web Services like S3 (storage), SQS (queuing) and others
+to Haskell programmers. The ultimate goal is to support all Amazon Web Services.
+
+* Installation
+
+Make sure you have a recent GHC installed, as well as cabal-install, and installation should be as easy as:
+
+#+BEGIN_SRC bash
+$ cabal install aws
+#+END_SRC
+
+If you prefer to install from source yourself, you should first get a clone of the 'aws' repository, and install it from
+inside the source directory:
+
+#+BEGIN_SRC bash
+$ git clone https://github.com/aristidb/aws.git
+$ cd aws
+$ cabal install
+#+END_SRC
+
+* Resources
+
+- [[https://github.com/aristidb/aws][aws on Github]]
+- [[http://hackage.haskell.org/package/aws][aws on Hackage]]
+- [[http://aws.amazon.com/][Official Amazon Web Services website]]
