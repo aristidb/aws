@@ -107,10 +107,20 @@ aws :: (Transaction r a
       => Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
+awsRef :: (Transaction r a
+       , ConfigurationFetch (Info r))
+      => Configuration -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
+awsRef = unsafeAwsRef
+
 simpleAws :: (Transaction r a
              , ConfigurationFetch (Info r))
             => Configuration -> r -> IO (Response (ResponseMetadata a) a)
 simpleAws cfg request = HTTP.withManager $ \manager -> liftIO $ aws cfg manager request
+
+simpleAwsRef :: (Transaction r a
+             , ConfigurationFetch (Info r))
+            => Configuration -> IORef (ResponseMetadata a) -> r -> IO a
+simpleAwsRef cfg metadataRef request = HTTP.withManager $ \manager -> liftIO $ awsRef cfg manager metadataRef request
 
 unsafeAws
   :: (ResponseConsumer r a,
@@ -119,18 +129,28 @@ unsafeAws
       ConfigurationFetch (Info r)) =>
      Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
 unsafeAws cfg manager request = do
+  metadataRef <- newIORef mempty
+  resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
+            unsafeAwsRef cfg manager metadataRef request
+  metadata <- readIORef metadataRef
+  return $ Response metadata resp
+
+unsafeAwsRef
+  :: (ResponseConsumer r a,
+      Monoid (ResponseMetadata a),
+      SignQuery r,
+      ConfigurationFetch (Info r)) =>
+     Configuration -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
+unsafeAwsRef cfg manager metadataRef request = do
   sd <- signatureData <$> timeInfo <*> credentials $ cfg
   let info = configurationFetch cfg
   let q = signQuery request info sd
   logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   let httpRequest = queryToHttpRequest q
-  metadataRef <- newIORef mempty
-  resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
-          runResourceT $ do
-            HTTP.Response status headers body <- HTTP.http httpRequest manager
-            responseConsumer request metadataRef status headers body
-  metadata <- readIORef metadataRef
-  return $ Response metadata resp
+  resp <- runResourceT $ do
+      HTTP.Response status headers body <- HTTP.http httpRequest manager
+      responseConsumer request metadataRef status headers body
+  return resp
 
 awsUri :: (SignQuery request
           , ConfigurationFetch (Info request))
