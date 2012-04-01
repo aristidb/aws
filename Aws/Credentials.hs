@@ -4,7 +4,6 @@ where
   
 import           Control.Applicative
 import           Control.Monad
-import           Control.Shortcircuit (orM)
 import           Data.List
 import           System.Directory
 import           System.Environment
@@ -46,7 +45,12 @@ loadCredentialsFromEnv = do
   return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) <*> (T.encodeUtf8 . T.pack <$> secret))
   
 loadCredentialsFromEnvOrFile :: FilePath -> T.Text -> IO (Maybe Credentials)
-loadCredentialsFromEnvOrFile file key = loadCredentialsFromEnv `orM` loadCredentialsFromFile file key
+loadCredentialsFromEnvOrFile file key = 
+  do
+    envcr <- loadCredentialsFromEnv
+    case envcr of
+      Just cr -> return (Just cr)
+      Nothing -> loadCredentialsFromFile file key
 
 loadCredentialsDefault :: IO (Maybe Credentials)
 loadCredentialsDefault = do
