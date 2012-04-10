@@ -35,7 +35,7 @@ tellMetadataRef r m = modifyIORef r (`mappend` m)
 
 type HTTPResponseConsumer a =  HTTP.Status
                             -> HTTP.ResponseHeaders
-                            -> Source IO ByteString
+                            -> Source (ResourceT IO) ByteString
                             -> ResourceT IO a
 
 class ResponseConsumer r a where
@@ -46,4 +46,4 @@ instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
     responseConsumer _ _ status headers bufsource = do
       chunks <- bufsource $$ CL.consume
-      return (HTTP.Response status headers $ L.fromChunks chunks)
+      return (HTTP.Response status HTTP.http11 headers $ L.fromChunks chunks)
