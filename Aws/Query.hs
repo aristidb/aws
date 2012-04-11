@@ -11,6 +11,7 @@ import qualified Blaze.ByteString.Builder as Blaze
 import qualified Data.ByteString          as B
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
+import qualified Data.Conduit as C
 import qualified Network.HTTP.Conduit     as HTTP
 import qualified Network.HTTP.Types       as HTTP
 
@@ -28,12 +29,12 @@ data SignedQuery
       , sqContentMd5 :: Maybe B.ByteString
       , sqAmzHeaders :: HTTP.RequestHeaders
       , sqOtherHeaders :: HTTP.RequestHeaders
-      , sqBody :: Maybe (HTTP.RequestBody IO)
+      , sqBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
       , sqStringToSign :: B.ByteString
       }
     --deriving (Show)
 
-queryToHttpRequest :: SignedQuery -> HTTP.Request IO
+queryToHttpRequest :: SignedQuery -> HTTP.Request (C.ResourceT IO)
 queryToHttpRequest SignedQuery{..}
     = HTTP.def {
         HTTP.method = httpMethod sqMethod

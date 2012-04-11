@@ -51,8 +51,8 @@ s3ErrorResponseConsumer status _headers source
     = do doc <- source $$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
-           Success err      -> C.resourceThrow err
-           Failure otherErr -> C.resourceThrow otherErr
+           Success err      -> C.monadThrow err
+           Failure otherErr -> C.monadThrow otherErr
     where
       parseError :: Cu.Cursor -> Attempt S3Error
       parseError root = do code <- force "Missing error Code" $ root $/ elContent "Code"
