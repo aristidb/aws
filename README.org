@@ -81,6 +81,10 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
+** 0.4 series
+
+- 0.4.0 :: Update conduit to 0.4.0, which is incompatible with earlier versions.
+
 ** 0.3 series
 
 - 0.3.2 :: Add awsRef / simpleAwsRef request variants for those who prefer an =IORef= over a =Data.Attempt.Attempt= value.
