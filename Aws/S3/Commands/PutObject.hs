@@ -20,6 +20,7 @@ import qualified Data.CaseInsensitive       as CI
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Network.HTTP.Conduit       as HTTP
+import qualified Data.Conduit       as C
 
 data PutObject = PutObject {
   poObjectName :: T.Text,
@@ -32,11 +33,11 @@ data PutObject = PutObject {
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
-  poRequestBody  :: HTTP.RequestBody IO,
+  poRequestBody  :: HTTP.RequestBody (C.ResourceT IO),
   poMetadata :: [(T.Text,T.Text)]
 }
 
-putObject :: T.Text -> Bucket -> HTTP.RequestBody IO -> PutObject
+putObject :: T.Text -> Bucket -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
 putObject obj bucket body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
 
 data PutObjectResponse 

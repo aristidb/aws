@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
-module Aws.Util
-where
+module Aws.Util where
 
+import Control.Monad.Trans.Control
 import           Control.Arrow
 import           Control.Exception
 import           Data.ByteString.Char8 ({- IsString -})
@@ -15,7 +16,7 @@ import qualified Data.ByteString       as B
 import qualified Data.ByteString.UTF8  as BU
 import qualified Data.Conduit          as C
 
-tryError :: (Exception e, C.ResourceIO m) => m b -> m (Either e b)
+tryError :: (Exception e, C.MonadResource m, MonadBaseControl IO m) => m b -> m (Either e b)
 tryError = Control.Exception.Lifted.try
 
 queryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> [(B.ByteString, B.ByteString)]

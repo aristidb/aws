@@ -148,7 +148,7 @@ unsafeAwsRef cfg manager metadataRef request = do
   logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   let httpRequest = queryToHttpRequest q
   resp <- runResourceT $ do
-      HTTP.Response status headers body <- HTTP.http httpRequest manager
+      HTTP.Response status _ headers body <- HTTP.http httpRequest manager
       responseConsumer request metadataRef status headers body
   return resp
 

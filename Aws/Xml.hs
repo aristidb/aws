@@ -55,5 +55,5 @@ xmlCursorConsumer parse metadataRef _status _headers source
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata
          case x of
-           Failure err -> liftIO $ C.resourceThrow err
+           Failure err -> liftIO $ C.monadThrow err
            Success v   -> return v

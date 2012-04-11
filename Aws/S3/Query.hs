@@ -20,6 +20,7 @@ import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.CaseInsensitive           as CI
 import qualified Network.HTTP.Conduit           as HTTP
+import qualified Data.Conduit as C
 import qualified Network.HTTP.Types             as HTTP
 
 data S3Query
@@ -33,7 +34,7 @@ data S3Query
       , s3QContentMd5 :: Maybe B.ByteString
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
-      , s3QRequestBody :: Maybe (HTTP.RequestBody IO)
+      , s3QRequestBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
       }
 
 instance Show S3Query where
