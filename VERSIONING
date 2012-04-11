@@ -1,0 +1,8 @@
+The AWS package is, starting with the 0.4 release, following the following versioning scheme:
+
+- Releases follow the Major.minor.tiny scheme. Numbering starts from 0, no numbers are special.
+- Minor changes that do not change any APIs, including APIs from other packages that are used by this package (e.g. by raising the lower version bound of a dependency), change the "tiny" level only.
+- Medium changes that change the API, or minor changes that raise the lower version bound of a dependency, change the "minor" level.
+- Major changes that change the API, change the "major" level.
+
+This means that the next major release after 0.4.0 will be 1.0.0, where the 1.x does NOT denote a "stable" release.
