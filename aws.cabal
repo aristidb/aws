@@ -126,7 +126,7 @@ Library
                        Aws.Ses.Response,
                        Aws.Transaction,
                        Aws.Util,
-                       Aws.Xml
+                       Aws.Xml,
                        Aws.Route53,
                        Aws.Route53.Commands,
                        Aws.Route53.Commands.ListHostedZones
@@ -158,7 +158,7 @@ Library
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2.0 && < 0.4,
                        utf8-string          == 0.3.*,
-                       xml-conduit          >= 0.7.0
+                       xml-conduit          >= 0.7.0,
                        dns                  >= 0.3.3
 
   GHC-Options: -Wall
