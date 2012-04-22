@@ -28,7 +28,6 @@ data GetHostedZoneResponse = GetHostedZoneResponse
 getHostedZone :: T.Text -> GetHostedZone
 getHostedZone hostedZoneId = GetHostedZone hostedZoneId
 
--- TODO sign the date header
 instance SignQuery GetHostedZone where
     type Info GetHostedZone = Route53Info
     signQuery GetHostedZone{..} = route53SignQuery path query
@@ -43,8 +42,7 @@ instance ResponseConsumer r GetHostedZoneResponse where
         where 
         parse cursor = do
             route53CheckResponseType () "GetHostedZoneResponse" cursor
-            -- TODO fail more gracefully (with a meaningful message)
-            (zone:_) <- mapM parseHostedZone $ cursor $// laxElement "HostedZone"
+            zone <- forceM "Missing a HostedZone element" $ cursor $// laxElement "HostedZone" &| parseHostedZone
             -- TODO assert that there are exactly four nameservers
             let delegationSet = cursor $// laxElement "DelegationSet" &/ laxElement "Nameservers" &/ elContent "Nameserver" &| T.encodeUtf8
             return $ GetHostedZoneResponse zone delegationSet
