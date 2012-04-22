@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Aws.Route53.Query
     ( route53SignQuery
     ) where
@@ -13,13 +13,13 @@ import qualified Data.ByteString                as B
 import qualified Network.HTTP.Types             as HTTP
 
 route53SignQuery :: B.ByteString -> [(B.ByteString, B.ByteString)] -> Route53Info -> SignatureData -> SignedQuery
-route53SignQuery path query si sd
+route53SignQuery resource query Route53Info{..} sd
     = SignedQuery {
         sqMethod        = Get -- TODO should not be hardcoded
-      , sqProtocol      = route53Protocol si
-      , sqHost          = route53Endpoint si
-      , sqPort          = route53Port si
-      , sqPath          = "/2012-02-29" `B.append`  path -- TODO move the protocol version into info
+      , sqProtocol      = route53Protocol 
+      , sqHost          = route53Endpoint
+      , sqPort          = route53Port
+      , sqPath          = route53ApiVersion `B.append` resource
       , sqQuery         = HTTP.simpleQueryToQuery query'
       , sqDate          = Just $ signatureTime sd
       , sqAuthorization = Nothing

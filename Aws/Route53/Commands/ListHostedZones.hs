@@ -32,12 +32,11 @@ listHostedZones = ListHostedZones { lhzMaxNumberOfItems = Nothing, lhzNextToken 
 -- TODO sign the date header
 instance SignQuery ListHostedZones where
     type Info ListHostedZones = Route53Info
-    signQuery ListHostedZones{..} = route53SignQuery path query
+    signQuery ListHostedZones{..} = route53SignQuery resource query
       where
-      path = "/hostedzone/"
+      resource = "/hostedzone"
       query = catMaybes -- query info signatureData
-            [ ("Action",) <$> Just "hostedzone"
-            , ("MaxItems",) . T.encodeUtf8 . T.pack . show <$> lhzMaxNumberOfItems
+            [ ("MaxItems",) . T.encodeUtf8 . T.pack . show <$> lhzMaxNumberOfItems
             , ("NextToken",) . T.encodeUtf8 <$> lhzNextToken
             ]
 

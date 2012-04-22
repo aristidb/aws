@@ -30,9 +30,9 @@ getHostedZone hostedZoneId = GetHostedZone hostedZoneId
 
 instance SignQuery GetHostedZone where
     type Info GetHostedZone = Route53Info
-    signQuery GetHostedZone{..} = route53SignQuery path query
+    signQuery GetHostedZone{..} = route53SignQuery resource query
       where
-      path = "/hostedzone/" `B.append` (T.encodeUtf8 hostedZoneId)
+      resource = "/hostedzone/" `B.append` (T.encodeUtf8 hostedZoneId)
       query = []
 
 instance ResponseConsumer r GetHostedZoneResponse where
