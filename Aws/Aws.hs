@@ -11,6 +11,7 @@ import           Aws.Ses.Info
 import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Sqs.Info
+import           Aws.Route53.Info
 import           Aws.Transaction
 import           Control.Applicative
 import           Control.Monad.Trans  (liftIO)
@@ -44,6 +45,8 @@ data Configuration
       , sqsInfoUri :: SqsInfo
       , sesInfo :: SesInfo
       , sesInfoUri :: SesInfo
+      , route53Info :: Route53Info
+      , route53InfoUri :: Route53Info
       , logger :: LogLevel -> T.Text -> IO ()
       }
 
@@ -75,6 +78,10 @@ instance ConfigurationFetch SesInfo where
     configurationFetch = sesInfo
     configurationFetchUri = sesInfoUri
 
+instance ConfigurationFetch Route53Info where
+    configurationFetch = route53Info
+    configurationFetchUri = route53InfoUri
+
 baseConfiguration :: IO Configuration
 baseConfiguration = do
   Just cr <- loadCredentialsDefault
@@ -89,6 +96,8 @@ baseConfiguration = do
                     , sqsInfoUri = sqs HTTP sqsEndpointUsClassic True
                     , sesInfo = sesHttpsPost sesUsEast
                     , sesInfoUri = sesHttpsGet sesUsEast
+                    , route53Info = route53  -- TODO
+                    , route53InfoUri = route53 -- TODO
                     , logger = defaultLog Warning
                     }
 -- TODO: better error handling when credentials cannot be loaded

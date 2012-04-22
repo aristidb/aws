@@ -1,22 +1,20 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
-
 module Aws.Route53.Commands.ListHostedZones where
 
 import           Aws.Response
 import           Aws.Signature
 import           Aws.Route53.Info
 import           Aws.Route53.Model
---import           Aws.Route53.Metadata
---import           Aws.Route53.Query
---import           Aws.Route53.Response
+import           Aws.Route53.Metadata
+import           Aws.Route53.Query
+import           Aws.Route53.Response
 import           Aws.Transaction
 import           Aws.Xml
-import           Control.Applicative
 import           Data.Maybe
-import           Text.XML.Cursor            (($//), (&|))
+import           Control.Applicative        ((<$>))
+import           Text.XML.Cursor            (($//), (&/), laxElement)
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Network.DNS.Types          as DNS
 
 data ListHostedZones = ListHostedZones
                      { lhzMaxNumberOfItems :: Maybe Int
@@ -34,22 +32,25 @@ listHostedZones = ListHostedZones { lhzMaxNumberOfItems = Nothing, lhzNextToken 
 -- TODO sign the date header
 instance SignQuery ListHostedZones where
     type Info ListHostedZones = Route53Info
-    signQuery ListHostedZones{..} = undefined
-                                  --Route53SignQuery $ catMaybes
-                                  --[ Just ("Action", "ListDomains")
-                                  --, ("MaxNumberOfDomains",) . T.encodeUtf8 . T.pack . show <$> lhzMaxNumberOfItems
-                                  --, ("NextToken",) . T.encodeUtf8 <$> lhzNextToken
-                                  --]
+    signQuery ListHostedZones{..} = route53SignQuery path query
+      where
+      path = "/hostedzone/"
+      query = catMaybes -- query info signatureData
+            [ ("Action",) <$> Just "hostedzone"
+            , ("MaxItems",) . T.encodeUtf8 . T.pack . show <$> lhzMaxNumberOfItems
+            , ("NextToken",) . T.encodeUtf8 <$> lhzNextToken
+            ]
 
 instance ResponseConsumer r ListHostedZonesResponse where
     type ResponseMetadata ListHostedZonesResponse = Route53Metadata
-    responseConsumer _ =
-        route53ResponseConsumer parse
+
+    responseConsumer _ = route53ResponseConsumer parse
         where 
         parse cursor = do
             route53CheckResponseType () "ListHostedZonesResponse" cursor
-            let names = cursor $// elContent "HostedZone" &| parseHostedZone
+            zones <- mapM parseHostedZone $ cursor $// laxElement "HostedZones" &/ laxElement "HostedZone"
             let nextToken = listToMaybe $ cursor $// elContent "NextMarker"
-            return $ ListHostedZonesResponse names nextToken
+            return $ ListHostedZonesResponse zones nextToken
 
-instance Transaction ListHostedZones ListHostedZonesResponse
+instance Transaction ListHostedZones ListHostedZonesResponse where
+

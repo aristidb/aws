@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Aws.Route53.Info
-where
+( Route53Info(..)
+, route53EndpointUsClassic
+, route53
+) where
 
 import           Aws.Http
-import           Data.Time
 import qualified Data.ByteString as B
-
---data Route53Authorization = Route53AuthorizationHeader 
---                            deriving (Show)
 
 data Route53Info = Route53Info 
     { route53Protocol :: Protocol

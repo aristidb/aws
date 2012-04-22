@@ -129,9 +129,13 @@ Library
                        Aws.Xml,
                        Aws.Route53,
                        Aws.Route53.Commands,
-                       Aws.Route53.Commands.ListHostedZones
+                       Aws.Route53.Commands.ListHostedZones,
                        Aws.Route53.Info,
                        Aws.Route53.Model
+                       Aws.Route53.Error,
+                       Aws.Route53.Metadata,
+                       Aws.Route53.Query,
+                       Aws.Route53.Response
                        
 
   -- Packages needed in order to build this package.

@@ -8,11 +8,9 @@ import           Data.Monoid
 import           Data.Typeable
 import qualified Data.Text     as T
 
-data Route53Metadata
-    = Route53Metadata {
-        requestId :: Maybe T.Text
-      }
-    deriving (Show, Typeable)
+data Route53Metadata = Route53Metadata 
+    { requestId :: Maybe T.Text
+    } deriving (Show, Typeable)
 
 instance Monoid Route53Metadata where
     mempty = Route53Metadata Nothing
