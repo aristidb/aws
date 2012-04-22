@@ -19,7 +19,7 @@ route53SignQuery path query si sd
       , sqProtocol      = route53Protocol si
       , sqHost          = route53Endpoint si
       , sqPort          = route53Port si
-      , sqPath          = "/2012-02-29" `B.append`  path
+      , sqPath          = "/2012-02-29" `B.append`  path -- TODO move the protocol version into info
       , sqQuery         = HTTP.simpleQueryToQuery query'
       , sqDate          = Just $ signatureTime sd
       , sqAuthorization = Nothing
