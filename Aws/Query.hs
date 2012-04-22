@@ -34,6 +34,24 @@ data SignedQuery
       }
     --deriving (Show)
 
+instance Show SignedQuery where
+  show q = "SignedQuery {"
+        ++ " sqMethod = " ++ show (sqMethod q)
+        ++ ", sqProtocol = " ++ show (sqProtocol q)
+        ++ ", sqHost = " ++ show (sqHost q)
+        ++ ", sqPort = " ++ show (sqPort q)
+        ++ ", sqPath = " ++ show (sqPath q)
+        ++ ", sqQuery = " ++ show (sqQuery q)
+        ++ ", sqDate = " ++ show (sqDate q)
+        ++ ", sqAuthorization = " ++ show (sqAuthorization q)
+        ++ ", sqContentType = " ++ show (sqContentType q)
+        ++ ", sqContentMd5 = " ++ show (sqContentMd5 q)
+        ++ ", sqAmzHeaders = " ++ show (sqAmzHeaders q)
+        ++ ", sqOtherHeaders = " ++ show (sqOtherHeaders q)
+        ++ ", sqBody = " ++ "<ResourceT IO>"
+        ++ ", sqStringToSign = " ++ show (sqStringToSign q)
+        ++ " }"
+
 queryToHttpRequest :: SignedQuery -> HTTP.Request (C.ResourceT IO)
 queryToHttpRequest SignedQuery{..}
     = HTTP.def {
