@@ -1,4 +1,11 @@
-{-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
+{-# LANGUAGE RecordWildCards
+  , TypeFamilies
+  , FlexibleInstances
+  , MultiParamTypeClasses
+  , OverloadedStrings
+  , TupleSections 
+  , ScopedTypeVariables
+  #-}
 module Aws.Route53.Commands.ListHostedZones where
 
 import           Aws.Response
@@ -12,7 +19,7 @@ import           Aws.Transaction
 import           Aws.Xml
 import           Data.Maybe
 import           Control.Applicative        ((<$>))
-import           Text.XML.Cursor            (($//), (&/), laxElement)
+import           Text.XML.Cursor            (($//))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 
@@ -22,7 +29,7 @@ data ListHostedZones = ListHostedZones
                      } deriving (Show)
 
 data ListHostedZonesResponse = ListHostedZonesResponse
-                             { lhzrHostedZones :: [HostedZone]
+                             { lhzrHostedZones :: HostedZones
                              , lhzrNextToken :: Maybe T.Text
                              } deriving (Show)
 
@@ -43,11 +50,11 @@ instance SignQuery ListHostedZones where
 instance ResponseConsumer r ListHostedZonesResponse where
     type ResponseMetadata ListHostedZonesResponse = Route53Metadata
 
-    responseConsumer _ = route53ResponseConsumer parse
+    responseConsumer _ = route53ResponseConsumer parser
         where 
-        parse cursor = do
+        parser cursor = do
             route53CheckResponseType () "ListHostedZonesResponse" cursor
-            zones <- mapM parseHostedZone $ cursor $// laxElement "HostedZones" &/ laxElement "HostedZone"
+            (zones::HostedZones) <- r53Parse cursor
             let nextToken = listToMaybe $ cursor $// elContent "NextMarker"
             return $ ListHostedZonesResponse zones nextToken
 

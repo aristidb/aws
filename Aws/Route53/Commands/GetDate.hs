@@ -9,7 +9,7 @@ import           System.Locale (defaultTimeLocale)
 import           Aws.Response
 import           Aws.Signature
 import           Aws.Route53.Info
-import           Aws.Route53.Response
+import           Aws.Route53.Model
 import           Aws.Transaction
 import           Data.Maybe
 import           Data.ByteString.Char8      (unpack)

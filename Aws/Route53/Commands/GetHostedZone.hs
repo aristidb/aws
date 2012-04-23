@@ -9,9 +9,6 @@ import           Aws.Route53.Metadata
 import           Aws.Route53.Query
 import           Aws.Route53.Response
 import           Aws.Transaction
-import           Aws.Xml
-import qualified Network.DNS.Types          as DNS
-import           Text.XML.Cursor            (($//), (&/), (&|), laxElement)
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Data.ByteString            as B
@@ -22,7 +19,7 @@ data GetHostedZone = GetHostedZone
 
 data GetHostedZoneResponse = GetHostedZoneResponse
                              { ghzrHostedZone :: HostedZone
-                             , ghzrDelegationSet :: [DNS.Domain]
+                             , ghzrDelegationSet :: DelegationSet
                              } deriving (Show)
 
 getHostedZone :: T.Text -> GetHostedZone
@@ -42,9 +39,8 @@ instance ResponseConsumer r GetHostedZoneResponse where
         where 
         parse cursor = do
             route53CheckResponseType () "GetHostedZoneResponse" cursor
-            zone <- forceM "Missing a HostedZone element" $ cursor $// laxElement "HostedZone" &| parseHostedZone
-            -- TODO assert that there are exactly four nameservers
-            let delegationSet = cursor $// laxElement "DelegationSet" &/ laxElement "Nameservers" &/ elContent "Nameserver" &| T.encodeUtf8
+            zone <- r53Parse cursor
+            delegationSet <- r53Parse cursor
             return $ GetHostedZoneResponse zone delegationSet
 
 instance Transaction GetHostedZone GetHostedZoneResponse where
