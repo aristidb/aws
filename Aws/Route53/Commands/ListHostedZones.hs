@@ -4,7 +4,6 @@
   , MultiParamTypeClasses
   , OverloadedStrings
   , TupleSections 
-  , ScopedTypeVariables
   #-}
 module Aws.Route53.Commands.ListHostedZones where
 
@@ -54,7 +53,7 @@ instance ResponseConsumer r ListHostedZonesResponse where
         where 
         parser cursor = do
             route53CheckResponseType () "ListHostedZonesResponse" cursor
-            (zones::HostedZones) <- r53Parse cursor
+            zones <- r53Parse cursor
             let nextToken = listToMaybe $ cursor $// elContent "NextMarker"
             return $ ListHostedZonesResponse zones nextToken
 
