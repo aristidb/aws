@@ -1,4 +1,9 @@
-{-# LANGUAGE OverloadedStrings, FlexibleContexts, RecordWildCards, TypeSynonymInstances #-}
+{-# LANGUAGE 
+    OverloadedStrings
+  , FlexibleContexts
+  , RecordWildCards
+  , TypeSynonymInstances 
+  #-}
 module Aws.Route53.Model
 ( HostedZone (..)
 , HostedZones
@@ -10,19 +15,22 @@ module Aws.Route53.Model
 , ResourceRecordSet(..)
 , ResourceRecords
 , ResourceRecord(..)
+, AliasTarget(..)
 , findHeader
 , findHeaderValue
 , headerRequestId
 , Route53Parseable(..)
+, typeToString
 )
 
 where
 
-import           Control.Monad
+import           Control.Monad      (MonadPlus, mzero, mplus, liftM)
 import           Aws.Xml
 import           Text.XML.Cursor    (($/), ($//), (&|), ($.//), laxElement)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.List          (find)
+import           Data.Maybe         (listToMaybe)
 import qualified Control.Failure    as F
 import qualified Text.XML.Cursor    as Cu
 import qualified Data.Text          as T
@@ -90,22 +98,63 @@ instance Route53Parseable Nameserver where
   r53Parse cursor = 
     force "Missing Nameserver element" $ cursor $.// elContent "Nameserver" &| T.encodeUtf8
 
-
 -- * RsourceRecordSet
+
+data REGION = ApNorthEast1
+            | ApSouthEast2
+            | EuWest1
+            | SaEast1
+            | UsEast1
+            | UsWest1
+            | UsWest2
+            | UnknownRegion
+
+instance Show REGION where
+  show ApNorthEast1  = "ap-north-east-1"
+  show ApSouthEast2  = "ap-South-east-2"
+  show EuWest1       = "eu-west-1"
+  show SaEast1       = "sa-east-1"
+  show UsEast1       = "us-east-1"
+  show UsWest1       = "us-west-1"
+  show UsWest2       = "us-west-2"
+  show UnknownRegion = "unknown"
+
+regionFromString :: String -> REGION
+regionFromString "ap-north-east-1" = ApNorthEast1
+regionFromString "ap-South-east-2" = ApSouthEast2
+regionFromString "eu-west-1"       = EuWest1
+regionFromString "sa-east-1"       = SaEast1
+regionFromString "us-east-1"       = UsEast1
+regionFromString "us-west-1"       = UsWest1
+regionFromString "us-west-2"       = UsWest2
+regionFromString _                 = UnknownRegion
 
 type ResourceRecords = [ResourceRecord]
 
 newtype ResourceRecord = ResourceRecord { value :: T.Text }
                          deriving (Show)
 
+data AliasTarget = AliasTarget { atHostedZoneId :: T.Text
+                               , atDNSName :: DNS.Domain
+                               } deriving (Show)
+
 -- TODO make this complete from the spec. Do not just use the exmpales!
 data ResourceRecordSet = ResourceRecordSet { rrsName :: DNS.Domain
                                            , rrsType :: DNS.TYPE
+                                           , rrsAliasTarget :: Maybe AliasTarget
+                                           , rrsSetIdentifier :: Maybe T.Text
+                                           , rrsWeight :: Maybe Int
+                                           , rssRegion :: Maybe REGION
                                            , rrsTTL  :: Int
                                            , rrsRecords :: ResourceRecords
                                            } deriving (Show)
                                            
 type ResourceRecordSets = [ResourceRecordSet]
+
+instance Route53Parseable ResourceRecordSets where
+  r53Parse cursor = do
+    c <- force "Missing ResourceRecordSets element" $ cursor $.// laxElement "ResourceRecordSets"
+    sequence $ c $/ laxElement "ResourceRecordSet" &| r53Parse
 
 instance Route53Parseable ResourceRecordSet where
   r53Parse cursor = do
@@ -113,11 +162,23 @@ instance Route53Parseable ResourceRecordSet where
     name <- force "Missing name element" $ c $/ elContent "Name" &| encodeUtf8
     dnsType <- force "Missing type element" $ c $/ elCont "Type" &| DNS.toType 
     ttl <- forceM "Missing TTL element" $ c $/ elCont "TTL" &| readInt
+    alias <- listToMaybe `liftM` (sequence $ c $/ laxElement "AliasTarget" &| r53Parse)
+    let setIdentifier = listToMaybe $ c $/ elContent "SetIdentifier"
+    weight <- listToMaybe `liftM` (sequence $ c $/ elCont "Weight" &| readInt)
+    let region = listToMaybe $ c $/ elCont "Region" &| regionFromString
     resourceRecords <- r53Parse c
-    return $ ResourceRecordSet name dnsType ttl resourceRecords
+    return $ ResourceRecordSet name dnsType alias setIdentifier weight region ttl resourceRecords
 
 -- TODO is there any constraint on the number of records?
 -- TODO check constraints on type
+
+instance Route53Parseable AliasTarget where
+  r53Parse cursor = do
+    c <- force "Missing AliasTarget element" $ cursor $.// laxElement "AliasTarget"
+    zoneId <- force "Missing HostedZoneId element" $ c $/ elContent "HostedZoneId"
+    dnsName <- force "Missing DNSName element" $ c $/ elContent "DNSName" &| encodeUtf8
+    return $ AliasTarget zoneId dnsName
+
 
 instance Route53Parseable ResourceRecords where
   r53Parse cursor = do
@@ -165,7 +226,7 @@ forceTake n e l = do
   t <- forceTake (n-1) e (tail l)
   return $ return h  `mplus` t
 
--- * Utility methods that extend the functionality of 'Network.DNS.Types'
+-- * Utility methods that extend the functionality of 'Network.HTTP.Types' and 'Network.DNS.Types'
 
 headerRequestId :: HTTP.Ascii -> HTTP.Header
 headerRequestId = (,) "x-amzn-requestid"
@@ -176,3 +237,5 @@ findHeader headers header = find (\h@(_,v) -> h == header v) headers
 findHeaderValue :: [HTTP.Header] -> (HTTP.Ascii -> HTTP.Header) -> Maybe HTTP.Ascii
 findHeaderValue headers = fmap snd . findHeader headers
 
+typeToString :: DNS.TYPE -> String
+typeToString = show
