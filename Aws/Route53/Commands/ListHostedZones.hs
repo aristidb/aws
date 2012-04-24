@@ -5,6 +5,13 @@
   , OverloadedStrings
   , TupleSections 
   #-}
+
+-- | GET ListHostedZones
+--
+--   List all Route53 hosted zones of the user, optionally paginated.
+--
+--   <http://docs.amazonwebservices.com/Route53/latest/APIReference/API_ListHostedZones.html>
+--
 module Aws.Route53.Commands.ListHostedZones where
 
 import           Aws.Response

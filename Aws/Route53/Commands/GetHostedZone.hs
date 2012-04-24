@@ -1,4 +1,13 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
+
+-- | GET GetHostedZone
+--
+--   Get a particular Route53 hosted zone identified through its 'hostedZoneId'.
+--   The HostedZoneId is obtained in the response to 'Aws.Route53.Commands.CreateHostedZone'
+--   or 'Aws.Route53.Commands.ListHostedZones'
+--
+--   <http://docs.amazonwebservices.com/Route53/latest/APIReference/API_GetHostedZone.html>
+--
 module Aws.Route53.Commands.GetHostedZone where
 
 import           Aws.Response

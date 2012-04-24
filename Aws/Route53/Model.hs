@@ -4,26 +4,36 @@
   , RecordWildCards
   , TypeSynonymInstances 
   #-}
+  
 module Aws.Route53.Model
-( HostedZone (..)
+( -- * Hosted Zone
+  HostedZone (..)
 , HostedZones
+
+  -- * Delegation Set
 , DelegationSet(..)
 , Nameserver
 , Nameservers
 , dsNameservers
+
+  -- * Resource Record Set
+, REGION(..)
 , ResourceRecordSets
 , ResourceRecordSet(..)
 , ResourceRecords
 , ResourceRecord(..)
 , AliasTarget(..)
+
+  -- * Parser Utilities
+, Route53Parseable(..)
+
+  -- * DNS and HTTP Utilites
+  -- | This functions extend 'Network.HTTP.Types' and 'Network.DNS.Types'
 , findHeader
 , findHeaderValue
 , headerRequestId
-, Route53Parseable(..)
 , typeToString
-)
-
-where
+) where
 
 import           Control.Monad      (MonadPlus, mzero, mplus, liftM)
 import           Aws.Xml
@@ -38,11 +48,11 @@ import qualified Data.Text.Encoding as T
 import qualified Network.DNS.Types  as DNS
 import qualified Network.HTTP.Types as HTTP
 
--- * HostedZone
+-- -------------------------------------------------------------------------- --
+-- HostedZone
 
 type HostedZones = [HostedZone]
 
--- | A hosted zone is
 data HostedZone = HostedZone 
                   { hzId :: T.Text
                   , hzName :: DNS.Domain
@@ -66,12 +76,11 @@ instance Route53Parseable HostedZone where
     resourceRecordSetCount <- forceM "Missing ResourceRecordCount" $ c $/ elCont "ResourceRecordSetCount" &| readInt
     return $ HostedZone zoneId name callerReference comment resourceRecordSetCount
 
--- * Delegation Set
+-- -------------------------------------------------------------------------- --
+-- Delegation Set
 
--- | Currently only internally used for composing parsers
 type Nameservers = [Nameserver]
 
--- | Currently only internally used for composing parsers
 type Nameserver = DNS.Domain
 
 data DelegationSet = DelegationSet { dsNameserver1 :: DNS.Domain 
@@ -98,7 +107,8 @@ instance Route53Parseable Nameserver where
   r53Parse cursor = 
     force "Missing Nameserver element" $ cursor $.// elContent "Nameserver" &| T.encodeUtf8
 
--- * RsourceRecordSet
+-- -------------------------------------------------------------------------- --
+-- RsourceRecordSet
 
 data REGION = ApNorthEast1
             | ApSouthEast2
@@ -190,7 +200,8 @@ instance Route53Parseable ResourceRecord where
     c <- force "Missing ResourceRecord element" $ cursor $.// laxElement "ResourceRecord"
     force "Missing Value element" $ c $/ elContent "Value" &| ResourceRecord
 
--- * Parser Utilities
+-- -------------------------------------------------------------------------- --
+-- Parser Utilities
 
 -- | A class for Route53 XML response parsers
 --
@@ -226,7 +237,9 @@ forceTake n e l = do
   t <- forceTake (n-1) e (tail l)
   return $ return h  `mplus` t
 
--- * Utility methods that extend the functionality of 'Network.HTTP.Types' and 'Network.DNS.Types'
+-- -------------------------------------------------------------------------- --
+-- Utility methods that extend the functionality of 'Network.HTTP.Types' 
+-- and 'Network.DNS.Types'
 
 headerRequestId :: HTTP.Ascii -> HTTP.Header
 headerRequestId = (,) "x-amzn-requestid"

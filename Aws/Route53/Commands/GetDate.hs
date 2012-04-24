@@ -1,4 +1,12 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
+
+-- | GET GetDate
+--
+--   Receive current date string from Route53 service that can be used as date string for
+--   authenticating REST requests to Route53.
+--
+--   <http://docs.amazonwebservices.com/Route53/latest/DeveloperGuide/RESTAuthentication.html>
+-- 
 module Aws.Route53.Commands.GetDate where
 
 import           Aws.Query

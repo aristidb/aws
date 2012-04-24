@@ -7,6 +7,21 @@
   , TupleSections
   , ScopedTypeVariables
   #-}
+
+-- | GET ListResourceRecordSets
+--
+--   Lists the resource record sets for a Route53 hosted zone. The hosted zone is identifed by
+--   the hostedZoneId which is retrieved in the response to 'Aws.Route53.Commands.ListHostedZones' 
+--   or 'Aws.Route53.Commands.CreateHostedZone'.
+-- 
+--   <http://docs.amazonwebservices.com/Route53/latest/APIReference/API_ListResourceRecordSets.html>
+--
+--   NOTE: Route53 supports record type @SPF@ which is not supported in 'Network.DNS.Types' and can thus
+--   not be queried through this bindings.
+--
+--   NOTE: the parameter 'identifier' is required for weighted and laltency resource record sets. This is
+--   not enforced by the type.
+--
 module Aws.Route53.Commands.ListResourceRecordSets where
 
 import           Aws.Response
@@ -25,16 +40,6 @@ import           Text.XML.Cursor            (($//), (&|), ($/))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Data.ByteString.Char8      as B
-
--- | GET ListResourceRecordSets
--- 
--- <http://docs.amazonwebservices.com/Route53/latest/APIReference/API_ListResourceRecordSets.html>
---
--- NOTE: route53 supports record type @SPF@ which is not supported in 'Network.DNS.Types' and can thus
--- not be queried through this bindings.
---
--- NOTE: the parameter 'identifier' is required for Weighted and altency resource record sets. This is
--- not enforced by the type.
 
 data ListResourceRecordSets = ListResourceRecordSets
                    { lrrsHostedZoneId :: T.Text
