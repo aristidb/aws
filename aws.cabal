@@ -132,6 +132,7 @@ Library
                        Aws.Route53.Commands.ListHostedZones,
                        Aws.Route53.Commands.ListResourceRecordSets,
                        Aws.Route53.Commands.GetHostedZone,
+                       Aws.Route53.Commands.DeleteHostedZone,
                        Aws.Route53.Commands.GetChange,
                        Aws.Route53.Commands.GetDate,
                        Aws.Route53.Info,
