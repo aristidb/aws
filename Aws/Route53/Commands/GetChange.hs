@@ -23,6 +23,7 @@ import           Aws.Route53.Metadata
 import           Aws.Route53.Query
 import           Aws.Route53.Response
 import           Aws.Transaction
+import           Aws.Http                   (Method(..))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Data.ByteString            as B
@@ -40,8 +41,9 @@ getChange changeId = GetChange changeId
 
 instance SignQuery GetChange where
     type Info GetChange = Route53Info
-    signQuery GetChange{..} = route53SignQuery resource query
+    signQuery GetChange{..} = route53SignQuery method resource query
       where
+      method = Get
       resource = "/change/" `B.append` (T.encodeUtf8 changeId)
       query = []
 

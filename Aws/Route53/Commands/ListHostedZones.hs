@@ -24,6 +24,7 @@ import           Aws.Route53.Response
 import           Aws.Transaction
 import           Aws.Xml
 import           Data.Maybe
+import           Aws.Http                   (Method(..))
 import           Control.Applicative        ((<$>))
 import           Text.XML.Cursor            (($//))
 import qualified Data.Text                  as T
@@ -45,8 +46,9 @@ listHostedZones = ListHostedZones { lhzMaxNumberOfItems = Nothing, lhzNextToken 
 -- TODO sign the date header
 instance SignQuery ListHostedZones where
     type Info ListHostedZones = Route53Info
-    signQuery ListHostedZones{..} = route53SignQuery resource query
+    signQuery ListHostedZones{..} = route53SignQuery method resource query
       where
+      method = Get
       resource = "/hostedzone"
       query = catMaybes -- query info signatureData
             [ ("MaxItems",) . T.encodeUtf8 . T.pack . show <$> lhzMaxNumberOfItems

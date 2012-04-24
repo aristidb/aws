@@ -12,10 +12,10 @@ import           Aws.Util
 import qualified Data.ByteString                as B
 import qualified Network.HTTP.Types             as HTTP
 
-route53SignQuery :: B.ByteString -> [(B.ByteString, B.ByteString)] -> Route53Info -> SignatureData -> SignedQuery
-route53SignQuery resource query Route53Info{..} sd
+route53SignQuery :: Method -> B.ByteString -> [(B.ByteString, B.ByteString)] -> Route53Info -> SignatureData -> SignedQuery
+route53SignQuery method resource query Route53Info{..} sd
     = SignedQuery {
-        sqMethod        = Get -- TODO should not be hardcoded
+        sqMethod        = method
       , sqProtocol      = route53Protocol 
       , sqHost          = route53Endpoint
       , sqPort          = route53Port

@@ -18,6 +18,7 @@ import           Aws.Route53.Metadata
 import           Aws.Route53.Query
 import           Aws.Route53.Response
 import           Aws.Transaction
+import           Aws.Http                   (Method(..))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Data.ByteString            as B
@@ -36,8 +37,9 @@ getHostedZone hostedZoneId = GetHostedZone hostedZoneId
 
 instance SignQuery GetHostedZone where
     type Info GetHostedZone = Route53Info
-    signQuery GetHostedZone{..} = route53SignQuery resource query
+    signQuery GetHostedZone{..} = route53SignQuery method resource query
       where
+      method = Get
       resource = "/hostedzone/" `B.append` (T.encodeUtf8 hostedZoneId)
       query = []
 

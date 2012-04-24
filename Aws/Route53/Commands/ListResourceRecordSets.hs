@@ -33,6 +33,7 @@ import           Aws.Route53.Query
 import           Aws.Route53.Response
 import           Aws.Transaction
 import           Aws.Xml
+import           Aws.Http                   (Method(..))
 import           Data.Maybe                 (catMaybes, listToMaybe)
 import           Control.Applicative        ((<$>))
 import qualified Network.DNS.Types          as DNS
@@ -64,8 +65,9 @@ data ListResourceRecordSetsResponse = ListResourceRecordSetsResponse
 
 instance SignQuery ListResourceRecordSets where
     type Info ListResourceRecordSets = Route53Info
-    signQuery ListResourceRecordSets{..} = route53SignQuery resource query
+    signQuery ListResourceRecordSets{..} = route53SignQuery method resource query
       where
+      method = Get
       resource = "/hostedzone/" `B.append` (T.encodeUtf8 lrrsHostedZoneId) `B.append` "/rrset"
       query = catMaybes [ ("name",) <$> name
                         , ("type",) . B.pack . typeToString <$> recordType
