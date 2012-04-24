@@ -24,6 +24,9 @@ module Aws.Route53.Model
 , ResourceRecord(..)
 , AliasTarget(..)
 
+  -- * Change Info
+, ChangeInfo(..)
+
   -- * Parser Utilities
 , Route53Parseable(..)
 
@@ -40,7 +43,10 @@ import           Aws.Xml
 import           Text.XML.Cursor    (($/), ($//), (&|), ($.//), laxElement)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.List          (find)
-import           Data.Maybe         (listToMaybe)
+import           Data.Maybe         (listToMaybe, fromJust)
+import           Data.Time          (UTCTime)
+import           Data.Time.Format   (parseTime)
+import           System.Locale      (defaultTimeLocale)
 import qualified Control.Failure    as F
 import qualified Text.XML.Cursor    as Cu
 import qualified Data.Text          as T
@@ -199,6 +205,27 @@ instance Route53Parseable ResourceRecord where
   r53Parse cursor = do
     c <- force "Missing ResourceRecord element" $ cursor $.// laxElement "ResourceRecord"
     force "Missing Value element" $ c $/ elContent "Value" &| ResourceRecord
+
+-- -------------------------------------------------------------------------- --
+-- Change Info
+
+data ChangeInfoStatus = PENDING | INSYNC
+                        deriving (Show, Read)
+
+data ChangeInfo = ChangeInfo { ciId :: T.Text
+                             , ciStatus :: ChangeInfoStatus
+                             , ciSubmittedAt :: UTCTime
+                             } deriving (Show)
+
+instance Route53Parseable ChangeInfo where
+  r53Parse cursor = do
+    c <- force "Missing ChangeInfo element" $ cursor $.// laxElement "ChangeInfo"
+    ciId <- force "Missing Id element" $ c $/ elContent "Id"
+    status <- force "Missing Status element" $ c $/ elCont "Status" &| read
+    submittedAt <- force "Missing SubmittedAt element" $ c $/ elCont "SubmittedAt" &| utcTime
+    return $ ChangeInfo ciId status submittedAt
+    where
+    utcTime str = fromJust $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" str
 
 -- -------------------------------------------------------------------------- --
 -- Parser Utilities
