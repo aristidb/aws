@@ -46,7 +46,7 @@ listHostedZones = ListHostedZones { lhzMaxNumberOfItems = Nothing, lhzNextToken 
 -- TODO sign the date header
 instance SignQuery ListHostedZones where
     type Info ListHostedZones = Route53Info
-    signQuery ListHostedZones{..} = route53SignQuery method resource query
+    signQuery ListHostedZones{..} = route53SignQuery method resource query Nothing
       where
       method = Get
       resource = "/hostedzone"

@@ -1,12 +1,10 @@
-{-# LANGUAGE 
-    RecordWildCards
-  , TypeFamilies
-  , FlexibleInstances
-  , MultiParamTypeClasses
-  , OverloadedStrings
-  , TupleSections
-  , ScopedTypeVariables
-  #-}
+{-# LANGUAGE RecordWildCards #-} 
+{-# LANGUAGE TypeFamilies #-} 
+{-# LANGUAGE FlexibleInstances #-} 
+{-# LANGUAGE MultiParamTypeClasses #-} 
+{-# LANGUAGE OverloadedStrings #-} 
+{-# LANGUAGE TupleSections #-} 
+{-# LANGUAGE ScopedTypeVariables #-} 
 
 -- | GET ListResourceRecordSets
 --
@@ -65,9 +63,10 @@ data ListResourceRecordSetsResponse = ListResourceRecordSetsResponse
 
 instance SignQuery ListResourceRecordSets where
     type Info ListResourceRecordSets = Route53Info
-    signQuery ListResourceRecordSets{..} = route53SignQuery method resource query
+    signQuery ListResourceRecordSets{..} = route53SignQuery method resource query body
       where
       method = Get
+      body = Nothing
       resource = "/hostedzone/" `B.append` (T.encodeUtf8 lrrsHostedZoneId) `B.append` "/rrset"
       query = catMaybes [ ("name",) <$> name
                         , ("type",) . B.pack . typeToString <$> recordType

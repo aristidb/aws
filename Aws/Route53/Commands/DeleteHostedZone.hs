@@ -37,13 +37,19 @@ data DeleteHostedZoneResponse = DeleteHostedZoneResponse
 deleteHostedZone :: T.Text -> DeleteHostedZone
 deleteHostedZone hostedZoneId = DeleteHostedZone hostedZoneId
 
+-- Delete add convenience methods:
+-- * Delete non-empty hosted zone
+-- * extract zoneId (maybe we should always strip the start of the string? Haskell is typed!)
+-- * Extract bare Model from responses (that are heavily wrapped...)
+
 instance SignQuery DeleteHostedZone where
     type Info DeleteHostedZone = Route53Info
-    signQuery DeleteHostedZone{..} = route53SignQuery method resource query
+    signQuery DeleteHostedZone{..} = route53SignQuery method resource query body
       where
       method = Delete
       resource = "/hostedzone/" `B.append` (T.encodeUtf8 dhzHostedZoneId)
       query = []
+      body = Nothing
 
 instance ResponseConsumer r DeleteHostedZoneResponse where
     type ResponseMetadata DeleteHostedZoneResponse = Route53Metadata

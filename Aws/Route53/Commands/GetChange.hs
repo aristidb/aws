@@ -1,11 +1,9 @@
-{-# LANGUAGE 
-    RecordWildCards
-  , TypeFamilies
-  , FlexibleInstances
-  , MultiParamTypeClasses
-  , OverloadedStrings
-  , TupleSections 
-  #-}
+{-# LANGUAGE RecordWildCards #-} 
+{-# LANGUAGE TypeFamilies #-} 
+{-# LANGUAGE FlexibleInstances #-} 
+{-# LANGUAGE MultiParamTypeClasses #-} 
+{-# LANGUAGE OverloadedStrings #-} 
+{-# LANGUAGE TupleSections #-}  
 
 -- | GET GetChange
 --
@@ -41,11 +39,12 @@ getChange changeId = GetChange changeId
 
 instance SignQuery GetChange where
     type Info GetChange = Route53Info
-    signQuery GetChange{..} = route53SignQuery method resource query
+    signQuery GetChange{..} = route53SignQuery method resource query body
       where
       method = Get
       resource = "/change/" `B.append` (T.encodeUtf8 changeId)
       query = []
+      body = Nothing
 
 instance ResponseConsumer r GetChangeResponse where
     type ResponseMetadata GetChangeResponse = Route53Metadata

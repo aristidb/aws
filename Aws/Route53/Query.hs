@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-} 
+
 module Aws.Route53.Query
     ( route53SignQuery
     ) where
@@ -9,11 +11,13 @@ import           Aws.Query
 import           Aws.Signature
 import           Aws.Route53.Info
 import           Aws.Util
+import qualified Text.XML                       as XML
 import qualified Data.ByteString                as B
 import qualified Network.HTTP.Types             as HTTP
+import qualified Network.HTTP.Conduit           as HTTP
 
-route53SignQuery :: Method -> B.ByteString -> [(B.ByteString, B.ByteString)] -> Route53Info -> SignatureData -> SignedQuery
-route53SignQuery method resource query Route53Info{..} sd
+route53SignQuery :: Method -> B.ByteString -> [(B.ByteString, B.ByteString)] -> Maybe XML.Element -> Route53Info -> SignatureData -> SignedQuery
+route53SignQuery method resource query body Route53Info{..} sd
     = SignedQuery {
         sqMethod        = method
       , sqProtocol      = route53Protocol 
@@ -27,7 +31,7 @@ route53SignQuery method resource query Route53Info{..} sd
       , sqContentMd5    = Nothing
       , sqAmzHeaders    = [("X-Amzn-Authorization", authorization)]
       , sqOtherHeaders  = []
-      , sqBody          = Nothing
+      , sqBody          = renderBody `fmap` body
       , sqStringToSign  = stringToSign
       }
     where
@@ -40,3 +44,9 @@ route53SignQuery method resource query Route53Info{..} sd
                                , signature credentials HmacSHA256 stringToSign
                                ]
       query' = ("AWSAccessKeyId", accessKeyId) : query
+
+      renderBody b = HTTP.RequestBodyLBS . XML.renderLBS XML.def $ XML.Document 
+                     { XML.documentPrologue = XML.Prologue [] Nothing []
+                     , XML.documentRoot = b
+                     , XML.documentEpilogue = []
+                     }

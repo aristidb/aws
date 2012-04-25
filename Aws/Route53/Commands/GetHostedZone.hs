@@ -1,4 +1,9 @@
-{-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 -- | GET GetHostedZone
 --
@@ -37,7 +42,7 @@ getHostedZone hostedZoneId = GetHostedZone hostedZoneId
 
 instance SignQuery GetHostedZone where
     type Info GetHostedZone = Route53Info
-    signQuery GetHostedZone{..} = route53SignQuery method resource query
+    signQuery GetHostedZone{..} = route53SignQuery method resource query Nothing
       where
       method = Get
       resource = "/hostedzone/" `B.append` (T.encodeUtf8 hostedZoneId)

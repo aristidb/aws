@@ -1,9 +1,8 @@
-{-# LANGUAGE 
-    OverloadedStrings
-  , FlexibleContexts
-  , RecordWildCards
-  , TypeSynonymInstances 
-  #-}
+{-# LANGUAGE OverloadedStrings #-} 
+{-# LANGUAGE QuasiQuotes #-} 
+{-# LANGUAGE FlexibleContexts #-} 
+{-# LANGUAGE RecordWildCards #-} 
+{-# LANGUAGE TypeSynonymInstances #-}  
   
 module Aws.Route53.Model
 ( -- * Hosted Zone
@@ -29,6 +28,7 @@ module Aws.Route53.Model
 
   -- * Parser Utilities
 , Route53Parseable(..)
+, Route53XmlSerializable(..)
 
   -- * DNS and HTTP Utilites
   -- | This functions extend 'Network.HTTP.Types' and 'Network.DNS.Types'
@@ -41,7 +41,9 @@ module Aws.Route53.Model
 import           Control.Monad      (MonadPlus, mzero, mplus, liftM)
 import           Aws.Xml
 import           Text.XML.Cursor    (($/), ($//), (&|), ($.//), laxElement)
-import           Data.Text.Encoding (encodeUtf8)
+import qualified Text.XML           as XML
+import           Text.Hamlet.XML    (xml)
+import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import           Data.List          (find)
 import           Data.Maybe         (listToMaybe, fromJust)
 import           Data.Time          (UTCTime)
@@ -81,6 +83,20 @@ instance Route53Parseable HostedZone where
     comment <- force "Missing Comment element" $ c $// elContent "Comment"
     resourceRecordSetCount <- forceM "Missing ResourceRecordCount" $ c $/ elCont "ResourceRecordSetCount" &| readInt
     return $ HostedZone zoneId name callerReference comment resourceRecordSetCount
+
+instance Route53XmlSerializable HostedZone where
+
+  toXml HostedZone{..} = XML.Element "HostedZone" [] [xml|
+    <Id>#{hzId}
+    <Name>#{decodeUtf8 hzName}
+    <CallerReference>${hzCallerReference}
+    <Config>
+      <Comment>#{hzComment}
+    <ResourceRecordSetCount>${T.pack . show $ hzResourceRecordCount}
+    |]
+
+instance Route53XmlSerializable HostedZones where
+  toXml hostedZones = XML.Element "HostedZones" [] $ (XML.NodeElement . toXml) `map` hostedZones
 
 -- -------------------------------------------------------------------------- --
 -- Delegation Set
@@ -228,7 +244,7 @@ instance Route53Parseable ChangeInfo where
     utcTime str = fromJust $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" str
 
 -- -------------------------------------------------------------------------- --
--- Parser Utilities
+-- Parser and Serialization Utilities
 
 -- | A class for Route53 XML response parsers
 --
@@ -263,6 +279,9 @@ forceTake n e l = do
   h <- force e l
   t <- forceTake (n-1) e (tail l)
   return $ return h  `mplus` t
+
+class Route53XmlSerializable r where
+  toXml :: r -> XML.Element 
 
 -- -------------------------------------------------------------------------- --
 -- Utility methods that extend the functionality of 'Network.HTTP.Types' 
