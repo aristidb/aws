@@ -54,9 +54,9 @@ instance SignQuery CreateHostedZone where
       body = Just $ XML.Element "{https://route53.amazonaws.com/doc/2012-02-29/}CreateHostedZoneRequest" []
              [xml|
              <Name>#{T.decodeUtf8 chzName}
-             <CallerReference>${chzCallerReference}
+             <CallerReference>#{chzCallerReference}
              <HostedZoneConfig>
-               <Comment>${chzComment}
+               <Comment>#{chzComment}
              |]
 
 instance ResponseConsumer r CreateHostedZoneResponse where

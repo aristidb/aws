@@ -89,10 +89,10 @@ instance Route53XmlSerializable HostedZone where
   toXml HostedZone{..} = XML.Element "HostedZone" [] [xml|
     <Id>#{hzId}
     <Name>#{decodeUtf8 hzName}
-    <CallerReference>${hzCallerReference}
+    <CallerReference>#{hzCallerReference}
     <Config>
       <Comment>#{hzComment}
-    <ResourceRecordSetCount>${T.pack . show $ hzResourceRecordCount}
+    <ResourceRecordSetCount>#{intToText hzResourceRecordSetCount}
     |]
 
 instance Route53XmlSerializable HostedZones where
@@ -151,6 +151,9 @@ instance Show REGION where
   show UsWest2       = "us-west-2"
   show UnknownRegion = "unknown"
 
+regionToText :: REGION -> T.Text
+regionToText = T.pack . show
+
 regionFromString :: String -> REGION
 regionFromString "ap-north-east-1" = ApNorthEast1
 regionFromString "ap-South-east-2" = ApSouthEast2
@@ -171,17 +174,54 @@ data AliasTarget = AliasTarget { atHostedZoneId :: T.Text
                                } deriving (Show)
 
 -- TODO make this complete from the spec. Do not just use the exmpales!
+-- We may e.g. have different type for alias resource record sets
 data ResourceRecordSet = ResourceRecordSet { rrsName :: DNS.Domain
                                            , rrsType :: DNS.TYPE
                                            , rrsAliasTarget :: Maybe AliasTarget
                                            , rrsSetIdentifier :: Maybe T.Text
                                            , rrsWeight :: Maybe Int
-                                           , rssRegion :: Maybe REGION
-                                           , rrsTTL  :: Int
+                                           , rrsRegion :: Maybe REGION
+                                           , rrsTTL  :: Maybe Int
                                            , rrsRecords :: ResourceRecords
                                            } deriving (Show)
                                            
 type ResourceRecordSets = [ResourceRecordSet]
+
+instance Route53XmlSerializable ResourceRecordSet where
+
+  toXml ResourceRecordSet{..} = XML.Element "ResourceRecordSet" [] [xml|
+    <Name>#{decodeUtf8 rrsName}
+    <Type>#{ typeToText rrsType }
+    $maybe a <- rrsAliasTarget
+      <AliasTarget>
+        ^{[XML.NodeElement (toXml a)]}
+    $maybe i <- rrsSetIdentifier 
+      <SetIdentifier>#{i}
+    $maybe w <- rrsWeight
+      <Weight>#{intToText w}
+    $maybe r <- rrsRegion
+      <Region>#{regionToText r}
+    $maybe t <- rrsTTL
+      <TTL>#{intToText t}
+    <ResourceRecords>
+      $forall record <- rrsRecords
+        ^{[XML.NodeElement (toXml record)]}
+    |]
+
+instance Route53XmlSerializable ResourceRecord where
+  
+  toXml ResourceRecord{..} = XML.Element "ResourceRecord" [] [xml|  <Value>#{value} |]
+
+instance Route53XmlSerializable AliasTarget where
+  
+  toXml AliasTarget{..} = XML.Element "AliasTarget" [] [xml|
+    <HostedZoneId>#{atHostedZoneId}
+    <DNSName>#{decodeUtf8 atDNSName}
+    |]
+
+--instance Route53XmlSerializable HostedZones where
+--  toXml hostedZones = XML.Element "HostedZones" [] $ (XML.NodeElement . toXml) `map` hostedZones
+
 
 instance Route53Parseable ResourceRecordSets where
   r53Parse cursor = do
@@ -193,7 +233,7 @@ instance Route53Parseable ResourceRecordSet where
     c <- force "Missing ResourceRecordSet element" $ cursor $.// laxElement "ResourceRecordSet"
     name <- force "Missing name element" $ c $/ elContent "Name" &| encodeUtf8
     dnsType <- force "Missing type element" $ c $/ elCont "Type" &| DNS.toType 
-    ttl <- forceM "Missing TTL element" $ c $/ elCont "TTL" &| readInt
+    ttl <- listToMaybe `liftM` (sequence $ c $/ elCont "TTL" &| readInt)
     alias <- listToMaybe `liftM` (sequence $ c $/ laxElement "AliasTarget" &| r53Parse)
     let setIdentifier = listToMaybe $ c $/ elContent "SetIdentifier"
     weight <- listToMaybe `liftM` (sequence $ c $/ elCont "Weight" &| readInt)
@@ -283,6 +323,9 @@ forceTake n e l = do
 class Route53XmlSerializable r where
   toXml :: r -> XML.Element 
 
+intToText :: Int -> T.Text
+intToText = T.pack . show
+
 -- -------------------------------------------------------------------------- --
 -- Utility methods that extend the functionality of 'Network.HTTP.Types' 
 -- and 'Network.DNS.Types'
@@ -298,3 +341,7 @@ findHeaderValue headers = fmap snd . findHeader headers
 
 typeToString :: DNS.TYPE -> String
 typeToString = show
+
+typeToText :: DNS.TYPE -> T.Text
+typeToText = T.pack . typeToString
+
