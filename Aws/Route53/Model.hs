@@ -1,8 +1,11 @@
-{-# LANGUAGE OverloadedStrings #-} 
-{-# LANGUAGE QuasiQuotes #-} 
-{-# LANGUAGE FlexibleContexts #-} 
-{-# LANGUAGE RecordWildCards #-} 
-{-# LANGUAGE TypeSynonymInstances #-}  
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
   
 module Aws.Route53.Model
 ( -- * Hosted Zone
@@ -38,12 +41,12 @@ module Aws.Route53.Model
 , typeToString
 ) where
 
+import           Data.String
 import           Control.Monad      (MonadPlus, mzero, mplus, liftM)
 import           Aws.Xml
 import           Text.XML.Cursor    (($/), ($//), (&|), ($.//), laxElement)
 import qualified Text.XML           as XML
 import           Text.Hamlet.XML    (xml)
-import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import           Data.List          (find)
 import           Data.Maybe         (listToMaybe, fromJust)
 import           Data.Time          (UTCTime)
@@ -52,18 +55,37 @@ import           System.Locale      (defaultTimeLocale)
 import qualified Control.Failure    as F
 import qualified Text.XML.Cursor    as Cu
 import qualified Data.Text          as T
-import qualified Data.Text.Encoding as T
 import qualified Network.DNS.Types  as DNS
 import qualified Network.HTTP.Types as HTTP
+
+class Route53Id r where
+  idText :: r -> T.Text
+  asId :: T.Text -> r
+
+--instance (Route53Id r) => IsString r where
+--  fromString = HostedZoneId . fromJust . T.stripPrefix (idPrefix undefined) . T.pack
 
 -- -------------------------------------------------------------------------- --
 -- HostedZone
 
+newtype HostedZoneId = HostedZoneId { hostedZoneIdText :: T.Text }
+                        deriving (Show, IsString)
+
+instance Route53Id HostedZoneId where
+  idText = hostedZoneIdText
+  asId = HostedZoneId . fromJust . T.stripPrefix "/hostedzone/"
+
+newtype Domain = Domain { domainText :: T.Text }
+                 deriving (Show)
+
+instance IsString Domain where
+  fromString = Domain . T.pack
+
 type HostedZones = [HostedZone]
 
 data HostedZone = HostedZone 
-                  { hzId :: T.Text
-                  , hzName :: DNS.Domain
+                  { hzId :: HostedZoneId
+                  , hzName :: Domain
                   , hzCallerReference :: T.Text
                   , hzComment :: T.Text
                   , hzResourceRecordSetCount :: Int
@@ -77,8 +99,8 @@ instance Route53Parseable HostedZones where
 instance Route53Parseable HostedZone where
   r53Parse cursor = do
     c <- force "Missing HostedZone element" $ cursor $.// laxElement "HostedZone"
-    zoneId <- force "Missing hostedZoneId element" $ c $/ elContent "Id"
-    name <- force "Missing Name element" $ c $/ elContent "Name" &| encodeUtf8
+    zoneId <- force "Missing hostedZoneId element" $ c $/ elContent "Id" &| asId
+    name <- force "Missing Name element" $ c $/ elContent "Name" &| Domain
     callerReference <- force "Missing CallerReference element" $ c $/ elContent "CallerReference"
     comment <- force "Missing Comment element" $ c $// elContent "Comment"
     resourceRecordSetCount <- forceM "Missing ResourceRecordCount" $ c $/ elCont "ResourceRecordSetCount" &| readInt
@@ -87,8 +109,8 @@ instance Route53Parseable HostedZone where
 instance Route53XmlSerializable HostedZone where
 
   toXml HostedZone{..} = XML.Element "HostedZone" [] [xml|
-    <Id>#{hzId}
-    <Name>#{decodeUtf8 hzName}
+    <Id>#{idText hzId}
+    <Name>#{domainText hzName}
     <CallerReference>#{hzCallerReference}
     <Config>
       <Comment>#{hzComment}
@@ -103,15 +125,15 @@ instance Route53XmlSerializable HostedZones where
 
 type Nameservers = [Nameserver]
 
-type Nameserver = DNS.Domain
+type Nameserver = Domain
 
-data DelegationSet = DelegationSet { dsNameserver1 :: DNS.Domain 
-                                   , dsNameserver2 :: DNS.Domain
-                                   , dsNameserver3 :: DNS.Domain
-                                   , dsNameserver4 :: DNS.Domain
+data DelegationSet = DelegationSet { dsNameserver1 :: Domain 
+                                   , dsNameserver2 :: Domain
+                                   , dsNameserver3 :: Domain
+                                   , dsNameserver4 :: Domain
                                    } deriving (Show)
 
-dsNameservers :: DelegationSet -> [DNS.Domain]
+dsNameservers :: DelegationSet -> [Domain]
 dsNameservers DelegationSet{..} = [dsNameserver1, dsNameserver2, dsNameserver3, dsNameserver4]
 
 instance Route53Parseable DelegationSet where
@@ -127,7 +149,7 @@ instance Route53Parseable Nameservers where
 
 instance Route53Parseable Nameserver where
   r53Parse cursor = 
-    force "Missing Nameserver element" $ cursor $.// elContent "Nameserver" &| T.encodeUtf8
+    force "Missing Nameserver element" $ cursor $.// elContent "Nameserver" &| Domain
 
 -- -------------------------------------------------------------------------- --
 -- RsourceRecordSet
@@ -169,13 +191,13 @@ type ResourceRecords = [ResourceRecord]
 newtype ResourceRecord = ResourceRecord { value :: T.Text }
                          deriving (Show)
 
-data AliasTarget = AliasTarget { atHostedZoneId :: T.Text
-                               , atDNSName :: DNS.Domain
+data AliasTarget = AliasTarget { atHostedZoneId :: HostedZoneId
+                               , atDNSName :: Domain
                                } deriving (Show)
 
 -- TODO make this complete from the spec. Do not just use the exmpales!
 -- We may e.g. have different type for alias resource record sets
-data ResourceRecordSet = ResourceRecordSet { rrsName :: DNS.Domain
+data ResourceRecordSet = ResourceRecordSet { rrsName :: Domain
                                            , rrsType :: DNS.TYPE
                                            , rrsAliasTarget :: Maybe AliasTarget
                                            , rrsSetIdentifier :: Maybe T.Text
@@ -190,8 +212,8 @@ type ResourceRecordSets = [ResourceRecordSet]
 instance Route53XmlSerializable ResourceRecordSet where
 
   toXml ResourceRecordSet{..} = XML.Element "ResourceRecordSet" [] [xml|
-    <Name>#{decodeUtf8 rrsName}
-    <Type>#{ typeToText rrsType }
+    <Name>#{domainText rrsName}
+    <Type>#{typeToText rrsType}
     $maybe a <- rrsAliasTarget
       <AliasTarget>
         ^{[XML.NodeElement (toXml a)]}
@@ -215,8 +237,8 @@ instance Route53XmlSerializable ResourceRecord where
 instance Route53XmlSerializable AliasTarget where
   
   toXml AliasTarget{..} = XML.Element "AliasTarget" [] [xml|
-    <HostedZoneId>#{atHostedZoneId}
-    <DNSName>#{decodeUtf8 atDNSName}
+    <HostedZoneId>#{idText atHostedZoneId}
+    <DNSName>#{domainText atDNSName}
     |]
 
 --instance Route53XmlSerializable HostedZones where
@@ -231,7 +253,7 @@ instance Route53Parseable ResourceRecordSets where
 instance Route53Parseable ResourceRecordSet where
   r53Parse cursor = do
     c <- force "Missing ResourceRecordSet element" $ cursor $.// laxElement "ResourceRecordSet"
-    name <- force "Missing name element" $ c $/ elContent "Name" &| encodeUtf8
+    name <- force "Missing name element" $ c $/ elContent "Name" &| Domain
     dnsType <- force "Missing type element" $ c $/ elCont "Type" &| DNS.toType 
     ttl <- listToMaybe `liftM` (sequence $ c $/ elCont "TTL" &| readInt)
     alias <- listToMaybe `liftM` (sequence $ c $/ laxElement "AliasTarget" &| r53Parse)
@@ -247,8 +269,8 @@ instance Route53Parseable ResourceRecordSet where
 instance Route53Parseable AliasTarget where
   r53Parse cursor = do
     c <- force "Missing AliasTarget element" $ cursor $.// laxElement "AliasTarget"
-    zoneId <- force "Missing HostedZoneId element" $ c $/ elContent "HostedZoneId"
-    dnsName <- force "Missing DNSName element" $ c $/ elContent "DNSName" &| encodeUtf8
+    zoneId <- force "Missing HostedZoneId element" $ c $/ elContent "HostedZoneId" &| asId
+    dnsName <- force "Missing DNSName element" $ c $/ elContent "DNSName" &| Domain
     return $ AliasTarget zoneId dnsName
 
 
@@ -268,7 +290,14 @@ instance Route53Parseable ResourceRecord where
 data ChangeInfoStatus = PENDING | INSYNC
                         deriving (Show, Read)
 
-data ChangeInfo = ChangeInfo { ciId :: T.Text
+newtype ChangeId = ChangeId { changeIdText :: T.Text }
+                   deriving (Show)
+
+instance Route53Id ChangeId where
+  idText = changeIdText
+  asId = ChangeId . fromJust. T.stripPrefix "/changeid/"
+
+data ChangeInfo = ChangeInfo { ciId :: ChangeId
                              , ciStatus :: ChangeInfoStatus
                              , ciSubmittedAt :: UTCTime
                              } deriving (Show)
@@ -276,7 +305,7 @@ data ChangeInfo = ChangeInfo { ciId :: T.Text
 instance Route53Parseable ChangeInfo where
   r53Parse cursor = do
     c <- force "Missing ChangeInfo element" $ cursor $.// laxElement "ChangeInfo"
-    ciId <- force "Missing Id element" $ c $/ elContent "Id"
+    ciId <- force "Missing Id element" $ c $/ elContent "Id" &| ChangeId
     status <- force "Missing Status element" $ c $/ elCont "Status" &| read
     submittedAt <- force "Missing SubmittedAt element" $ c $/ elCont "SubmittedAt" &| utcTime
     return $ ChangeInfo ciId status submittedAt
