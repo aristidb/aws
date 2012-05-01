@@ -42,10 +42,10 @@ import qualified Data.ByteString.Char8      as B
 
 data ListResourceRecordSets = ListResourceRecordSets
                    { lrrsHostedZoneId :: T.Text
-                   , name :: Maybe DNS.Domain
-                   , recordType :: Maybe DNS.TYPE   -- ^ /note that SPF is currently not supported/
-                   , identifier :: Maybe T.Text     -- ^ must be present for weighted or latency resource record sets
-                   , maxitems :: Maybe Int          -- ^ maximum effective value is 100
+                   , lrrsName :: Maybe DNS.Domain
+                   , lrrsRecordType :: Maybe DNS.TYPE   -- ^ /note that SPF is currently not supported/
+                   , lrrsIdentifier :: Maybe T.Text     -- ^ must be present for weighted or latency resource record sets
+                   , lrrsMaxItems :: Maybe Int          -- ^ maximum effective value is 100
                    } deriving (Show)
 
 -- | A most general 'ListResourceRecordSets' query
@@ -54,11 +54,11 @@ listResourceRecordSets hostedZoneId = ListResourceRecordSets hostedZoneId Nothin
 
 data ListResourceRecordSetsResponse = ListResourceRecordSetsResponse
                              { lrrsrResourceRecordSets :: ResourceRecordSets
-                             , lrrsIsTruncated :: Bool
-                             , lrrsMaxItems :: Maybe Int                 -- ^ The maxitems value from the request (TODO is it Maybe?)
-                             , lrrsNextRecordName :: Maybe DNS.Domain    -- ^ TODO check constraint
-                             , lrrsNextRecordType :: Maybe DNS.TYPE      -- ^ TODO check constraint
-                             , lrrsNextRecordIdentifier :: Maybe T.Text  -- ^ TODO check constraint
+                             , lrrsrIsTruncated :: Bool
+                             , lrrsrMaxItems :: Maybe Int                 -- ^ The maxitems value from the request (TODO is it Maybe?)
+                             , lrrsrNextRecordName :: Maybe DNS.Domain    -- ^ TODO check constraint
+                             , lrrsrNextRecordType :: Maybe DNS.TYPE      -- ^ TODO check constraint
+                             , lrrsrNextRecordIdentifier :: Maybe T.Text  -- ^ TODO check constraint
                              } deriving (Show)
 
 instance SignQuery ListResourceRecordSets where
@@ -68,10 +68,10 @@ instance SignQuery ListResourceRecordSets where
       method = Get
       body = Nothing
       resource = "/hostedzone/" `B.append` (T.encodeUtf8 lrrsHostedZoneId) `B.append` "/rrset"
-      query = catMaybes [ ("name",) <$> name
-                        , ("type",) . B.pack . typeToString <$> recordType
-                        , ("identifier",) . T.encodeUtf8 <$> identifier
-                        , ("maxitems",) . B.pack . show <$> maxitems
+      query = catMaybes [ ("name",) <$> lrrsName
+                        , ("type",) . B.pack . typeToString <$> lrrsRecordType
+                        , ("identifier",) . T.encodeUtf8 <$> lrrsIdentifier
+                        , ("maxitems",) . B.pack . show <$> lrrsMaxItems
                         ]
 
 instance ResponseConsumer r ListResourceRecordSetsResponse where
