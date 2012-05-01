@@ -2,10 +2,7 @@
 module Aws.SimpleDb.Commands.Domain where
 
 import           Aws.Core
-import           Aws.SimpleDb.Info
-import           Aws.SimpleDb.Metadata
-import           Aws.SimpleDb.Query
-import           Aws.SimpleDb.Response
+import           Aws.SimpleDb.Core
 import           Control.Applicative
 import           Data.Maybe
 import           Data.Time

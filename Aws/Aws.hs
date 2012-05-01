@@ -5,7 +5,7 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Aws.Ses.Info
-import           Aws.SimpleDb.Info
+import           Aws.SimpleDb.Core
 import           Aws.Sqs.Info
 import           Control.Applicative
 import           Control.Monad.Trans  (liftIO)
