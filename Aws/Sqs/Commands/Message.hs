@@ -3,14 +3,10 @@
 module Aws.Sqs.Commands.Message where
 
 import           Aws.Core
-import           Aws.Sqs.Info
-import           Aws.Sqs.Metadata
-import           Aws.Sqs.Query
-import           Aws.Sqs.Response
+import           Aws.Sqs.Core
 import           Control.Applicative
 import           Data.Maybe
 import           Text.XML.Cursor       (($/), ($//), (&/), (&|))
-import qualified Aws.Sqs.Model         as M
 import qualified Control.Failure       as F
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text             as T
@@ -19,12 +15,12 @@ import qualified Text.XML.Cursor       as Cu
 
 data SendMessage = SendMessage{
   smMessage :: T.Text,
-  smQueueName :: M.QueueName
+  smQueueName :: QueueName
 }deriving (Show)
 
 data SendMessageResponse = SendMessageResponse{
   smrMD5OfMessageBody :: T.Text,
-  smrMessageId :: M.MessageId
+  smrMessageId :: MessageId
 } deriving (Show)
 
 instance ResponseConsumer r SendMessageResponse where
@@ -34,7 +30,7 @@ instance ResponseConsumer r SendMessageResponse where
         parse el = do
           md5 <- force "Missing MD5 Signature" $ el $// Cu.laxElement "MD5OfMessageBody" &/ Cu.content
           mid <- force "Missing Message Id" $ el $// Cu.laxElement "MessageId" &/ Cu.content
-          return SendMessageResponse { smrMD5OfMessageBody = md5, smrMessageId = M.MessageId mid }
+          return SendMessageResponse { smrMD5OfMessageBody = md5, smrMessageId = MessageId mid }
 
 instance SignQuery SendMessage  where
     type Info SendMessage  = SqsInfo
@@ -46,8 +42,8 @@ instance SignQuery SendMessage  where
 instance Transaction SendMessage SendMessageResponse
 
 data DeleteMessage = DeleteMessage{
-  dmReceiptHandle :: M.ReceiptHandle,
-  dmQueueName :: M.QueueName 
+  dmReceiptHandle :: ReceiptHandle,
+  dmQueueName :: QueueName 
 }deriving (Show)
 
 data DeleteMessageResponse = DeleteMessageResponse{
@@ -64,26 +60,26 @@ instance SignQuery DeleteMessage  where
     signQuery DeleteMessage {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Just dmQueueName, 
                                              sqsQuery = [("Action", Just "DeleteMessage"), 
-                                                        ("ReceiptHandle", Just $ TE.encodeUtf8 $ M.printReceiptHandle dmReceiptHandle )]} 
+                                                        ("ReceiptHandle", Just $ TE.encodeUtf8 $ printReceiptHandle dmReceiptHandle )]} 
 
 instance Transaction DeleteMessage DeleteMessageResponse
 
 data ReceiveMessage
     = ReceiveMessage {
         rmVisibilityTimeout :: Maybe Int
-      , rmAttributes :: [M.MessageAttribute]
+      , rmAttributes :: [MessageAttribute]
       , rmMaxNumberOfMessages :: Maybe Int
-      , rmQueueName :: M.QueueName
+      , rmQueueName :: QueueName
       }
     deriving (Show)
 
 data Message
     = Message {
         mMessageId :: T.Text
-      , mReceiptHandle :: M.ReceiptHandle
+      , mReceiptHandle :: ReceiptHandle
       , mMD5OfBody :: T.Text
       , mBody :: T.Text
-      , mAttributes :: [(M.MessageAttribute,T.Text)]
+      , mAttributes :: [(MessageAttribute,T.Text)]
       }
     deriving(Show)
 
@@ -93,11 +89,11 @@ data ReceiveMessageResponse
       }
     deriving (Show)
 
-readMessageAttribute :: F.Failure XmlException m => Cu.Cursor -> m (M.MessageAttribute,T.Text)
+readMessageAttribute :: F.Failure XmlException m => Cu.Cursor -> m (MessageAttribute,T.Text)
 readMessageAttribute cursor = do
   name <- force "Missing Name" $ cursor $/ Cu.laxElement "Name" &/ Cu.content
   value <- force "Missing Value" $ cursor $/ Cu.laxElement "Value" &/ Cu.content
-  parsedName <- M.parseMessageAttribute name
+  parsedName <- parseMessageAttribute name
   return (parsedName, value)
 
 readMessage :: Cu.Cursor -> [Message]
@@ -106,16 +102,16 @@ readMessage cursor = do
   rh <- force "Missing Reciept Handle" $ cursor $// Cu.laxElement "ReceiptHandle" &/ Cu.content
   md5 <- force "Missing MD5 Signature" $ cursor $// Cu.laxElement "MD5OfBody" &/ Cu.content
   body <- force "Missing Body" $ cursor $// Cu.laxElement "Body" &/ Cu.content
-  let attributes :: [(M.MessageAttribute, T.Text)] = concat $ cursor $// Cu.laxElement "Attribute" &| readMessageAttribute
+  let attributes :: [(MessageAttribute, T.Text)] = concat $ cursor $// Cu.laxElement "Attribute" &| readMessageAttribute
 
-  return Message{ mMessageId = mid, mReceiptHandle = M.ReceiptHandle rh, mMD5OfBody = md5, mBody = body, mAttributes = attributes}
+  return Message{ mMessageId = mid, mReceiptHandle = ReceiptHandle rh, mMD5OfBody = md5, mBody = body, mAttributes = attributes}
 
-formatMAttributes :: [M.MessageAttribute] -> [(B.ByteString, Maybe B.ByteString)]
+formatMAttributes :: [MessageAttribute] -> [(B.ByteString, Maybe B.ByteString)]
 formatMAttributes attrs =
   case length attrs of
     0 -> []
     1 -> [("AttributeName", Just $ B.pack $ show $ attrs !! 0)]
-    _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ TE.encodeUtf8 $ M.printMessageAttribute x) ) attrs [1 :: Integer ..]
+    _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ TE.encodeUtf8 $ printMessageAttribute x) ) attrs [1 :: Integer ..]
 
 instance ResponseConsumer r ReceiveMessageResponse where
     type ResponseMetadata ReceiveMessageResponse = SqsMetadata
@@ -140,9 +136,9 @@ instance SignQuery ReceiveMessage  where
 instance Transaction ReceiveMessage ReceiveMessageResponse
 
 data ChangeMessageVisibility = ChangeMessageVisibility {
-  cmvReceiptHandle :: M.ReceiptHandle,
+  cmvReceiptHandle :: ReceiptHandle,
   cmvVisibilityTimeout :: Int,
-  cmvQueueName :: M.QueueName
+  cmvQueueName :: QueueName
 }deriving (Show)
 
 data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse{
@@ -159,7 +155,7 @@ instance SignQuery ChangeMessageVisibility  where
     signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
                                              sqsQueueName = Just cmvQueueName, 
                                              sqsQuery = [("Action", Just "ChangeMessageVisibility"), 
-                                                         ("ReceiptHandle", Just $ TE.encodeUtf8 $ M.printReceiptHandle cmvReceiptHandle),
+                                                         ("ReceiptHandle", Just $ TE.encodeUtf8 $ printReceiptHandle cmvReceiptHandle),
                                                          ("VisibilityTimeout", Just $ B.pack $ show cmvVisibilityTimeout)]}
 
 instance Transaction ChangeMessageVisibility ChangeMessageVisibilityResponse

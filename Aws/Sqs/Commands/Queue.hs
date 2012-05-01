@@ -3,11 +3,7 @@
 module Aws.Sqs.Commands.Queue where
 
 import           Aws.Core
-import           Aws.Sqs.Info
-import           Aws.Sqs.Metadata
-import           Aws.Sqs.Query
-import           Aws.Sqs.Response
-import           Aws.Sqs.Model
+import           Aws.Sqs.Core
 import           Control.Applicative
 import           Data.Maybe
 import           Text.XML.Cursor       (($//), (&/))

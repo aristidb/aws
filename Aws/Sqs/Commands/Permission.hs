@@ -3,11 +3,7 @@
 module Aws.Sqs.Commands.Permission where
 
 import           Aws.Core
-import           Aws.Sqs.Info
-import           Aws.Sqs.Metadata
-import           Aws.Sqs.Model
-import           Aws.Sqs.Query
-import           Aws.Sqs.Response
+import           Aws.Sqs.Core
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as TE

@@ -6,7 +6,7 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Aws.Ses.Core
 import           Aws.SimpleDb.Core
-import           Aws.Sqs.Info
+import           Aws.Sqs.Core
 import           Control.Applicative
 import           Control.Monad.Trans  (liftIO)
 import           Data.Attempt         (attemptIO)
