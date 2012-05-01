@@ -83,6 +83,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.4 series
 
+- 0.4.0.1 :: Change dependency bounds to allow the transformers 0.3 package.
 - 0.4.0 :: Update conduit to 0.4.0, which is incompatible with earlier versions.
 
 ** 0.3 series
