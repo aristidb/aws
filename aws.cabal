@@ -97,12 +97,7 @@ Library
                        Aws.Ses,
                        Aws.Ses.Commands,
                        Aws.Ses.Commands.SendRawEmail,
-                       Aws.Ses.Error,
-                       Aws.Ses.Info,
-                       Aws.Ses.Metadata,
-                       Aws.Ses.Model,
-                       Aws.Ses.Query,
-                       Aws.Ses.Response
+                       Aws.Ses.Core
 
   -- Packages needed in order to build this package.
   Build-depends:       attempt              >= 0.3.1.1 && < 0.5,

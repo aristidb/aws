@@ -4,7 +4,7 @@ where
 
 import           Aws.Core
 import           Aws.S3.Core
-import           Aws.Ses.Info
+import           Aws.Ses.Core
 import           Aws.SimpleDb.Core
 import           Aws.Sqs.Info
 import           Control.Applicative

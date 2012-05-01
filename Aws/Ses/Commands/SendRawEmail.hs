@@ -9,11 +9,7 @@ import Data.Typeable
 import Text.XML.Cursor (($//))
 
 import Aws.Core
-import Aws.Ses.Info
-import Aws.Ses.Query
-import Aws.Ses.Metadata
-import Aws.Ses.Model
-import Aws.Ses.Response
+import Aws.Ses.Core
 
 -- | Send a raw e-mail message.
 data SendRawEmail =
