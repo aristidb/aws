@@ -6,7 +6,7 @@ Name:                aws
 -- The package version. See the Haskell package versioning policy
 -- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
 -- standards guiding when and how versions should be incremented.
-Version:             0.4.0.1
+Version:             0.4.1
 
 -- A short (one-line) description of the package.
 Synopsis:            Amazon Web Services (AWS) for Haskell
@@ -48,7 +48,7 @@ Cabal-version:       >=1.8
 Source-repository this
   type: git
   location: https://github.com/aristidb/aws.git
-  tag: 0.3.2
+  tag: 0.4.1
 
 Source-repository head
   type: git
