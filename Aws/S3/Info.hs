@@ -12,8 +12,8 @@ data S3Authorization
     deriving (Show)
 
 data RequestStyle
-    = PathStyle
-    | BucketStyle
+    = PathStyle -- ^ Requires correctly setting region endpoint, but allows non-DNS compliant bucket names in the US standard region.
+    | BucketStyle -- ^ Bucket name must be DNS compliant.
     | VHostStyle
     deriving (Show)
 
