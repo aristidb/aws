@@ -2,10 +2,9 @@
 module Aws.SimpleDb.Response
 where
 
-import           Aws.Response
+import           Aws.Core
 import           Aws.SimpleDb.Error
 import           Aws.SimpleDb.Metadata
-import           Aws.Xml
 import           Data.IORef
 import           Data.Maybe
 import           Text.XML.Cursor            (($|), ($/), ($//), (&|))

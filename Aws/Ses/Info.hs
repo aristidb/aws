@@ -6,7 +6,7 @@ module Aws.Ses.Info
     , sesHttpsPost
     ) where
 
-import           Aws.Http
+import           Aws.Core
 import qualified Data.ByteString as B
 
 data SesInfo

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, FlexibleContexts #-}
 module Aws.Sqs.Model where
 
-import           Aws.Xml
+import           Aws.Core
 import qualified Control.Failure as F
 import qualified Data.Text       as T
 

@@ -59,10 +59,7 @@ Library
   Exposed-modules:
                        Aws,
                        Aws.Aws,
-                       Aws.Credentials,
-                       Aws.Http,
-                       Aws.Query,
-                       Aws.Response,
+                       Aws.Core,
                        Aws.S3,
                        Aws.S3.Commands,
                        Aws.S3.Commands.DeleteObject,
@@ -72,7 +69,6 @@ Library
                        Aws.S3.Commands.PutBucket,
                        Aws.S3.Commands.PutObject,
                        Aws.S3.Core,
-                       Aws.Signature,
                        Aws.SimpleDb,
                        Aws.SimpleDb.Commands,
                        Aws.SimpleDb.Commands.BatchDeleteAttributes,
@@ -118,10 +114,7 @@ Library
                        Aws.Ses.Metadata,
                        Aws.Ses.Model,
                        Aws.Ses.Query,
-                       Aws.Ses.Response,
-                       Aws.Transaction,
-                       Aws.Util,
-                       Aws.Xml
+                       Aws.Ses.Response
 
   -- Packages needed in order to build this package.
   Build-depends:       attempt              >= 0.3.1.1 && < 0.5,

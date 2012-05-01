@@ -2,14 +2,11 @@
 
 module Aws.Sqs.Commands.CreateQueue where
 
-import           Aws.Response
+import           Aws.Core
 import           Aws.Sqs.Info
 import           Aws.Sqs.Metadata
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
-import           Aws.Signature
-import           Aws.Transaction
-import           Aws.Xml
 import           Control.Applicative
 import           Data.Maybe
 import           Text.XML.Cursor              (($//), (&/))

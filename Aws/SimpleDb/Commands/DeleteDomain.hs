@@ -2,13 +2,11 @@
 module Aws.SimpleDb.Commands.DeleteDomain
 where
 
-import           Aws.Response
-import           Aws.Signature
+import           Aws.Core
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
-import           Aws.Transaction
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 

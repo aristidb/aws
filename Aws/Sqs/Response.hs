@@ -1,10 +1,9 @@
 {-# LANGUAGE FlexibleInstances, OverloadedStrings, ScopedTypeVariables, RecordWildCards #-}
 module Aws.Sqs.Response where
 
-import           Aws.Response
+import           Aws.Core
 import           Aws.Sqs.Error
 import           Aws.Sqs.Metadata
-import           Aws.Xml
 import           Control.Monad.IO.Class
 import           Data.Attempt                 (Attempt(..))
 import           Data.Conduit                 (($$))

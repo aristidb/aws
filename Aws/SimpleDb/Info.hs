@@ -2,7 +2,7 @@
 module Aws.SimpleDb.Info
 where
 
-import           Aws.Http
+import           Aws.Core
 import qualified Data.ByteString as B
 
 data SdbInfo

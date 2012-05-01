@@ -1,13 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts #-}
 module Aws.S3.Core where
 
-import           Aws.Credentials
-import           Aws.Http
-import           Aws.Query
-import           Aws.Response
-import           Aws.Signature
-import           Aws.Util
-import           Aws.Xml
+import           Aws.Core
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Attempt                   (Attempt(..))

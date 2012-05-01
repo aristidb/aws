@@ -2,12 +2,9 @@
 
 module Aws.Sqs.Query where
 
-import           Aws.Credentials
-import           Aws.Http
-import           Aws.Query
+import           Aws.Core
 import           Aws.Sqs.Info
 import           Aws.Sqs.Model
-import           Aws.Signature
 import           Data.List
 import           Data.Monoid
 import           Data.Ord

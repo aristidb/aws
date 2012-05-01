@@ -3,12 +3,8 @@ module Aws.Ses.Query
     ( sesSignQuery
     ) where
 
-import           Aws.Credentials
-import           Aws.Http
-import           Aws.Query
-import           Aws.Signature
+import           Aws.Core
 import           Aws.Ses.Info
-import           Aws.Util
 import qualified Data.ByteString                as B
 import qualified Network.HTTP.Types             as HTTP
 

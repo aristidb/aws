@@ -2,16 +2,11 @@
 module Aws.Aws
 where
 
-import           Aws.Credentials
-import           Aws.Http
-import           Aws.Query
-import           Aws.Response
+import           Aws.Core
 import           Aws.S3.Core
 import           Aws.Ses.Info
-import           Aws.Signature
 import           Aws.SimpleDb.Info
 import           Aws.Sqs.Info
-import           Aws.Transaction
 import           Control.Applicative
 import           Control.Monad.Trans  (liftIO)
 import           Data.Attempt         (attemptIO)

@@ -2,15 +2,12 @@
 
 module Aws.Sqs.Commands.GetQueueAttributes where
 
-import           Aws.Response
+import           Aws.Core
 import           Aws.Sqs.Info
 import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
-import           Aws.Signature
-import           Aws.Transaction
-import           Aws.Xml
 import           Text.XML.Cursor              (($/), ($//), (&/), (&|))
 import qualified Data.Text                    as T
 import qualified Text.XML.Cursor              as Cu

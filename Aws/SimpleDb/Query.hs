@@ -2,12 +2,8 @@
 module Aws.SimpleDb.Query
 where
 
-import           Aws.Credentials
-import           Aws.Http
-import           Aws.Query
-import           Aws.Signature
+import           Aws.Core
 import           Aws.SimpleDb.Info
-import           Aws.Util
 import           Data.List
 import           Data.Monoid
 import qualified Blaze.ByteString.Builder       as Blaze

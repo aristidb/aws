@@ -8,10 +8,7 @@ import Data.Text (Text)
 import Data.Typeable
 import Text.XML.Cursor (($//))
 
-import Aws.Signature
-import Aws.Response
-import Aws.Transaction
-import Aws.Xml
+import Aws.Core
 import Aws.Ses.Info
 import Aws.Ses.Query
 import Aws.Ses.Metadata

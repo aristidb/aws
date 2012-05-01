@@ -2,10 +2,9 @@
 module Aws.Ses.Response
 where
 
-import           Aws.Response
+import           Aws.Core
 import           Aws.Ses.Error
 import           Aws.Ses.Metadata
-import           Aws.Xml
 import           Data.IORef
 import           Data.Maybe
 import           Text.XML.Cursor            (($/), ($//))

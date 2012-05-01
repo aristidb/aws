@@ -2,14 +2,12 @@
 
 module Aws.Sqs.Commands.AddPermission where
 
-import           Aws.Response
+import           Aws.Core
 import           Aws.Sqs.Info
 import           Aws.Sqs.Metadata
 import           Aws.Sqs.Model
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
-import           Aws.Signature
-import           Aws.Transaction
 import qualified Data.Text             as T
 import qualified Data.ByteString.Char8 as B
 import qualified Network.HTTP.Types    as HTTP

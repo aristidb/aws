@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Aws.Sqs.Info where
 
-import           Aws.Http
+import           Aws.Core
 import           Aws.S3.Core
 import           Data.Time
 import qualified Data.ByteString as B

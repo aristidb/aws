@@ -2,14 +2,11 @@
 module Aws.SimpleDb.Commands.DomainMetadata
 where
 
-import           Aws.Response
-import           Aws.Signature
+import           Aws.Core
 import           Aws.SimpleDb.Info
 import           Aws.SimpleDb.Metadata
 import           Aws.SimpleDb.Query
 import           Aws.SimpleDb.Response
-import           Aws.Transaction
-import           Aws.Xml
 import           Data.Time
 import           Data.Time.Clock.POSIX
 import           Text.XML.Cursor            (($//), (&|))

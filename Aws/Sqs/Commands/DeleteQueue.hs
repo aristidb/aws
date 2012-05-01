@@ -2,14 +2,12 @@
 
 module Aws.Sqs.Commands.DeleteQueue where
 
-import           Aws.Response
+import           Aws.Core
 import           Aws.Sqs.Info
 import           Aws.Sqs.Metadata
 import qualified Aws.Sqs.Model as M
 import           Aws.Sqs.Query
 import           Aws.Sqs.Response
-import           Aws.Signature
-import           Aws.Transaction
 
 data DeleteQueue = DeleteQueue{
   dqQueueName :: M.QueueName 

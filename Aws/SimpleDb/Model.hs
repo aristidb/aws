@@ -2,9 +2,8 @@
 module Aws.SimpleDb.Model
 where
 
+import           Aws.Core
 import           Aws.SimpleDb.Response
-import           Aws.Util
-import           Aws.Xml
 import           Control.Monad
 import           Text.XML.Cursor            (($/), (&|))
 import qualified Control.Failure            as F

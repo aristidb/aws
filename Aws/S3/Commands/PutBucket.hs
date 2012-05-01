@@ -1,11 +1,8 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances #-}
 module Aws.S3.Commands.PutBucket where
 
-import           Aws.Http
-import           Aws.Response
+import           Aws.Core
 import           Aws.S3.Core
-import           Aws.Signature
-import           Aws.Transaction
 import           Control.Monad
 import qualified Data.Text            as T
 import qualified Data.Text.Encoding   as T

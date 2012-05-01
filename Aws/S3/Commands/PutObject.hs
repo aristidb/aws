@@ -2,11 +2,8 @@
 module Aws.S3.Commands.PutObject
 where
 
-import           Aws.Http
-import           Aws.Response
+import           Aws.Core
 import           Aws.S3.Core
-import           Aws.Signature
-import           Aws.Transaction
 import           Control.Applicative
 import           Control.Arrow              (second)
 import           Data.ByteString.Char8      ({- IsString -})
