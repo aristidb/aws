@@ -4,11 +4,7 @@ where
 
 import           Aws.Http
 import           Aws.Response
-import           Aws.S3.Info
-import           Aws.S3.Metadata
-import           Aws.S3.Model
-import           Aws.S3.Query
-import           Aws.S3.Response
+import           Aws.S3.Core
 import           Aws.Signature
 import           Aws.Transaction
 import           Data.ByteString.Char8      ({- IsString -})

@@ -6,7 +6,7 @@ import           Aws.Credentials
 import           Aws.Http
 import           Aws.Query
 import           Aws.Response
-import           Aws.S3.Info
+import           Aws.S3.Core
 import           Aws.Ses.Info
 import           Aws.Signature
 import           Aws.SimpleDb.Info
