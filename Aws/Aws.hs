@@ -1,5 +1,25 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
 module Aws.Aws
+( -- * Logging
+  LogLevel
+, defaultLog
+  -- * Configuration
+, Configuration
+, ConfigurationFetch
+, baseConfiguration
+, debugConfiguration
+  -- * Transaction runners
+  -- ** Safe runners
+, aws
+, awsRef
+, simpleAws
+, simpleAwsRef
+  -- ** Unsafe runners
+, unsafeAws
+, unsafeAwsRef
+  -- ** URI runners
+, awsUri
+)
 where
 
 import           Aws.Core
@@ -27,6 +47,10 @@ data LogLevel
     | Error
     deriving (Show, Eq, Ord)
 
+defaultLog :: LogLevel -> LogLevel -> T.Text -> IO ()
+defaultLog minLevel lev t | lev >= minLevel = T.hPutStrLn stderr $ T.concat [T.pack $ show lev, ": ", t]
+                          | otherwise       = return ()
+
 data Configuration
     = Configuration {
        timeInfo :: TimeInfo
@@ -41,10 +65,6 @@ data Configuration
       , sesInfoUri :: SesInfo
       , logger :: LogLevel -> T.Text -> IO ()
       }
-
-defaultLog :: LogLevel -> LogLevel -> T.Text -> IO ()
-defaultLog minLevel lev t | lev >= minLevel = T.hPutStrLn stderr $ T.concat [T.pack $ show lev, ": ", t]
-                          | otherwise       = return ()
 
 class ConfigurationFetch a where
     configurationFetch :: Configuration -> a

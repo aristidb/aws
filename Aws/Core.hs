@@ -1,5 +1,68 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, TypeFamilies, FlexibleContexts, FlexibleInstances, DeriveFunctor, OverloadedStrings, RecordWildCards, DeriveDataTypeable #-}
-module Aws.Core where
+module Aws.Core
+( -- * Response
+  -- ** Metadata in responses
+  Response(..)
+, tellMetadata
+, tellMetadataRef
+  -- ** Response data consumers
+, HTTPResponseConsumer
+, ResponseConsumer(..)
+  -- ** Response deconstruction helpers
+, readHex2
+  -- *** XML
+, XmlException(..)
+, elContent
+, elCont
+, force
+, forceM
+, textReadInt
+, readInt
+, xmlCursorConsumer
+  -- * Query
+, SignedQuery(..)
+, queryToHttpRequest
+, queryToUri
+  -- ** Expiration
+, TimeInfo(..)
+, AbsoluteTimeInfo(..)
+, fromAbsoluteTimeInfo
+, makeAbsoluteTimeInfo
+ -- ** Signature
+, SignatureData(..)
+, signatureData
+, SignQuery(..)
+, AuthorizationHash(..)
+, amzHash
+, signature
+  -- ** Query construction helpers
+, queryList
+, awsBool
+, awsTrue
+, awsFalse
+, fmtTime
+, fmtRfc822Time
+, fmtAmzTime
+, fmtTimeEpochSeconds
+  -- * Transactions
+, Transaction
+  -- * Credentials
+, Credentials(..)
+, credentialsDefaultFile
+, credentialsDefaultKey
+, loadCredentialsFromFile
+, loadCredentialsFromEnv
+, loadCredentialsFromEnvOrFile
+, loadCredentialsDefault
+  -- * HTTP types
+, Protocol(..)
+, defaultPort
+, Method(..)
+, httpMethod
+ -- * Error handling
+, tryError -- TODO: delete?
+)
+where
 
 import           Control.Applicative
 import           Control.Arrow
@@ -23,7 +86,7 @@ import           System.Directory
 import           System.Environment
 import           System.FilePath             ((</>))
 import           System.Locale
-import           Text.XML.Cursor
+import           Text.XML.Cursor             hiding (force, forceM)
 import qualified Blaze.ByteString.Builder    as Blaze
 import qualified Control.Exception           as E
 import qualified Control.Exception.Lifted
