@@ -1,9 +1,10 @@
 module Aws
 ( -- * Logging
   LogLevel
+, Logger
 , defaultLog
   -- * Configuration
-, Configuration
+, Configuration(..)
 , ConfigurationFetch
 , baseConfiguration
 , debugConfiguration
