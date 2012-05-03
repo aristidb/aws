@@ -372,13 +372,18 @@ makeAbsoluteTimeInfo Timestamp     now = AbsoluteTimestamp now
 makeAbsoluteTimeInfo (ExpiresAt t) _   = AbsoluteExpires t
 makeAbsoluteTimeInfo (ExpiresIn s) now = AbsoluteExpires $ addUTCTime s now
 
+-- | Data that is always required for signing requests.
 data SignatureData
     = SignatureData {
+        -- | Expiration or timestamp.
         signatureTimeInfo :: AbsoluteTimeInfo
+        -- | Current time.
       , signatureTime :: UTCTime
+        -- | Access credentials.
       , signatureCredentials :: Credentials
       }
 
+-- | Create signature data using the current system time.
 signatureData :: TimeInfo -> Credentials -> IO SignatureData
 signatureData rti cr = do
   now <- getCurrentTime
