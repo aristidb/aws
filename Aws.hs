@@ -1,6 +1,6 @@
 module Aws
 ( -- * Logging
-  LogLevel
+  LogLevel(..)
 , Logger
 , defaultLog
   -- * Configuration
