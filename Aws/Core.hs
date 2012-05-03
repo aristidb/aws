@@ -346,21 +346,27 @@ queryToUri SignedQuery{..}
       , HTTP.renderQuery True sqQuery
       ]
 
+-- | Whether to restrict the signature validity with a plain timestamp, or with explicit expiration
+-- (absolute or relative).
 data TimeInfo
-    = Timestamp
-    | ExpiresAt { fromExpiresAt :: UTCTime }
-    | ExpiresIn { fromExpiresIn :: NominalDiffTime }
+    = Timestamp                                      -- ^ Use a simple timestamp to let AWS check the request validity.
+    | ExpiresAt { fromExpiresAt :: UTCTime }         -- ^ Let requests expire at a specific fixed time.
+    | ExpiresIn { fromExpiresIn :: NominalDiffTime } -- ^ Let requests expire a specific number of seconds after they
+                                                     -- were generated.
     deriving (Show)
 
+-- | Like 'TimeInfo', but with all relative times replaced by absolute UTC.
 data AbsoluteTimeInfo
     = AbsoluteTimestamp { fromAbsoluteTimestamp :: UTCTime }
     | AbsoluteExpires { fromAbsoluteExpires :: UTCTime }
     deriving (Show)
 
+-- | Just the UTC time value.
 fromAbsoluteTimeInfo :: AbsoluteTimeInfo -> UTCTime
 fromAbsoluteTimeInfo (AbsoluteTimestamp time) = time
 fromAbsoluteTimeInfo (AbsoluteExpires time) = time
 
+-- | Convert 'TimeInfo' to 'AbsoluteTimeInfo' given the current UTC time.
 makeAbsoluteTimeInfo :: TimeInfo -> UTCTime -> AbsoluteTimeInfo
 makeAbsoluteTimeInfo Timestamp     now = AbsoluteTimestamp now
 makeAbsoluteTimeInfo (ExpiresAt t) _   = AbsoluteExpires t
