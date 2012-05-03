@@ -110,9 +110,13 @@ import qualified Network.HTTP.Types          as HTTP
 import qualified Text.XML                    as XML
 import qualified Text.XML.Cursor             as Cu
 
+-- | A response with metadata. Can also contain an error response, or an internal error, via 'Attempt'.
+-- 
+-- Response forms a Writer-like monad.
 data Response m a = Response m (Attempt a)
     deriving (Show, Functor)
 
+-- | An empty response with some metadata.
 tellMetadata :: m -> Response m ()
 tellMetadata m = Response m (return ())
 
@@ -125,34 +129,55 @@ instance Monoid m => Monad (Response m) where
 instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
     failure e = Response mempty (F.failure e)
 
+-- | Add metadata to an 'IORef' (using 'mappend').
 tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
 tellMetadataRef r m = modifyIORef r (`mappend` m)
 
+-- | A full HTTP response parser. Takes HTTP status, response headers, and response body.
 type HTTPResponseConsumer a =  HTTP.Status
                             -> HTTP.ResponseHeaders
                             -> Source (ResourceT IO) ByteString
                             -> ResourceT IO a
 
-class ResponseConsumer r a where
-    type ResponseMetadata a
-    responseConsumer :: r -> IORef (ResponseMetadata a) -> HTTPResponseConsumer a
+-- | Class for types that AWS HTTP responses can be parsed into.
+-- 
+-- The request is also passed for possibly required additional metadata.
+-- 
+-- Note that for debugging, there is an instance for 'L.ByteString'.
+class ResponseConsumer req resp where
+    -- | Metadata associated with a response. Typically there is one metadata type for each AWS service.
+    type ResponseMetadata resp
 
+    -- | Response parser. Takes the corresponding request, an 'IORef' for metadata, and HTTP response data.
+    responseConsumer :: req -> IORef (ResponseMetadata resp) -> HTTPResponseConsumer resp
+
+-- | Does not parse response. For debugging.
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
     responseConsumer _ _ status headers bufsource = do
       chunks <- bufsource $$ CL.consume
       return (HTTP.Response status HTTP.http11 headers $ L.fromChunks chunks)
 
+-- | Associates a request type and a response type in a bi-directional way.
+-- 
+-- This allows the type-checker to infer the response type when given the request type and vice versa.
+-- 
+-- Note that the actual request generation and response parsing resides in 'SignQuery' and 'ResponseConsumer'
+-- respectively.
 class (SignQuery r, ResponseConsumer r a, Monoid (ResponseMetadata a))
     => Transaction r a | r -> a, a -> r
 
+-- | AWS access credentials.
 data Credentials
     = Credentials {
+        -- | AWS Access Key ID.
         accessKeyID :: B.ByteString
+        -- | AWS Secret Access Key.
       , secretAccessKey :: B.ByteString
       }
     deriving (Show)
-             
+
+-- | The file where access credentials are loaded by default, when using 'loadCredentialsDefault'.
 credentialsDefaultFile :: IO FilePath
 credentialsDefaultFile = (</> ".aws-keys") <$> getHomeDirectory
 
