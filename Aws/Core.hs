@@ -270,23 +270,38 @@ httpMethod Delete    = "DELETE"
 -- | A pre-signed medium-level request object.
 data SignedQuery
     = SignedQuery {
+        -- | Request method.
         sqMethod :: Method
+        -- | Protocol to be used.
       , sqProtocol :: Protocol
+        -- | HTTP host.
       , sqHost :: B.ByteString
+        -- | IP port.
       , sqPort :: Int
+        -- | HTTP path.
       , sqPath :: B.ByteString
+        -- | Query string list (used with 'Get' and 'PostQuery').
       , sqQuery :: HTTP.Query
+        -- | Request date/time.
       , sqDate :: Maybe UTCTime
+        -- | Authorization string (if applicable), for @Authorization@ header..
       , sqAuthorization :: Maybe B.ByteString
+        -- | Request body content type.
       , sqContentType :: Maybe B.ByteString
+        -- | Request body content MD5.
       , sqContentMd5 :: Maybe B.ByteString
+        -- | Additional Amazon "amz" headers.
       , sqAmzHeaders :: HTTP.RequestHeaders
+        -- | Additional non-"amz" headers.
       , sqOtherHeaders :: HTTP.RequestHeaders
+        -- | Request body (used with 'Post' and 'Put').
       , sqBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
+        -- | String to sign. Note that the string is already signed, this is passed mostly for debugging purposes.
       , sqStringToSign :: B.ByteString
       }
     --deriving (Show)
 
+-- | Create a HTTP request from a 'SignedQuery' object.
 queryToHttpRequest :: SignedQuery -> HTTP.Request (C.ResourceT IO)
 queryToHttpRequest SignedQuery{..}
     = HTTP.def {
@@ -316,6 +331,9 @@ queryToHttpRequest SignedQuery{..}
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
                            _ -> sqContentType
 
+-- | Create a URI fro a 'SignedQuery' object. 
+-- 
+-- Unused / incompatible fields will be silently ignored.
 queryToUri :: SignedQuery -> B.ByteString
 queryToUri SignedQuery{..}
     = B.concat [
