@@ -64,10 +64,8 @@ where
 
 import           Control.Applicative
 import           Control.Arrow
-import           Control.Exception
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Control
 import           Data.Attempt                (Attempt(..))
 import           Data.ByteString             (ByteString)
 import           Data.ByteString.Char8       ({- IsString -})
@@ -87,7 +85,6 @@ import           System.Locale
 import           Text.XML.Cursor             hiding (force, forceM)
 import qualified Blaze.ByteString.Builder    as Blaze
 import qualified Control.Exception           as E
-import qualified Control.Exception.Lifted
 import qualified Control.Failure             as F
 import qualified Crypto.Classes              as Crypto
 import qualified Crypto.HMAC                 as HMAC
