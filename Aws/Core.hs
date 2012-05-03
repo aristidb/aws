@@ -423,37 +423,55 @@ signature cr ah input = Base64.encode sig
       key :: HMAC.MacKey c d
       key = HMAC.MacKey (secretAccessKey cr)
 
+-- TODO: remove?
 tryError :: (Exception e, C.MonadResource m, MonadBaseControl IO m) => m b -> m (Either e b)
 tryError = Control.Exception.Lifted.try
 
+-- | @queryList f prefix xs@ constructs a query list from a list of elements @xs@, using a common prefix @prefix@,
+-- and a transformer function @f@.
+-- 
+-- A dot (@.@) is interspersed between prefix and generated key.
+-- 
+-- Example:
+-- 
+-- @queryList swap \"pfx\" [(\"a\", \"b\"), (\"c\", \"d\")]@ evaluates to @[(\"pfx.b\", \"a\"), (\"pfx.d\", \"c\")]@
+-- (except with ByteString instead of String, of course).
 queryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> [(B.ByteString, B.ByteString)]
 queryList f prefix xs = concat $ zipWith combine prefixList (map f xs)
     where prefixList = map (dot prefix . BU.fromString . show) [(1 :: Int) ..]
           combine pf = map $ first (pf `dot`)
           dot x y = B.concat [x, BU.fromString ".", y]
 
+-- | A \"true\"/\"false\" boolean as requested by some services.
 awsBool :: Bool -> B.ByteString
 awsBool True = "true"
 awsBool False = "false"
 
+-- | \"true\"
 awsTrue :: B.ByteString
 awsTrue = awsBool True
 
+-- | \"false\"
 awsFalse :: B.ByteString
 awsFalse = awsBool False
 
+-- | Format time according to a format string, as a ByteString.
 fmtTime :: String -> UTCTime -> B.ByteString
 fmtTime s t = BU.fromString $ formatTime defaultTimeLocale s t
 
+-- | Format time in RFC 822 format.
 fmtRfc822Time :: UTCTime -> B.ByteString
 fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"
 
+-- | Format time in yyyy-mm-ddThh-mm-ss format.
 fmtAmzTime :: UTCTime -> B.ByteString
 fmtAmzTime = fmtTime "%Y-%m-%dT%H:%M:%S"
 
+-- | Format time as seconds since the Unix epoch.
 fmtTimeEpochSeconds :: UTCTime -> B.ByteString
 fmtTimeEpochSeconds = fmtTime "%s"
 
+-- | Parse a two-digit hex number.
 readHex2 :: [Char] -> Maybe Word8
 readHex2 [c1,c2] = do n1 <- readHex1 c1
                       n2 <- readHex1 c2
