@@ -59,8 +59,6 @@ module Aws.Core
 , defaultPort
 , Method(..)
 , httpMethod
- -- * Error handling
-, tryError -- TODO: delete?
 )
 where
 
@@ -422,10 +420,6 @@ signature cr ah input = Base64.encode sig
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key :: HMAC.MacKey c d
       key = HMAC.MacKey (secretAccessKey cr)
-
--- TODO: remove?
-tryError :: (Exception e, C.MonadResource m, MonadBaseControl IO m) => m b -> m (Either e b)
-tryError = Control.Exception.Lifted.try
 
 -- | @queryList f prefix xs@ constructs a query list from a list of elements @xs@, using a common prefix @prefix@,
 -- and a transformer function @f@.
