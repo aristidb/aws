@@ -238,23 +238,28 @@ loadCredentialsDefault = do
   file <- credentialsDefaultFile
   loadCredentialsFromEnvOrFile file credentialsDefaultKey
 
+-- | Protocols supported by AWS. Currently, all AWS services use the HTTP or HTTPS protocols.
 data Protocol
     = HTTP
     | HTTPS
     deriving (Show)
 
+-- | The default port to be used for a protocol if no specific port is specified.
 defaultPort :: Protocol -> Int
 defaultPort HTTP = 80
 defaultPort HTTPS = 443
 
+-- | Request method. Not all request methods are supported by all services.
 data Method
-    = Get
-    | PostQuery
-    | Post
-    | Put
-    | Delete
+    = Get       -- ^ GET method. Put all request parameters in a query string and HTTP headers.
+    | PostQuery -- ^ POST method. Put all request parameters in a query string and HTTP headers, but send the query string
+                --   as a POST payload
+    | Post      -- ^ POST method. Sends a service- and request-specific request body.
+    | Put       -- ^ PUT method.
+    | Delete    -- ^ DELETE method.
     deriving (Show, Eq)
 
+-- | HTTP method associated with a request method.
 httpMethod :: Method -> HTTP.Method
 httpMethod Get       = "GET"
 httpMethod PostQuery = "POST"
@@ -262,6 +267,7 @@ httpMethod Post      = "POST"
 httpMethod Put       = "PUT"
 httpMethod Delete    = "DELETE"
 
+-- | A pre-signed medium-level request object.
 data SignedQuery
     = SignedQuery {
         sqMethod :: Method
