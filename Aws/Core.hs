@@ -484,33 +484,46 @@ readHex2 [c1,c2] = do n1 <- readHex1 c1
 readHex2 _ = Nothing
 
 -- XML
+
+-- | An error that occurred during XML parsing / validation.
 newtype XmlException = XmlException { xmlErrorMessage :: String }
     deriving (Show, Typeable)
 
 instance E.Exception XmlException
 
+-- | A specific element (case-insensitive, ignoring namespace - sadly necessary), extracting only the textual contents.
 elContent :: T.Text -> Cursor -> [T.Text]
 elContent name = laxElement name &/ content
 
+-- | Like 'elContent', but extracts 'String's instead of 'T.Text'.
 elCont :: T.Text -> Cursor -> [String]
 elCont name = laxElement name &/ content &| T.unpack
 
+-- | Extract the first element from a parser result list, and throw an 'XmlException' if the list is empty.
 force :: F.Failure XmlException m => String -> [a] -> m a
 force = Cu.force . XmlException
 
+-- | Extract the first element from a monadic parser result list, and throw an 'XmlException' if the list is empty.
 forceM :: F.Failure XmlException m => String -> [m a] -> m a
 forceM = Cu.forceM . XmlException
 
+-- | Read an integer from a 'T.Text', throwing an 'XmlException' on failure.
 textReadInt :: (F.Failure XmlException m, Num a) => T.Text -> m a
 textReadInt s = case reads $ T.unpack s of
                   [(n,"")] -> return $ fromInteger n
                   _        -> F.failure $ XmlException "Invalid Integer"
 
+-- | Read an integer from a 'String', throwing an 'XmlException' on failure.
 readInt :: (F.Failure XmlException m, Num a) => String -> m a
 readInt s = case reads s of
               [(n,"")] -> return $ fromInteger n
               _        -> F.failure $ XmlException "Invalid Integer"
 
+-- | Create a complete 'HTTPResponseConsumer' from a simple function that takes a 'Cu.Cursor' to XML in the response
+-- body.
+-- 
+-- This function is highly recommended for any services that parse relatively short XML responses. (If status and response
+-- headers are required, simply take them as function parameters, and pass them through to this function.)
 xmlCursorConsumer ::
     (Monoid m)
     => (Cu.Cursor -> Response m a)
