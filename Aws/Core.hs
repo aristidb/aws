@@ -178,13 +178,23 @@ data Credentials
       }
     deriving (Show)
 
--- | The file where access credentials are loaded by default, when using 'loadCredentialsDefault'.
+-- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
+-- 
+-- Value: /<user directory>/@/.aws-keys@
 credentialsDefaultFile :: IO FilePath
 credentialsDefaultFile = (</> ".aws-keys") <$> getHomeDirectory
 
+-- | The key to be used in the access credential file that is loaded, when using 'loadCredentialsDefault'.
+-- 
+-- Value: @default@
 credentialsDefaultKey :: T.Text
 credentialsDefaultKey = "default"
 
+-- | Load credentials from a (text) file given a key name.
+-- 
+-- The file consists of a sequence of lines, each in the following format:
+-- 
+-- @keyName awsKeyID awsKeySecret@
 loadCredentialsFromFile :: FilePath -> T.Text -> IO (Maybe Credentials)
 loadCredentialsFromFile file key = do
   contents <- map T.words . T.lines <$> T.readFile file
@@ -195,6 +205,8 @@ loadCredentialsFromFile file key = do
         hasKey _ [] = False
         hasKey k (k2 : _) = k == k2
 
+-- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@ 
+--   (or @AWS_SECRET_ACCESS_KEY@), if possible.
 loadCredentialsFromEnv :: IO (Maybe Credentials)
 loadCredentialsFromEnv = do
   env <- getEnvironment
@@ -202,7 +214,10 @@ loadCredentialsFromEnv = do
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
   return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) <*> (T.encodeUtf8 . T.pack <$> secret))
-  
+
+-- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
+-- 
+-- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
 loadCredentialsFromEnvOrFile :: FilePath -> T.Text -> IO (Maybe Credentials)
 loadCredentialsFromEnvOrFile file key = 
   do
@@ -211,6 +226,13 @@ loadCredentialsFromEnvOrFile file key =
       Just cr -> return (Just cr)
       Nothing -> loadCredentialsFromFile file key
 
+-- | Load credentials from environment variables if possible, or alternative from the default file with the default
+-- key name.
+-- 
+-- Default file: /<user directory>/@/.aws-keys@
+-- Default key name: @default@
+-- 
+-- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
 loadCredentialsDefault :: IO (Maybe Credentials)
 loadCredentialsDefault = do
   file <- credentialsDefaultFile
