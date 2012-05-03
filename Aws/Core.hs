@@ -144,7 +144,7 @@ type HTTPResponseConsumer a =  HTTP.Status
 -- The request is also passed for possibly required additional metadata.
 -- 
 -- Note that for debugging, there is an instance for 'L.ByteString'.
-class ResponseConsumer req resp where
+class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
     -- | Metadata associated with a response. Typically there is one metadata type for each AWS service.
     type ResponseMetadata resp
 
@@ -164,8 +164,9 @@ instance ResponseConsumer r (HTTP.Response L.ByteString) where
 -- 
 -- Note that the actual request generation and response parsing resides in 'SignQuery' and 'ResponseConsumer'
 -- respectively.
-class (SignQuery r, ResponseConsumer r a, Monoid (ResponseMetadata a))
-    => Transaction r a | r -> a, a -> r
+class (SignQuery r, ResponseConsumer r a)
+      => Transaction r a
+      | r -> a, a -> r
 
 -- | AWS access credentials.
 data Credentials
