@@ -390,19 +390,28 @@ signatureData rti cr = do
   let ti = makeAbsoluteTimeInfo rti now
   return SignatureData { signatureTimeInfo = ti, signatureTime = now, signatureCredentials = cr }
 
+-- | A "signable" request object. Assembles together the Query, and signs it in one go.
 class SignQuery r where
+    -- | Additional information, like API endpoints and service-specific preferences.
     type Info r :: *
+    
+    -- | Create a 'SignedQuery' from a request, additional 'Info', and 'SignatureData'.
     signQuery :: r -> Info r -> SignatureData -> SignedQuery
 
+-- | Supported crypto hashes for the signature.
 data AuthorizationHash
     = HmacSHA1
     | HmacSHA256
     deriving (Show)
 
+-- | Authorization hash identifier as expected by Amazon.
 amzHash :: AuthorizationHash -> B.ByteString
 amzHash HmacSHA1 = "HmacSHA1"
 amzHash HmacSHA256 = "HmacSHA256"
 
+-- | Create a signature. Usually, AWS wants a specifically constructed string to be signed.
+-- 
+-- The signature is a HMAC-based hash of the string and the secret access key.
 signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
 signature cr ah input = Base64.encode sig
     where
