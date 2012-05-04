@@ -59,7 +59,7 @@ instance SignQuery ListResourceRecordSets where
       where
       method = Get
       body = Nothing
-      resource = T.encodeUtf8 (qualifiedIdText lrrsHostedZoneId) `B.append` "/rrset"
+      resource = (T.encodeUtf8 . qualifiedIdText) lrrsHostedZoneId `B.append` "/rrset"
       query = catMaybes [ ("name",) . T.encodeUtf8 . dText <$> lrrsName
                         , ("type",) . B.pack . typeToString <$> lrrsRecordType
                         , ("identifier",) . T.encodeUtf8 <$> lrrsIdentifier
