@@ -43,7 +43,7 @@ instance SignQuery ChangeResourceRecordSets where
       method = Post
       resource = (T.encodeUtf8 . qualifiedIdText) crrHostedZoneId `B.append` "/rrset"
       query = []
-      body = Just $ XML.Element "{https://route53.amazonaws.com/doc/2012-02-29/}ChangeResourceRecordSetsRequest" []
+      body = Just $ XML.Element "ChangeResourceRecordSetsRequest" [("xmlns","https://route53.amazonaws.com/doc/2012-02-29/")]
              [xml|
              <ChangeBatch>
                $maybe c <- crrComment
