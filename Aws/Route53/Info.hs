@@ -5,7 +5,7 @@ module Aws.Route53.Info
 , route53
 ) where
 
-import           Aws.Http
+import           Aws.Core
 import qualified Data.ByteString as B
 
 data Route53Info = Route53Info 

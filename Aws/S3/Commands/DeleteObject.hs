@@ -2,15 +2,8 @@
 module Aws.S3.Commands.DeleteObject
 where
 
-import           Aws.Http
-import           Aws.Response
-import           Aws.S3.Info
-import           Aws.S3.Metadata
-import           Aws.S3.Model
-import           Aws.S3.Query
-import           Aws.S3.Response
-import           Aws.Signature
-import           Aws.Transaction
+import           Aws.Core
+import           Aws.S3.Core
 import           Data.ByteString.Char8      ({- IsString -})
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T

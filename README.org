@@ -79,10 +79,22 @@ main = do
 
 You can also find this example in the source distribution in the ~Examples/~ folder.
 
+
+* Frequently Asked Questions
+
+** S3 questions
+
+- I get an error when I try to access my bucket with upper-case characters / a very long name.
+
+  Those names are not compliant with DNS. You need to use path-style requests, by setting ~s3RequestStyle~ in the configuration to
+  ~PathStyle~. Note that such bucket names are only allowed in the US standard region, so your endpoint needs to be US standard.
+
 * Release Notes
 
 ** 0.4 series
 
+- 0.4.1 :: Documentation improvements.
+- 0.4.0.1 :: Change dependency bounds to allow the transformers 0.3 package.
 - 0.4.0 :: Update conduit to 0.4.0, which is incompatible with earlier versions.
 
 ** 0.3 series

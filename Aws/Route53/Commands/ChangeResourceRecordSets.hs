@@ -14,15 +14,12 @@
 --
 module Aws.Route53.Commands.ChangeResourceRecordSets where
 
-import           Aws.Response
-import           Aws.Signature
 import           Aws.Route53.Info
 import           Aws.Route53.Model
 import           Aws.Route53.Metadata
 import           Aws.Route53.Query
 import           Aws.Route53.Response
-import           Aws.Transaction
-import           Aws.Http                   (Method(..))
+import           Aws.Core
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Text.XML                   as XML

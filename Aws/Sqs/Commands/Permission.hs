@@ -1,28 +1,22 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 
-module Aws.Sqs.Commands.AddPermission where
+module Aws.Sqs.Commands.Permission where
 
-import           Aws.Response
-import           Aws.Sqs.Info
-import           Aws.Sqs.Metadata
-import           Aws.Sqs.Model
-import           Aws.Sqs.Query
-import           Aws.Sqs.Response
-import           Aws.Signature
-import           Aws.Transaction
-import qualified Data.Text             as T
+import           Aws.Core
+import           Aws.Sqs.Core
 import qualified Data.ByteString.Char8 as B
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as TE
 import qualified Network.HTTP.Types    as HTTP
 
+data AddPermission = AddPermission {
+    apLabel :: T.Text,
+    apPermissions :: [(T.Text,SqsPermission)],
+    apQueueName :: QueueName
+  } deriving (Show)
 
-data AddPermission = AddPermission{
-  apLabel :: T.Text,
-  apPermissions :: [(T.Text,SqsPermission)],
-  apQueueName :: QueueName
-}deriving (Show)
-
-data AddPermissionResponse = AddPermissionResponse{
-} deriving (Show)
+data AddPermissionResponse = AddPermissionResponse
+  deriving (Show)
 
 
 formatPermissions :: [(T.Text,SqsPermission)] -> [HTTP.QueryItem]
@@ -46,3 +40,27 @@ instance SignQuery AddPermission  where
                                                         ("Label", Just $ B.pack $ T.unpack apLabel)] ++ formatPermissions apPermissions}
 
 instance Transaction AddPermission AddPermissionResponse
+
+data RemovePermission = RemovePermission {
+    rpLabel :: T.Text,
+    rpQueueName :: QueueName 
+  } deriving (Show)
+
+data RemovePermissionResponse = RemovePermissionResponse 
+  deriving (Show)
+
+instance ResponseConsumer r RemovePermissionResponse where
+    type ResponseMetadata RemovePermissionResponse = SqsMetadata
+    responseConsumer _ = sqsXmlResponseConsumer parse
+      where 
+        parse _ = do
+          return RemovePermissionResponse {}  
+          
+instance SignQuery RemovePermission  where 
+    type Info RemovePermission  = SqsInfo
+    signQuery RemovePermission {..} = sqsSignQuery SqsQuery {
+                                             sqsQueueName = Just rpQueueName, 
+                                             sqsQuery = [("Action", Just "RemovePermission"), 
+                                                        ("Label", Just $ TE.encodeUtf8 rpLabel )]} 
+
+instance Transaction RemovePermission RemovePermissionResponse

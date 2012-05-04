@@ -2,11 +2,10 @@
 module Aws.Route53.Response
 where
 
-import           Aws.Response
+import           Aws.Core
 import           Aws.Route53.Error
 import           Aws.Route53.Model
 import           Aws.Route53.Metadata
-import           Aws.Xml
 import           Data.IORef
 import           Data.Text                  (Text, unpack)
 import           Data.Text.Encoding         (decodeUtf8)

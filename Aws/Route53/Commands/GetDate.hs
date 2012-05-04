@@ -9,16 +9,12 @@
 -- 
 module Aws.Route53.Commands.GetDate where
 
-import           Aws.Query
-import           Aws.Http
+import           Aws.Core
 import           Data.Time (UTCTime)
 import           Data.Time.Format (parseTime)
 import           System.Locale (defaultTimeLocale)
-import           Aws.Response
-import           Aws.Signature
 import           Aws.Route53.Info
 import           Aws.Route53.Model
-import           Aws.Transaction
 import           Data.Maybe
 import           Data.ByteString.Char8      (unpack)
 import qualified Network.HTTP.Types         as HTTP

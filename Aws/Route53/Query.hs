@@ -5,12 +5,8 @@ module Aws.Route53.Query
     ( route53SignQuery
     ) where
 
-import           Aws.Credentials
-import           Aws.Http
-import           Aws.Query
-import           Aws.Signature
+import           Aws.Core
 import           Aws.Route53.Info
-import           Aws.Util
 import qualified Text.XML                       as XML
 import qualified Data.ByteString                as B
 import qualified Network.HTTP.Types             as HTTP

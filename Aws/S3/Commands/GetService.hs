@@ -2,16 +2,8 @@
 module Aws.S3.Commands.GetService
 where
 
-import           Aws.Http
-import           Aws.Response
-import           Aws.S3.Info
-import           Aws.S3.Metadata
-import           Aws.S3.Model
-import           Aws.S3.Query
-import           Aws.S3.Response
-import           Aws.Signature
-import           Aws.Transaction
-import           Aws.Xml
+import           Aws.Core
+import           Aws.S3.Core
 import           Data.Maybe
 import           Data.Time.Format
 import           System.Locale

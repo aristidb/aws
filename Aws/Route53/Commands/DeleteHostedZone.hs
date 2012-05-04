@@ -13,15 +13,12 @@
 --
 module Aws.Route53.Commands.DeleteHostedZone where
 
-import           Aws.Response
-import           Aws.Signature
+import           Aws.Core
 import           Aws.Route53.Info
 import           Aws.Route53.Model
 import           Aws.Route53.Metadata
 import           Aws.Route53.Query
 import           Aws.Route53.Response
-import           Aws.Transaction
-import           Aws.Http                   (Method(..))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 import qualified Data.ByteString            as B

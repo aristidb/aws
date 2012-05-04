@@ -14,17 +14,13 @@
 --
 module Aws.Route53.Commands.ListHostedZones where
 
-import           Aws.Response
-import           Aws.Signature
+import           Aws.Core
 import           Aws.Route53.Info
 import           Aws.Route53.Model
 import           Aws.Route53.Metadata
 import           Aws.Route53.Query
 import           Aws.Route53.Response
-import           Aws.Transaction
-import           Aws.Xml
 import           Data.Maybe
-import           Aws.Http                   (Method(..))
 import           Control.Applicative        ((<$>))
 import           Text.XML.Cursor            (($//))
 import qualified Data.Text                  as T

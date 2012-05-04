@@ -47,9 +47,9 @@ module Aws.Route53.Model
 , typeToString
 ) where
 
+import           Aws.Core
 import           Data.String
 import           Control.Monad      (MonadPlus, mzero, mplus, liftM)
-import           Aws.Xml
 import           Text.XML.Cursor    (($/), ($//), (&|), ($.//), laxElement)
 import qualified Text.XML           as XML
 import           Text.Hamlet.XML    (xml)
