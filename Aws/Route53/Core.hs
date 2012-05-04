@@ -474,10 +474,9 @@ newtype ChangeId = ChangeId { changeIdText :: T.Text }
                    deriving (Show, Eq)
 
 instance Route53Id ChangeId where
-  idQualifier = const "changeId"
+  idQualifier = const "change"
   idText = changeIdText
   asId' = ChangeId
-  --asId = ChangeId . fromJust. T.stripPrefix "/changeid/"
 
 data ChangeInfo = ChangeInfo { ciId :: ChangeId
                              , ciStatus :: ChangeInfoStatus
