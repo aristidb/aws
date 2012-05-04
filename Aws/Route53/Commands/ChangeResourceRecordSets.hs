@@ -27,7 +27,7 @@ data ACTION = CREATE | DELETE
 
 -- TODO enforce constrains either via type or dynamically on creation or usage
 data ChangeResourceRecordSets = ChangeResourceRecordSets
-                      { crrHostedZoneId :: T.Text
+                      { crrHostedZoneId :: HostedZoneId
                       , crrComment :: Maybe T.Text
                       , crrsChanges :: [(ACTION, ResourceRecordSet)]
                       } deriving (Show)
@@ -41,7 +41,7 @@ instance SignQuery ChangeResourceRecordSets where
     signQuery ChangeResourceRecordSets{..} = route53SignQuery method resource query body
       where
       method = Post
-      resource = "/hostedzone/" `B.append` T.encodeUtf8 crrHostedZoneId `B.append` "/rrset"
+      resource = (T.encodeUtf8 . qualifiedIdText) crrHostedZoneId `B.append` "/rrset"
       query = []
       body = Just $ XML.Element "{https://route53.amazonaws.com/doc/2012-02-29/}ChangeResourceRecordSetsRequest" []
              [xml|

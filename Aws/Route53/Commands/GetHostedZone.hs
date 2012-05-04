@@ -22,7 +22,7 @@ import qualified Data.Text.Encoding         as T
 import qualified Data.ByteString            as B
 
 data GetHostedZone = GetHostedZone
-                   { hostedZoneId :: T.Text
+                   { hostedZoneId :: HostedZoneId
                    } deriving (Show)
 
 data GetHostedZoneResponse = GetHostedZoneResponse
@@ -30,7 +30,7 @@ data GetHostedZoneResponse = GetHostedZoneResponse
                              , ghzrDelegationSet :: DelegationSet
                              } deriving (Show)
 
-getHostedZone :: T.Text -> GetHostedZone
+getHostedZone :: HostedZoneId -> GetHostedZone
 getHostedZone hostedZoneId = GetHostedZone hostedZoneId
 
 instance SignQuery GetHostedZone where
@@ -38,7 +38,7 @@ instance SignQuery GetHostedZone where
     signQuery GetHostedZone{..} = route53SignQuery method resource query Nothing
       where
       method = Get
-      resource = "/hostedzone/" `B.append` (T.encodeUtf8 hostedZoneId)
+      resource = T.encodeUtf8 . qualifiedIdText $ hostedZoneId
       query = []
 
 instance ResponseConsumer r GetHostedZoneResponse where
