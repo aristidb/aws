@@ -41,22 +41,22 @@ import qualified Data.Text.Encoding         as T
 import qualified Data.ByteString.Char8      as B
 
 data ListResourceRecordSets = ListResourceRecordSets
-                   { lrrsHostedZoneId :: T.Text
-                   , lrrsName :: Maybe DNS.Domain
+                   { lrrsHostedZoneId :: HostedZoneId
+                   , lrrsName :: Maybe Domain
                    , lrrsRecordType :: Maybe DNS.TYPE   -- ^ /note that SPF is currently not supported/
-                   , lrrsIdentifier :: Maybe T.Text     -- ^ must be present for weighted or latency resource record sets
+                   , lrrsIdentifier :: Maybe T.Text     -- ^ must be present for weighted or latency resource record sets. TODO introduce newtype wrapper
                    , lrrsMaxItems :: Maybe Int          -- ^ maximum effective value is 100
                    } deriving (Show)
 
 -- | A most general 'ListResourceRecordSets' query
-listResourceRecordSets :: T.Text -> ListResourceRecordSets
+listResourceRecordSets :: HostedZoneId -> ListResourceRecordSets
 listResourceRecordSets hostedZoneId = ListResourceRecordSets hostedZoneId Nothing Nothing Nothing Nothing
 
 data ListResourceRecordSetsResponse = ListResourceRecordSetsResponse
                              { lrrsrResourceRecordSets :: ResourceRecordSets
                              , lrrsrIsTruncated :: Bool
                              , lrrsrMaxItems :: Maybe Int                 -- ^ The maxitems value from the request (TODO is it Maybe?)
-                             , lrrsrNextRecordName :: Maybe DNS.Domain    -- ^ TODO check constraint
+                             , lrrsrNextRecordName :: Maybe Domain        -- ^ TODO check constraint
                              , lrrsrNextRecordType :: Maybe DNS.TYPE      -- ^ TODO check constraint
                              , lrrsrNextRecordIdentifier :: Maybe T.Text  -- ^ TODO check constraint
                              } deriving (Show)
@@ -67,8 +67,8 @@ instance SignQuery ListResourceRecordSets where
       where
       method = Get
       body = Nothing
-      resource = "/hostedzone/" `B.append` (T.encodeUtf8 lrrsHostedZoneId) `B.append` "/rrset"
-      query = catMaybes [ ("name",) <$> lrrsName
+      resource = T.encodeUtf8 (qualifiedIdText lrrsHostedZoneId) `B.append` "/rrset"
+      query = catMaybes [ ("name",) . T.encodeUtf8 . dText <$> lrrsName
                         , ("type",) . B.pack . typeToString <$> lrrsRecordType
                         , ("identifier",) . T.encodeUtf8 <$> lrrsIdentifier
                         , ("maxitems",) . B.pack . show <$> lrrsMaxItems
@@ -84,7 +84,7 @@ instance ResponseConsumer r ListResourceRecordSetsResponse where
             resourceRecordSets <- r53Parse cursor
             isTruncated <- force "Missing IsTruncated element" $ cursor $/ elCont "IsTruncated" &| ("True"==)
             maxItems <- listToMaybe <$> (sequence $ cursor $/ elCont "MaxItems" &| readInt)
-            let nextRecordName = listToMaybe $ cursor $// elContent "NextRecordName" &| T.encodeUtf8
+            let nextRecordName = listToMaybe $ cursor $// elContent "NextRecordName" &| Domain
             let nextRecordType = listToMaybe $ cursor $// elCont "NextRecordType" &| DNS.toType
             let nextRecordIdentifier = listToMaybe $ cursor $// elContent "NextRecordIdentifier"
             return $ ListResourceRecordSetsResponse resourceRecordSets isTruncated maxItems nextRecordName nextRecordType nextRecordIdentifier

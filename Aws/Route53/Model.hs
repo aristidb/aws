@@ -6,11 +6,14 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
   
 module Aws.Route53.Model
 ( -- * Hosted Zone
   HostedZone (..)
 , HostedZones
+, Domain(..)
+, HostedZoneId(..)
 
   -- * Delegation Set
 , DelegationSet(..)
@@ -28,10 +31,13 @@ module Aws.Route53.Model
 
   -- * Change Info
 , ChangeInfo(..)
+, ChangeInfoStatus(..)
+, ChangeId(..)
 
   -- * Parser Utilities
 , Route53Parseable(..)
 , Route53XmlSerializable(..)
+, Route53Id(..)
 
   -- * DNS and HTTP Utilites
   -- | This functions extend 'Network.HTTP.Types' and 'Network.DNS.Types'
@@ -59,8 +65,24 @@ import qualified Network.DNS.Types  as DNS
 import qualified Network.HTTP.Types as HTTP
 
 class Route53Id r where
+  idQualifier :: r -> T.Text
   idText :: r -> T.Text
+  
   asId :: T.Text -> r
+  asId t = asId' . fromJust .T.stripPrefix (qualifiedIdTextPrefix (undefined::r)) $ t
+
+  qualifiedIdTextPrefix :: r -> T.Text
+  qualifiedIdTextPrefix r = "/" `T.append` idQualifier r `T.append` "/" 
+
+  qualifiedIdText :: r -> T.Text
+  qualifiedIdText r = qualifiedIdTextPrefix r `T.append` idText r
+
+  -- | Helper for defining 'asId'. Constructs 'r' from a 'T.Text' assuming that
+  --   the qualifier with already stripped from the argument.
+  --
+  --   Define either this or 'asId'. Usually defining 'asId'' is easier.
+  asId' :: (T.Text -> r)
+  asId' t = asId $ qualifiedIdTextPrefix (undefined::r) `T.append` t
 
 --instance (Route53Id r) => IsString r where
 --  fromString = HostedZoneId . fromJust . T.stripPrefix (idPrefix undefined) . T.pack
@@ -68,15 +90,17 @@ class Route53Id r where
 -- -------------------------------------------------------------------------- --
 -- HostedZone
 
-newtype HostedZoneId = HostedZoneId { hostedZoneIdText :: T.Text }
-                        deriving (Show, IsString)
+newtype HostedZoneId = HostedZoneId { hziText :: T.Text }
+                        deriving (Show, IsString, Eq)
 
 instance Route53Id HostedZoneId where
-  idText = hostedZoneIdText
-  asId = HostedZoneId . fromJust . T.stripPrefix "/hostedzone/"
+  idQualifier = const "hostedzone"
+  idText = hziText
+  --asId r = HostedZoneId . fromJust . T.stripPrefix (qualifiedIdTextPrefix (undefined::HostedZoneId)) $ r
+  asId' = HostedZoneId
 
-newtype Domain = Domain { domainText :: T.Text }
-                 deriving (Show)
+newtype Domain = Domain { dText :: T.Text }
+                 deriving (Show, Eq)
 
 instance IsString Domain where
   fromString = Domain . T.pack
@@ -110,7 +134,7 @@ instance Route53XmlSerializable HostedZone where
 
   toXml HostedZone{..} = XML.Element "HostedZone" [] [xml|
     <Id>#{idText hzId}
-    <Name>#{domainText hzName}
+    <Name>#{dText hzName}
     <CallerReference>#{hzCallerReference}
     <Config>
       <Comment>#{hzComment}
@@ -162,6 +186,7 @@ data REGION = ApNorthEast1
             | UsWest1
             | UsWest2
             | UnknownRegion
+            deriving (Eq)
 
 instance Show REGION where
   show ApNorthEast1  = "ap-north-east-1"
@@ -189,7 +214,7 @@ regionFromString _                 = UnknownRegion
 type ResourceRecords = [ResourceRecord]
 
 newtype ResourceRecord = ResourceRecord { value :: T.Text }
-                         deriving (Show)
+                         deriving (Show, Eq)
 
 data AliasTarget = AliasTarget { atHostedZoneId :: HostedZoneId
                                , atDNSName :: Domain
@@ -212,7 +237,7 @@ type ResourceRecordSets = [ResourceRecordSet]
 instance Route53XmlSerializable ResourceRecordSet where
 
   toXml ResourceRecordSet{..} = XML.Element "ResourceRecordSet" [] [xml|
-    <Name>#{domainText rrsName}
+    <Name>#{dText rrsName}
     <Type>#{typeToText rrsType}
     $maybe a <- rrsAliasTarget
       <AliasTarget>
@@ -238,7 +263,7 @@ instance Route53XmlSerializable AliasTarget where
   
   toXml AliasTarget{..} = XML.Element "AliasTarget" [] [xml|
     <HostedZoneId>#{idText atHostedZoneId}
-    <DNSName>#{domainText atDNSName}
+    <DNSName>#{dText atDNSName}
     |]
 
 --instance Route53XmlSerializable HostedZones where
@@ -291,11 +316,13 @@ data ChangeInfoStatus = PENDING | INSYNC
                         deriving (Show, Read)
 
 newtype ChangeId = ChangeId { changeIdText :: T.Text }
-                   deriving (Show)
+                   deriving (Show, Eq)
 
 instance Route53Id ChangeId where
+  idQualifier = const "changeId"
   idText = changeIdText
-  asId = ChangeId . fromJust. T.stripPrefix "/changeid/"
+  asId' = ChangeId
+  --asId = ChangeId . fromJust. T.stripPrefix "/changeid/"
 
 data ChangeInfo = ChangeInfo { ciId :: ChangeId
                              , ciStatus :: ChangeInfoStatus
