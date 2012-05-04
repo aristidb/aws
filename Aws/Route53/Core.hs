@@ -1,27 +1,49 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards #-} 
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
   
-module Aws.Route53.Model
-( -- * Hosted Zone
-  HostedZone (..)
+module Aws.Route53.Core
+( -- * Info
+  Route53Info(..)
+, route53EndpointUsClassic
+, route53
+
+  -- * Error
+, Route53Error(..)
+
+  -- * Metadata
+, Route53Metadata(..)
+
+  -- * Query
+, route53SignQuery
+
+  -- * Response
+, route53ResponseConsumer
+, route53CheckResponseType
+
+  -- * Model
+
+  -- ** Hosted Zone
+, HostedZone (..)
 , HostedZones
 , Domain(..)
 , HostedZoneId(..)
 
-  -- * Delegation Set
+  -- ** Delegation Set
 , DelegationSet(..)
 , Nameserver
 , Nameservers
 , dsNameservers
 
-  -- * Resource Record Set
+  -- ** Resource Record Set
 , REGION(..)
 , ResourceRecordSets
 , ResourceRecordSet(..)
@@ -29,7 +51,7 @@ module Aws.Route53.Model
 , ResourceRecord(..)
 , AliasTarget(..)
 
-  -- * Change Info
+  -- ** Change Info
 , ChangeInfo(..)
 , ChangeInfoStatus(..)
 , ChangeId(..)
@@ -48,21 +70,155 @@ module Aws.Route53.Model
 ) where
 
 import           Aws.Core
+import           Data.IORef
+import           Data.Monoid
 import           Data.String
-import           Control.Monad      (MonadPlus, mzero, mplus, liftM)
-import           Text.XML.Cursor    (($/), ($//), (&|), ($.//), laxElement)
-import qualified Text.XML           as XML
-import           Text.Hamlet.XML    (xml)
-import           Data.List          (find)
-import           Data.Maybe         (listToMaybe, fromJust)
-import           Data.Time          (UTCTime)
-import           Data.Time.Format   (parseTime)
-import           System.Locale      (defaultTimeLocale)
-import qualified Control.Failure    as F
-import qualified Text.XML.Cursor    as Cu
-import qualified Data.Text          as T
-import qualified Network.DNS.Types  as DNS
-import qualified Network.HTTP.Types as HTTP
+import           Data.Typeable
+import           Control.Monad        (MonadPlus, mzero, mplus, liftM)
+import           Data.List            (find)
+import           Data.Maybe           (listToMaybe, fromJust)
+import           Data.Text            (Text, unpack)
+import           Data.Text.Encoding   (decodeUtf8)
+import           Data.Time            (UTCTime)
+import           Data.Time.Format     (parseTime)
+import           System.Locale        (defaultTimeLocale)
+import           Text.Hamlet.XML      (xml)
+import           Text.XML.Cursor      (($/), ($//), (&|), ($.//), laxElement)
+import qualified Control.Exception    as C
+import qualified Control.Failure      as F
+import qualified Data.ByteString      as B
+import qualified Data.Text            as T
+import qualified Network.DNS.Types    as DNS
+import qualified Network.HTTP.Conduit as HTTP
+import qualified Network.HTTP.Types   as HTTP
+import qualified Text.XML             as XML
+import qualified Text.XML.Cursor      as Cu
+
+-- -------------------------------------------------------------------------- --
+-- Info
+
+data Route53Info = Route53Info 
+    { route53Protocol :: Protocol
+    , route53Endpoint :: B.ByteString
+    , route53Port :: Int
+    , route53ApiVersion :: B.ByteString
+    } deriving (Show)
+
+route53EndpointUsClassic :: B.ByteString
+route53EndpointUsClassic = "route53.amazonaws.com"
+
+route53ApiVersionRecent :: B.ByteString
+route53ApiVersionRecent = "2012-02-29"
+
+route53 :: Route53Info
+route53 = Route53Info 
+    { route53Protocol = HTTPS
+    , route53Endpoint = route53EndpointUsClassic
+    , route53Port = defaultPort HTTPS
+    , route53ApiVersion = route53ApiVersionRecent
+    }
+
+-- -------------------------------------------------------------------------- --
+-- Error
+
+-- TODO route53 documentation seem to indicate that there is also a type field in the error response body.
+-- http://docs.amazonwebservices.com/Route53/latest/DeveloperGuide/ResponseHeader_RequestID.html
+
+data Route53Error = Route53Error
+      { route53StatusCode   :: HTTP.Status
+      , route53ErrorCode    :: Text
+      , route53ErrorMessage :: Text
+      } deriving (Show, Typeable)
+
+instance C.Exception Route53Error
+
+-- -------------------------------------------------------------------------- --
+-- Metadata
+
+data Route53Metadata = Route53Metadata 
+    { requestId :: Maybe T.Text
+    } deriving (Show, Typeable)
+
+instance Monoid Route53Metadata where
+    mempty = Route53Metadata Nothing
+    Route53Metadata r1 `mappend` Route53Metadata r2 = Route53Metadata (r1 `mplus` r2)
+
+-- -------------------------------------------------------------------------- --
+-- Query
+
+route53SignQuery :: Method -> B.ByteString -> [(B.ByteString, B.ByteString)] -> Maybe XML.Element -> Route53Info -> SignatureData -> SignedQuery
+route53SignQuery method resource query body Route53Info{..} sd
+    = SignedQuery {
+        sqMethod        = method
+      , sqProtocol      = route53Protocol 
+      , sqHost          = route53Endpoint
+      , sqPort          = route53Port
+      , sqPath          = route53ApiVersion `B.append` resource
+      , sqQuery         = HTTP.simpleQueryToQuery query'
+      , sqDate          = Just $ signatureTime sd
+      , sqAuthorization = Nothing
+      , sqContentType   = Nothing
+      , sqContentMd5    = Nothing
+      , sqAmzHeaders    = [("X-Amzn-Authorization", authorization)]
+      , sqOtherHeaders  = []
+      , sqBody          = renderBody `fmap` body
+      , sqStringToSign  = stringToSign
+      }
+    where
+      stringToSign  = fmtRfc822Time (signatureTime sd)
+      credentials   = signatureCredentials sd
+      accessKeyId   = accessKeyID credentials
+      authorization = B.concat [ "AWS3-HTTPS AWSAccessKeyId="
+                               , accessKeyId
+                               , ", Algorithm=HmacSHA256, Signature="
+                               , signature credentials HmacSHA256 stringToSign
+                               ]
+      query' = ("AWSAccessKeyId", accessKeyId) : query
+
+      renderBody b = HTTP.RequestBodyLBS . XML.renderLBS XML.def $ XML.Document 
+                     { XML.documentPrologue = XML.Prologue [] Nothing []
+                     , XML.documentRoot = b
+                     , XML.documentEpilogue = []
+                     }
+
+-- -------------------------------------------------------------------------- --
+-- Response
+
+-- TODO: the documentation seems to indicate that in case of errors the requestId is returned in the body
+--       Have a look at Ses/Response.hs how to parse the requestId element. We may try both (header and
+--       body element) on each response and sum the results with `mplus` in the Maybe monad.
+--       http://docs.amazonwebservices.com/Route53/latest/DeveloperGuide/ResponseHeader_RequestID.html
+
+route53ResponseConsumer :: (Cu.Cursor -> Response Route53Metadata a)
+                        -> IORef Route53Metadata
+                        -> HTTPResponseConsumer a
+route53ResponseConsumer inner metadataRef status headers =
+    xmlCursorConsumer parse metadataRef status headers
+    where
+      parse cursor = do
+        tellMetadata . Route53Metadata . fmap decodeUtf8 $ findHeaderValue headers headerRequestId
+        case cursor $/ Cu.laxElement "Error" of
+          []      -> inner cursor
+          (err:_) -> fromError err
+
+      fromError cursor = do
+        errCode    <- force "Missing Error Code"    $ cursor $// elContent "Code"
+        errMessage <- force "Missing Error Message" $ cursor $// elContent "Message"
+        F.failure $ Route53Error status errCode errMessage
+
+
+route53CheckResponseType :: F.Failure XmlException m => a -> Text -> Cu.Cursor -> m a
+route53CheckResponseType a n c = do 
+    _ <- force ("Expected response type " ++ unpack n) (Cu.laxElement n c)
+    return a
+
+-- ** Response types
+
+-- TODO analyse the possible response types. I think there are common patterns.
+-- Collect common code from the Commands here
+
+-- -------------------------------------------------------------------------- --
+-- Model
 
 class Route53Id r where
   idQualifier :: r -> T.Text
@@ -268,7 +424,6 @@ instance Route53XmlSerializable AliasTarget where
 
 --instance Route53XmlSerializable HostedZones where
 --  toXml hostedZones = XML.Element "HostedZones" [] $ (XML.NodeElement . toXml) `map` hostedZones
-
 
 instance Route53Parseable ResourceRecordSets where
   r53Parse cursor = do

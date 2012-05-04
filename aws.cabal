@@ -87,6 +87,7 @@ Library
                        Aws.Ses.Commands.SendRawEmail,
                        Aws.Ses.Core
                        Aws.Route53,
+                       Aws.Route53.Core
                        Aws.Route53.Commands,
                        Aws.Route53.Commands.ListHostedZones,
                        Aws.Route53.Commands.ListResourceRecordSets,
@@ -94,13 +95,7 @@ Library
                        Aws.Route53.Commands.CreateHostedZone,
                        Aws.Route53.Commands.DeleteHostedZone,
                        Aws.Route53.Commands.GetChange,
-                       Aws.Route53.Commands.GetDate,
-                       Aws.Route53.Info,
-                       Aws.Route53.Model
-                       Aws.Route53.Error,
-                       Aws.Route53.Metadata,
-                       Aws.Route53.Query,
-                       Aws.Route53.Response
+                       Aws.Route53.Commands.GetDate
                        
 
   -- Packages needed in order to build this package.

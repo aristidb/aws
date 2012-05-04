@@ -23,11 +23,7 @@
 module Aws.Route53.Commands.ListResourceRecordSets where
 
 import           Aws.Core
-import           Aws.Route53.Info
-import           Aws.Route53.Model
-import           Aws.Route53.Metadata
-import           Aws.Route53.Query
-import           Aws.Route53.Response
+import           Aws.Route53.Core
 import           Data.Maybe                 (catMaybes, listToMaybe)
 import           Control.Applicative        ((<$>))
 import qualified Network.DNS.Types          as DNS

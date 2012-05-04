@@ -28,7 +28,7 @@ import           Aws.S3.Core
 import           Aws.Ses.Core
 import           Aws.SimpleDb.Core
 import           Aws.Sqs.Core
-import           Aws.Route53.Info
+import           Aws.Route53.Core
 import           Control.Applicative
 import           Control.Monad.Trans  (liftIO)
 import           Data.Attempt         (attemptIO)

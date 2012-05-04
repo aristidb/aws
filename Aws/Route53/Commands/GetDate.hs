@@ -10,12 +10,11 @@
 module Aws.Route53.Commands.GetDate where
 
 import           Aws.Core
-import           Data.Time (UTCTime)
-import           Data.Time.Format (parseTime)
-import           System.Locale (defaultTimeLocale)
-import           Aws.Route53.Info
-import           Aws.Route53.Model
+import           Aws.Route53.Core
 import           Data.Maybe
+import           Data.Time                  (UTCTime)
+import           Data.Time.Format           (parseTime)
+import           System.Locale              (defaultTimeLocale)
 import           Data.ByteString.Char8      (unpack)
 import qualified Network.HTTP.Types         as HTTP
 
