@@ -20,14 +20,14 @@ import qualified Data.Text.Encoding         as T
 import qualified Data.ByteString            as B
 
 data GetChange = GetChange
-               { changeId :: T.Text
+               { changeId :: ChangeId
                } deriving (Show)
 
 data GetChangeResponse = GetChangeResponse
                        { gcrChangeInfo :: ChangeInfo
                        } deriving (Show)
 
-getChange :: T.Text -> GetChange
+getChange :: ChangeId -> GetChange
 getChange changeId = GetChange changeId
 
 instance SignQuery GetChange where
@@ -35,7 +35,7 @@ instance SignQuery GetChange where
     signQuery GetChange{..} = route53SignQuery method resource query body
       where
       method = Get
-      resource = "/change/" `B.append` (T.encodeUtf8 changeId)
+      resource = T.encodeUtf8 . qualifiedIdText $ changeId
       query = []
       body = Nothing
 

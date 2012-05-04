@@ -486,7 +486,7 @@ data ChangeInfo = ChangeInfo { ciId :: ChangeId
 instance Route53Parseable ChangeInfo where
   r53Parse cursor = do
     c <- force "Missing ChangeInfo element" $ cursor $.// laxElement "ChangeInfo"
-    ciId <- force "Missing Id element" $ c $/ elContent "Id" &| ChangeId
+    ciId <- force "Missing Id element" $ c $/ elContent "Id" &| asId
     status <- force "Missing Status element" $ c $/ elCont "Status" &| read
     submittedAt <- force "Missing SubmittedAt element" $ c $/ elCont "SubmittedAt" &| utcTime
     return $ ChangeInfo ciId status submittedAt
