@@ -5,3 +5,4 @@ import qualified Aws.S3               as S3
 import qualified Aws.SimpleDb         as Sdb
 import qualified Aws.Sqs              as Sqs
 import qualified Aws.Ses              as Ses
+import qualified Aws.Route53          as Route53
