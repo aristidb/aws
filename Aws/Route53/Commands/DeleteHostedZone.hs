@@ -34,8 +34,6 @@ deleteHostedZone hostedZoneId = DeleteHostedZone hostedZoneId
 
 -- Delete add convenience methods:
 -- * Delete non-empty hosted zone
--- * extract zoneId (maybe we should always strip the start of the string? Haskell is typed!)
--- * Extract bare Model from responses (that are heavily wrapped...)
 
 instance SignQuery DeleteHostedZone where
     type Info DeleteHostedZone = Route53Info

@@ -228,8 +228,6 @@ route53CheckResponseType a n c = do
     _ <- force ("Expected response type " ++ unpack n) (Cu.laxElement n c)
     return a
 
--- ** Response types
-
 -- TODO analyse the possible response types. I think there are common patterns.
 -- Collect common code from the Commands here
 
@@ -280,7 +278,6 @@ newtype HostedZoneId = HostedZoneId { hziText :: T.Text }
 instance Route53Id HostedZoneId where
   idQualifier = const "hostedzone"
   idText = hziText
-  --asId r = HostedZoneId . fromJust . T.stripPrefix (qualifiedIdTextPrefix (undefined::HostedZoneId)) $ r
   asId' = HostedZoneId
 
 newtype Domain = Domain { dText :: T.Text }
@@ -404,8 +401,6 @@ data AliasTarget = AliasTarget { atHostedZoneId :: HostedZoneId
                                , atDNSName :: Domain
                                } deriving (Show)
 
--- TODO make this complete from the spec. Do not just use the exmpales!
--- We may e.g. have different type for alias resource record sets
 data ResourceRecordSet = ResourceRecordSet { rrsName :: Domain
                                            , rrsType :: RecordType
                                            , rrsAliasTarget :: Maybe AliasTarget
@@ -440,18 +435,13 @@ instance Route53XmlSerializable ResourceRecordSet where
     |]
 
 instance Route53XmlSerializable ResourceRecord where
-  
   toXml ResourceRecord{..} = XML.Element "ResourceRecord" [] [xml|  <Value>#{value} |]
 
 instance Route53XmlSerializable AliasTarget where
-  
   toXml AliasTarget{..} = XML.Element "AliasTarget" [] [xml|
     <HostedZoneId>#{idText atHostedZoneId}
     <DNSName>#{dText atDNSName}
     |]
-
---instance Route53XmlSerializable HostedZones where
---  toXml hostedZones = XML.Element "HostedZones" [] $ (XML.NodeElement . toXml) `map` hostedZones
 
 instance Route53Parseable ResourceRecordSets where
   r53Parse cursor = do
@@ -480,7 +470,6 @@ instance Route53Parseable AliasTarget where
     zoneId <- force "Missing HostedZoneId element" $ c $/ elContent "HostedZoneId" &| asId
     dnsName <- force "Missing DNSName element" $ c $/ elContent "DNSName" &| Domain
     return $ AliasTarget zoneId dnsName
-
 
 instance Route53Parseable ResourceRecords where
   r53Parse cursor = do
@@ -526,25 +515,10 @@ instance Route53Parseable ChangeInfo where
 
 -- | A class for Route53 XML response parsers
 --
---   TODO Move these utilties to another module, for instance 'Aws.Route53.ParserUtils'
---
---   Parsers work with the following scheme:
---
---   * A parsers target either a single node or a set of ndoes.
---
---   * A parser that targets a single node will parse the first matching node that it finds.
---   
---   * A cursor with a node that is the target node it self or a parent of the target nodes.
---   
---   * The parser fails if it targets a single node and that nodes does not exist.
---   
---   * For multiple target nodes the parser may return the empty list.
---
 --  TODO there is a lot of Boilerplat here. With only little overhead serializatin and deserialization
 --  could be derived from the instance declaration. Maybe some DLS would be a goold solution
 
 class Route53Parseable r where
-
   r53Parse :: F.Failure XmlException m => Cu.Cursor -> m r
 
 -- | Takes the first @n@ elements from a List and injects them into a 'MonadPlus'. 

@@ -47,7 +47,7 @@ listResourceRecordSets hostedZoneId = ListResourceRecordSets hostedZoneId Nothin
 data ListResourceRecordSetsResponse = ListResourceRecordSetsResponse
                              { lrrsrResourceRecordSets :: ResourceRecordSets
                              , lrrsrIsTruncated :: Bool
-                             , lrrsrMaxItems :: Maybe Int                 -- ^ The maxitems value from the request (TODO is it Maybe?)
+                             , lrrsrMaxItems :: Maybe Int                 -- ^ The maxitems value from the request 
                              , lrrsrNextRecordName :: Maybe Domain        -- ^ TODO check constraint
                              , lrrsrNextRecordType :: Maybe RecordType    -- ^ TODO check constraint
                              , lrrsrNextRecordIdentifier :: Maybe T.Text  -- ^ TODO check constraint

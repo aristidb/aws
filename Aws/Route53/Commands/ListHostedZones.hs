@@ -38,14 +38,13 @@ data ListHostedZonesResponse = ListHostedZonesResponse
 listHostedZones :: ListHostedZones
 listHostedZones = ListHostedZones { lhzMaxNumberOfItems = Nothing, lhzNextToken = Nothing }
 
--- TODO sign the date header
 instance SignQuery ListHostedZones where
     type Info ListHostedZones = Route53Info
     signQuery ListHostedZones{..} = route53SignQuery method resource query Nothing
       where
       method = Get
       resource = "/hostedzone"
-      query = catMaybes -- query info signatureData
+      query = catMaybes
             [ ("MaxItems",) . T.encodeUtf8 . T.pack . show <$> lhzMaxNumberOfItems
             , ("NextToken",) . T.encodeUtf8 <$> lhzNextToken
             ]
