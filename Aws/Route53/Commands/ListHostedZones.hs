@@ -1,10 +1,9 @@
-{-# LANGUAGE RecordWildCards
-  , TypeFamilies
-  , FlexibleInstances
-  , MultiParamTypeClasses
-  , OverloadedStrings
-  , TupleSections 
-  #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 -- | GET ListHostedZones
 --
