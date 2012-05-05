@@ -14,9 +14,6 @@
 -- 
 --   <http://docs.amazonwebservices.com/Route53/latest/APIReference/API_ListResourceRecordSets.html>
 --
---   NOTE: Route53 supports record type @SPF@ which is not supported in 'Network.DNS.Types' and can thus
---   not be queried through this bindings.
---
 --   NOTE: the parameter 'identifier' is required for weighted and laltency resource record sets. This is
 --   not enforced by the type.
 --
@@ -26,7 +23,6 @@ import           Aws.Core
 import           Aws.Route53.Core
 import           Data.Maybe                 (catMaybes, listToMaybe)
 import           Control.Applicative        ((<$>))
-import qualified Network.DNS.Types          as DNS
 import           Text.XML.Cursor            (($//), (&|), ($/))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
@@ -35,7 +31,7 @@ import qualified Data.ByteString.Char8      as B
 data ListResourceRecordSets = ListResourceRecordSets
                    { lrrsHostedZoneId :: HostedZoneId
                    , lrrsName :: Maybe Domain
-                   , lrrsRecordType :: Maybe DNS.TYPE   -- ^ /note that SPF is currently not supported/
+                   , lrrsRecordType :: Maybe RecordType
                    , lrrsIdentifier :: Maybe T.Text     -- ^ must be present for weighted or latency resource record sets. TODO introduce newtype wrapper
                    , lrrsMaxItems :: Maybe Int          -- ^ maximum effective value is 100
                    } deriving (Show)
@@ -49,7 +45,7 @@ data ListResourceRecordSetsResponse = ListResourceRecordSetsResponse
                              , lrrsrIsTruncated :: Bool
                              , lrrsrMaxItems :: Maybe Int                 -- ^ The maxitems value from the request (TODO is it Maybe?)
                              , lrrsrNextRecordName :: Maybe Domain        -- ^ TODO check constraint
-                             , lrrsrNextRecordType :: Maybe DNS.TYPE      -- ^ TODO check constraint
+                             , lrrsrNextRecordType :: Maybe RecordType    -- ^ TODO check constraint
                              , lrrsrNextRecordIdentifier :: Maybe T.Text  -- ^ TODO check constraint
                              } deriving (Show)
 
@@ -77,7 +73,7 @@ instance ResponseConsumer r ListResourceRecordSetsResponse where
             isTruncated <- force "Missing IsTruncated element" $ cursor $/ elCont "IsTruncated" &| ("True"==)
             maxItems <- listToMaybe <$> (sequence $ cursor $/ elCont "MaxItems" &| readInt)
             let nextRecordName = listToMaybe $ cursor $// elContent "NextRecordName" &| Domain
-            let nextRecordType = listToMaybe $ cursor $// elCont "NextRecordType" &| DNS.toType
+            let nextRecordType = listToMaybe $ cursor $// elCont "NextRecordType" &| read
             let nextRecordIdentifier = listToMaybe $ cursor $// elContent "NextRecordIdentifier"
             return $ ListResourceRecordSetsResponse resourceRecordSets isTruncated maxItems nextRecordName nextRecordType nextRecordIdentifier
 

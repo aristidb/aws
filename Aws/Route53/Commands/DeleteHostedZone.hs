@@ -15,19 +15,17 @@ module Aws.Route53.Commands.DeleteHostedZone where
 
 import           Aws.Core
 import           Aws.Route53.Core
-import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Data.ByteString            as B
 
 data DeleteHostedZone = DeleteHostedZone
-                   { dhzHostedZoneId :: T.Text
+                   { dhzHostedZoneId :: HostedZoneId
                    } deriving (Show)
 
 data DeleteHostedZoneResponse = DeleteHostedZoneResponse
                               { dhzrChangeInfo :: ChangeInfo
                               } deriving (Show)
 
-deleteHostedZone :: T.Text -> DeleteHostedZone
+deleteHostedZone :: HostedZoneId -> DeleteHostedZone
 deleteHostedZone hostedZoneId = DeleteHostedZone hostedZoneId
 
 -- Delete add convenience methods:
@@ -40,7 +38,7 @@ instance SignQuery DeleteHostedZone where
     signQuery DeleteHostedZone{..} = route53SignQuery method resource query body
       where
       method = Delete
-      resource = "/hostedzone/" `B.append` (T.encodeUtf8 dhzHostedZoneId)
+      resource = T.encodeUtf8 . qualifiedIdText $ dhzHostedZoneId
       query = []
       body = Nothing
 

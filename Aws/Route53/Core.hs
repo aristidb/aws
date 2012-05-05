@@ -31,6 +31,10 @@ module Aws.Route53.Core
 
   -- * Model
 
+  -- ** DNS
+, RecordType(..)
+, typeToString
+
   -- ** Hosted Zone
 , HostedZone (..)
 , HostedZones
@@ -61,12 +65,11 @@ module Aws.Route53.Core
 , Route53XmlSerializable(..)
 , Route53Id(..)
 
-  -- * DNS and HTTP Utilites
-  -- | This functions extend 'Network.HTTP.Types' and 'Network.DNS.Types'
+  -- * HTTP Utilites
+  -- | This functions extend 'Network.HTTP.Types'
 , findHeader
 , findHeaderValue
 , headerRequestId
-, typeToString
 ) where
 
 import           Aws.Core
@@ -83,12 +86,13 @@ import           Data.Time            (UTCTime)
 import           Data.Time.Format     (parseTime)
 import           System.Locale        (defaultTimeLocale)
 import           Text.Hamlet.XML      (xml)
+import           Text.XML             (elementAttributes)
 import           Text.XML.Cursor      (($/), ($//), (&|), ($.//), laxElement)
 import qualified Control.Exception    as C
 import qualified Control.Failure      as F
 import qualified Data.ByteString      as B
 import qualified Data.Text            as T
-import qualified Network.DNS.Types    as DNS
+import qualified Data.Text.Encoding   as T
 import qualified Network.HTTP.Conduit as HTTP
 import qualified Network.HTTP.Types   as HTTP
 import qualified Text.XML             as XML
@@ -102,6 +106,8 @@ data Route53Info = Route53Info
     , route53Endpoint :: B.ByteString
     , route53Port :: Int
     , route53ApiVersion :: B.ByteString
+    , route53XmlNamespace :: T.Text
+
     } deriving (Show)
 
 route53EndpointUsClassic :: B.ByteString
@@ -110,12 +116,16 @@ route53EndpointUsClassic = "route53.amazonaws.com"
 route53ApiVersionRecent :: B.ByteString
 route53ApiVersionRecent = "2012-02-29"
 
+route53XmlNamespaceRecent :: Text
+route53XmlNamespaceRecent = "https://route53amazonaw.com/doc/" `T.append` T.decodeUtf8 route53ApiVersionRecent `T.append` "/"
+
 route53 :: Route53Info
 route53 = Route53Info 
     { route53Protocol = HTTPS
     , route53Endpoint = route53EndpointUsClassic
     , route53Port = defaultPort HTTPS
     , route53ApiVersion = route53ApiVersionRecent
+    , route53XmlNamespace = route53XmlNamespaceRecent
     }
 
 -- -------------------------------------------------------------------------- --
@@ -177,9 +187,11 @@ route53SignQuery method resource query body Route53Info{..} sd
 
       renderBody b = HTTP.RequestBodyLBS . XML.renderLBS XML.def $ XML.Document 
                      { XML.documentPrologue = XML.Prologue [] Nothing []
-                     , XML.documentRoot = b
+                     , XML.documentRoot = b { elementAttributes = addNamespace (elementAttributes b) }
                      , XML.documentEpilogue = []
                      }
+      addNamespace attrs = maybe (("xmlns",route53XmlNamespace):attrs) (const attrs) $ lookup "xmlns" attrs
+                           
 
 -- -------------------------------------------------------------------------- --
 -- Response
@@ -242,6 +254,18 @@ class Route53Id r where
 
 --instance (Route53Id r) => IsString r where
 --  fromString = HostedZoneId . fromJust . T.stripPrefix (idPrefix undefined) . T.pack
+
+-- -------------------------------------------------------------------------- --
+-- DNS
+
+data RecordType = A | AAAA | NS | TXT | MX | CNAME | SOA | PTR | SRV | SPF | UNKNOWN Int 
+                deriving (Eq, Show, Read)
+
+typeToString :: RecordType -> String
+typeToString = show
+
+typeToText :: RecordType -> T.Text
+typeToText = T.pack . typeToString
 
 -- -------------------------------------------------------------------------- --
 -- HostedZone
@@ -332,7 +356,7 @@ instance Route53Parseable Nameserver where
     force "Missing Nameserver element" $ cursor $.// elContent "Nameserver" &| Domain
 
 -- -------------------------------------------------------------------------- --
--- RsourceRecordSet
+-- ResourceRecordSet
 
 data REGION = ApNorthEast1
             | ApSouthEast2
@@ -379,7 +403,7 @@ data AliasTarget = AliasTarget { atHostedZoneId :: HostedZoneId
 -- TODO make this complete from the spec. Do not just use the exmpales!
 -- We may e.g. have different type for alias resource record sets
 data ResourceRecordSet = ResourceRecordSet { rrsName :: Domain
-                                           , rrsType :: DNS.TYPE
+                                           , rrsType :: RecordType
                                            , rrsAliasTarget :: Maybe AliasTarget
                                            , rrsSetIdentifier :: Maybe T.Text
                                            , rrsWeight :: Maybe Int
@@ -434,7 +458,7 @@ instance Route53Parseable ResourceRecordSet where
   r53Parse cursor = do
     c <- force "Missing ResourceRecordSet element" $ cursor $.// laxElement "ResourceRecordSet"
     name <- force "Missing name element" $ c $/ elContent "Name" &| Domain
-    dnsType <- force "Missing type element" $ c $/ elCont "Type" &| DNS.toType 
+    dnsType <- force "Missing type element" $ c $/ elCont "Type" &| read
     ttl <- listToMaybe `liftM` (sequence $ c $/ elCont "TTL" &| readInt)
     alias <- listToMaybe `liftM` (sequence $ c $/ laxElement "AliasTarget" &| r53Parse)
     let setIdentifier = listToMaybe $ c $/ elContent "SetIdentifier"
@@ -538,7 +562,6 @@ intToText = T.pack . show
 
 -- -------------------------------------------------------------------------- --
 -- Utility methods that extend the functionality of 'Network.HTTP.Types' 
--- and 'Network.DNS.Types'
 
 headerRequestId :: HTTP.Ascii -> HTTP.Header
 headerRequestId = (,) "x-amzn-requestid"
@@ -548,10 +571,4 @@ findHeader headers header = find (\h@(_,v) -> h == header v) headers
 
 findHeaderValue :: [HTTP.Header] -> (HTTP.Ascii -> HTTP.Header) -> Maybe HTTP.Ascii
 findHeaderValue headers = fmap snd . findHeader headers
-
-typeToString :: DNS.TYPE -> String
-typeToString = show
-
-typeToText :: DNS.TYPE -> T.Text
-typeToText = T.pack . typeToString
 

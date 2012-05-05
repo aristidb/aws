@@ -17,9 +17,7 @@ module Aws.Route53.Commands.GetHostedZone where
 
 import           Aws.Core
 import           Aws.Route53.Core
-import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
-import qualified Data.ByteString            as B
 
 data GetHostedZone = GetHostedZone
                    { hostedZoneId :: HostedZoneId

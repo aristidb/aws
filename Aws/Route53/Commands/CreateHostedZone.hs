@@ -18,12 +18,10 @@ import           Aws.Core
 import           Aws.Route53.Core
 import           Text.Hamlet.XML            (xml)
 import qualified Data.Text                  as T
-import qualified Data.Text.Encoding         as T
-import qualified Network.DNS.Types          as DNS
 import qualified Text.XML                   as XML
 
 data CreateHostedZone = CreateHostedZone
-                      { chzName :: DNS.Domain
+                      { chzName :: Domain
                       , chzCallerReference :: T.Text
                       , chzComment :: T.Text
                       } deriving (Show)
@@ -34,7 +32,7 @@ data CreateHostedZoneResponse = CreateHostedZoneResponse
                               , chzrDelegationSet :: DelegationSet
                               } deriving (Show)
 
-createHostedZone :: DNS.Domain -> T.Text -> T.Text -> CreateHostedZone
+createHostedZone :: Domain -> T.Text -> T.Text -> CreateHostedZone
 createHostedZone name callerReference comment = CreateHostedZone name callerReference comment
 
 instance SignQuery CreateHostedZone where
@@ -44,9 +42,9 @@ instance SignQuery CreateHostedZone where
       method = Post
       resource = "/hostedzone"
       query = []
-      body = Just $ XML.Element "{https://route53.amazonaws.com/doc/2012-02-29/}CreateHostedZoneRequest" []
+      body = Just $ XML.Element "CreateHostedZoneRequest" []
              [xml|
-             <Name>#{T.decodeUtf8 chzName}
+             <Name>#{dText chzName}
              <CallerReference>#{chzCallerReference}
              <HostedZoneConfig>
                <Comment>#{chzComment}
