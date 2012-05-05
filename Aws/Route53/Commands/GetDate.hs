@@ -1,3 +1,7 @@
+--
+-- Copyright (c) 2012 Lars Kuhtz - http://lars.kuhtz.eu/
+-- License: BSD3 (see https://raw.github.com/aristidb/aws/master/LICENSE)
+--
 {-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 
 -- | GET GetDate

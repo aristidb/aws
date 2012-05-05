@@ -1,3 +1,7 @@
+--
+-- Copyright (c) 2012 Lars Kuhtz - http://lars.kuhtz.eu/
+-- License: BSD3 (see https://raw.github.com/aristidb/aws/master/LICENSE)
+--
 module Aws.Route53.Commands
 ( -- * Actions on Hosted Zones
   module Aws.Route53.Commands.CreateHostedZone
