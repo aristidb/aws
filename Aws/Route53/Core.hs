@@ -117,7 +117,7 @@ route53ApiVersionRecent :: B.ByteString
 route53ApiVersionRecent = "2012-02-29"
 
 route53XmlNamespaceRecent :: Text
-route53XmlNamespaceRecent = "https://route53amazonaw.com/doc/" `T.append` T.decodeUtf8 route53ApiVersionRecent `T.append` "/"
+route53XmlNamespaceRecent = "https://route53.amazonaws.com/doc/" `T.append` T.decodeUtf8 route53ApiVersionRecent `T.append` "/"
 
 route53 :: Route53Info
 route53 = Route53Info 
