@@ -3,7 +3,7 @@ module Aws.Ses.Core
     ( SesError(..)
     , SesMetadata(..)
 
-    , SesInfo(..)
+    , SesConfiguration(..)
     , sesUsEast
     , sesHttpsGet
     , sesHttpsPost
@@ -58,8 +58,8 @@ instance Monoid SesMetadata where
     mempty = SesMetadata Nothing
     SesMetadata r1 `mappend` SesMetadata r2 = SesMetadata (r1 `mplus` r2)
 
-data SesInfo
-    = SesInfo {
+data SesConfiguration
+    = SesConfiguration {
         sesiHttpMethod :: Method
       , sesiHost       :: B.ByteString
       }
@@ -68,13 +68,13 @@ data SesInfo
 sesUsEast :: B.ByteString
 sesUsEast = "email.us-east-1.amazonaws.com"
 
-sesHttpsGet :: B.ByteString -> SesInfo
-sesHttpsGet endpoint = SesInfo Get endpoint
+sesHttpsGet :: B.ByteString -> SesConfiguration
+sesHttpsGet endpoint = SesConfiguration Get endpoint
 
-sesHttpsPost :: B.ByteString -> SesInfo
-sesHttpsPost endpoint = SesInfo PostQuery endpoint
+sesHttpsPost :: B.ByteString -> SesConfiguration
+sesHttpsPost endpoint = SesConfiguration PostQuery endpoint
 
-sesSignQuery :: [(B.ByteString, B.ByteString)] -> SesInfo -> SignatureData -> SignedQuery
+sesSignQuery :: [(B.ByteString, B.ByteString)] -> SesConfiguration -> SignatureData -> SignedQuery
 sesSignQuery query si sd
     = SignedQuery {
         sqMethod        = sesiHttpMethod si

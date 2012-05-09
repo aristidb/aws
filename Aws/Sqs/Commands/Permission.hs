@@ -32,7 +32,7 @@ instance ResponseConsumer r AddPermissionResponse where
            return AddPermissionResponse {}
         
 instance SignQuery AddPermission  where 
-    type Info AddPermission  = SqsInfo
+    type ServiceConfiguration AddPermission  = SqsConfiguration
     signQuery AddPermission {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Just apQueueName, 
                                              sqsQuery = [("Action", Just "AddPermission"), 
@@ -57,7 +57,7 @@ instance ResponseConsumer r RemovePermissionResponse where
           return RemovePermissionResponse {}  
           
 instance SignQuery RemovePermission  where 
-    type Info RemovePermission  = SqsInfo
+    type ServiceConfiguration RemovePermission  = SqsConfiguration
     signQuery RemovePermission {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Just rpQueueName, 
                                              sqsQuery = [("Action", Just "RemovePermission"), 

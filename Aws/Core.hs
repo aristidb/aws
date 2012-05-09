@@ -388,10 +388,10 @@ signatureData rti cr = do
 -- | A "signable" request object. Assembles together the Query, and signs it in one go.
 class SignQuery r where
     -- | Additional information, like API endpoints and service-specific preferences.
-    type Info r :: *
+    type ServiceConfiguration r :: *
     
     -- | Create a 'SignedQuery' from a request, additional 'Info', and 'SignatureData'.
-    signQuery :: r -> Info r -> SignatureData -> SignedQuery
+    signQuery :: r -> ServiceConfiguration r -> SignatureData -> SignedQuery
 
 -- | Supported crypto hashes for the signature.
 data AuthorizationHash

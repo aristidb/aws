@@ -24,8 +24,8 @@ module Aws
 , Response(..)
 , ResponseMetadata
   -- * Query
-  -- ** Info
-, Info
+  -- ** Service configuration
+, ServiceConfiguration
   -- ** Expiration
 , TimeInfo(..)
   -- * Transactions

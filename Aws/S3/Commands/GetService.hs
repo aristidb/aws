@@ -37,7 +37,7 @@ instance ResponseConsumer r GetServiceResponse where
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
 
 instance SignQuery GetService where
-    type Info GetService = S3Info
+    type ServiceConfiguration GetService = S3Configuration
     signQuery GetService = s3SignQuery S3Query {
                                 s3QMethod = Get
                               , s3QBucket = Nothing

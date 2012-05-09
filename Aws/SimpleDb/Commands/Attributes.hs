@@ -30,7 +30,7 @@ getAttributes :: T.Text -> T.Text -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
 
 instance SignQuery GetAttributes where
-    type Info GetAttributes = SdbInfo
+    type ServiceConfiguration GetAttributes = SdbConfiguration
     signQuery GetAttributes{..}
         = sdbSignQuery $
             [("Action", "GetAttributes"), ("ItemName", T.encodeUtf8 gaItemName), ("DomainName", T.encodeUtf8 gaDomainName)] ++
@@ -69,7 +69,7 @@ putAttributes item attributes domain = PutAttributes {
                                        }
                                        
 instance SignQuery PutAttributes where
-    type Info PutAttributes = SdbInfo
+    type ServiceConfiguration PutAttributes = SdbConfiguration
     signQuery PutAttributes{..}
         = sdbSignQuery $ 
             [("Action", "PutAttributes"), ("ItemName", T.encodeUtf8 paItemName), ("DomainName", T.encodeUtf8 paDomainName)] ++
@@ -104,7 +104,7 @@ deleteAttributes item attributes domain = DeleteAttributes {
                                        }
                                        
 instance SignQuery DeleteAttributes where
-    type Info DeleteAttributes = SdbInfo
+    type ServiceConfiguration DeleteAttributes = SdbConfiguration
     signQuery DeleteAttributes{..}
         = sdbSignQuery $ 
             [("Action", "DeleteAttributes"), ("ItemName", T.encodeUtf8 daItemName), ("DomainName", T.encodeUtf8 daDomainName)] ++
@@ -132,7 +132,7 @@ batchPutAttributes :: [Item [Attribute SetAttribute]] -> T.Text -> BatchPutAttri
 batchPutAttributes items domain = BatchPutAttributes { bpaItems = items, bpaDomainName = domain }
 
 instance SignQuery BatchPutAttributes where
-    type Info BatchPutAttributes = SdbInfo
+    type ServiceConfiguration BatchPutAttributes = SdbConfiguration
     signQuery BatchPutAttributes{..}
         = sdbSignQuery $ 
             [("Action", "BatchPutAttributes")
@@ -160,7 +160,7 @@ batchDeleteAttributes :: [Item [Attribute DeleteAttribute]] -> T.Text -> BatchDe
 batchDeleteAttributes items domain = BatchDeleteAttributes { bdaItems = items, bdaDomainName = domain }
 
 instance SignQuery BatchDeleteAttributes where
-    type Info BatchDeleteAttributes = SdbInfo
+    type ServiceConfiguration BatchDeleteAttributes = SdbConfiguration
     signQuery BatchDeleteAttributes{..}
         = sdbSignQuery $ 
             [("Action", "BatchDeleteAttributes")

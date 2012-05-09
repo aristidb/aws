@@ -22,7 +22,7 @@ data PutBucketResponse
     deriving (Show)
 
 instance SignQuery PutBucket where
-    type Info PutBucket = S3Info
+    type ServiceConfiguration PutBucket = S3Configuration
 
     signQuery PutBucket{..} = s3SignQuery (S3Query {
                                              s3QMethod       = Put

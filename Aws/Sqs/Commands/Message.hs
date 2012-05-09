@@ -33,7 +33,7 @@ instance ResponseConsumer r SendMessageResponse where
           return SendMessageResponse { smrMD5OfMessageBody = md5, smrMessageId = MessageId mid }
 
 instance SignQuery SendMessage  where
-    type Info SendMessage  = SqsInfo
+    type ServiceConfiguration SendMessage  = SqsConfiguration
     signQuery SendMessage {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Just smQueueName,
                                              sqsQuery = [("Action", Just "SendMessage"),
@@ -56,7 +56,7 @@ instance ResponseConsumer r DeleteMessageResponse where
         parse _ = do return DeleteMessageResponse {}
           
 instance SignQuery DeleteMessage  where 
-    type Info DeleteMessage  = SqsInfo
+    type ServiceConfiguration DeleteMessage  = SqsConfiguration
     signQuery DeleteMessage {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Just dmQueueName, 
                                              sqsQuery = [("Action", Just "DeleteMessage"), 
@@ -122,7 +122,7 @@ instance ResponseConsumer r ReceiveMessageResponse where
           return ReceiveMessageResponse{ rmrMessages = messages }
 
 instance SignQuery ReceiveMessage  where
-    type Info ReceiveMessage  = SqsInfo
+    type ServiceConfiguration ReceiveMessage  = SqsConfiguration
     signQuery ReceiveMessage {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Just rmQueueName,
                                              sqsQuery = [("Action", Just "ReceiveMessage")] ++
@@ -151,7 +151,7 @@ instance ResponseConsumer r ChangeMessageVisibilityResponse where
         parse _ = do return ChangeMessageVisibilityResponse{}
     
 instance SignQuery ChangeMessageVisibility  where 
-    type Info ChangeMessageVisibility  = SqsInfo
+    type ServiceConfiguration ChangeMessageVisibility  = SqsConfiguration
     signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 
                                              sqsQueueName = Just cmvQueueName, 
                                              sqsQuery = [("Action", Just "ChangeMessageVisibility"), 

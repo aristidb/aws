@@ -21,7 +21,7 @@ data SendRawEmail =
     deriving (Eq, Ord, Show, Typeable)
 
 instance SignQuery SendRawEmail where
-    type Info SendRawEmail = SesInfo
+    type ServiceConfiguration SendRawEmail = SesConfiguration
     signQuery SendRawEmail {..} =
         sesSignQuery $ ("Action", "SendRawEmail") :
                        concat [ sesAsQuery srmDestinations

@@ -31,7 +31,7 @@ select :: T.Text -> Select
 select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextToken = Nothing }
 
 instance SignQuery Select where
-    type Info Select = SdbInfo
+    type ServiceConfiguration Select = SdbConfiguration
     signQuery Select{..}
         = sdbSignQuery . catMaybes $
             [ Just ("Action", "Select")

@@ -17,7 +17,7 @@ data DeleteObjectResponse = DeleteObjectResponse{
 }
 
 instance SignQuery DeleteObject where
-    type Info DeleteObject = S3Info
+    type ServiceConfiguration DeleteObject = S3Configuration
     signQuery DeleteObject {..} = s3SignQuery S3Query {
                                  s3QMethod = Delete
                                , s3QBucket = Just $ T.encodeUtf8 doBucket
