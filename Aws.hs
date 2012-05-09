@@ -7,7 +7,7 @@ module Aws
 , Configuration(..)
 , ConfigurationFetch
 , baseConfiguration
-, debugConfiguration
+, dbgConfiguration
   -- * Transaction runners
   -- ** Safe runners
 , aws

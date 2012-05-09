@@ -51,6 +51,13 @@ data SdbConfiguration
       , sdbiPort :: Int
       }
     deriving (Show)
+
+instance DefaultServiceConfiguration SdbConfiguration where
+  defaultConfiguration = sdbHttpsPost sdbUsEast
+  defaultConfigurationUri = sdbHttpsGet sdbUsEast
+  
+  debugConfiguration = sdbHttpPost sdbUsEast
+  debugConfigurationUri = sdbHttpGet sdbUsEast
              
 sdbUsEast :: B.ByteString
 sdbUsEast = "sdb.amazonaws.com" 

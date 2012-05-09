@@ -83,6 +83,12 @@ data SqsConfiguration
       }
     deriving (Show)
 
+instance DefaultServiceConfiguration SqsConfiguration where
+    defaultConfiguration = sqs HTTPS sqsEndpointUsClassic False
+    defaultConfigurationUri = sqs HTTPS sqsEndpointUsClassic True
+    debugConfiguration = sqs HTTP sqsEndpointUsClassic False
+    debugConfigurationUri = sqs HTTP sqsEndpointUsClassic True
+  
 sqsEndpointUsClassic :: Endpoint
 sqsEndpointUsClassic 
     = Endpoint { 

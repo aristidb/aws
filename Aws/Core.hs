@@ -54,6 +54,8 @@ module Aws.Core
 , loadCredentialsFromEnv
 , loadCredentialsFromEnvOrFile
 , loadCredentialsDefault
+  -- * Service configuration
+, DefaultServiceConfiguration(..)
   -- * HTTP types
 , Protocol(..)
 , defaultPort
@@ -417,6 +419,22 @@ signature cr ah input = Base64.encode sig
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key :: HMAC.MacKey c d
       key = HMAC.MacKey (secretAccessKey cr)
+
+-- | Default configuration for a specific service.
+class DefaultServiceConfiguration config where
+    -- | Default service configuration for normal requests.
+    defaultConfiguration :: config
+    
+    -- | Default service configuration for URI-only requests.
+    defaultConfigurationUri :: config
+
+    -- | Default debugging-only configuration for normal requests. (Normally using HTTP instead of HTTPS for easier debugging.)
+    debugConfiguration :: config
+    debugConfiguration = defaultConfiguration
+
+    -- | Default debugging-only configuration for URI-only requests. (Normally using HTTP instead of HTTPS for easier debugging.)
+    debugConfigurationUri :: config
+    debugConfigurationUri = defaultConfigurationUri
 
 -- | @queryList f prefix xs@ constructs a query list from a list of elements @xs@, using a common prefix @prefix@,
 -- and a transformer function @f@.
