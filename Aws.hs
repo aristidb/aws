@@ -20,6 +20,8 @@ module Aws
   -- ** URI runners
 , awsUri
   -- * Response
+  -- ** Full HTTP response
+, HTTPResponseConsumer
   -- ** Metadata in responses
 , Response(..)
 , ResponseMetadata
