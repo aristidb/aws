@@ -5,7 +5,6 @@ module Aws
 , defaultLog
   -- * Configuration
 , Configuration(..)
-, ConfigurationFetch
 , baseConfiguration
 , dbgConfiguration
   -- * Transaction runners
@@ -28,6 +27,7 @@ module Aws
   -- * Query
   -- ** Service configuration
 , ServiceConfiguration
+, DefaultServiceConfiguration(..)
   -- ** Expiration
 , TimeInfo(..)
   -- * Transactions
