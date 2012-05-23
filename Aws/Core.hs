@@ -178,8 +178,8 @@ data Credentials
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
 -- 
 -- Value: /<user directory>/@/.aws-keys@
-credentialsDefaultFile :: IO FilePath
-credentialsDefaultFile = (</> ".aws-keys") <$> getHomeDirectory
+credentialsDefaultFile :: MonadIO io => io FilePath
+credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
 
 -- | The key to be used in the access credential file that is loaded, when using 'loadCredentialsDefault'.
 -- 
@@ -192,8 +192,8 @@ credentialsDefaultKey = "default"
 -- The file consists of a sequence of lines, each in the following format:
 -- 
 -- @keyName awsKeyID awsKeySecret@
-loadCredentialsFromFile :: FilePath -> T.Text -> IO (Maybe Credentials)
-loadCredentialsFromFile file key = do
+loadCredentialsFromFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
+loadCredentialsFromFile file key = liftIO $ do
   contents <- map T.words . T.lines <$> T.readFile file
   return $ do 
     [_key, keyID, secret] <- find (hasKey key) contents
@@ -204,8 +204,8 @@ loadCredentialsFromFile file key = do
 
 -- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@ 
 --   (or @AWS_SECRET_ACCESS_KEY@), if possible.
-loadCredentialsFromEnv :: IO (Maybe Credentials)
-loadCredentialsFromEnv = do
+loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
+loadCredentialsFromEnv = liftIO $ do
   env <- getEnvironment
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
@@ -215,7 +215,7 @@ loadCredentialsFromEnv = do
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
 -- 
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
-loadCredentialsFromEnvOrFile :: FilePath -> T.Text -> IO (Maybe Credentials)
+loadCredentialsFromEnvOrFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromEnvOrFile file key = 
   do
     envcr <- loadCredentialsFromEnv
@@ -230,7 +230,7 @@ loadCredentialsFromEnvOrFile file key =
 -- Default key name: @default@
 -- 
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
-loadCredentialsDefault :: IO (Maybe Credentials)
+loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
 loadCredentialsDefault = do
   file <- credentialsDefaultFile
   loadCredentialsFromEnvOrFile file credentialsDefaultKey
