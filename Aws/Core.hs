@@ -8,10 +8,13 @@ module Aws.Core
   -- ** Response data consumers
 , HTTPResponseConsumer
 , ResponseConsumer(..)
+  -- ** Exception types
+, XmlException(..)
+, HeaderException(..)
+, FormException(..)
   -- ** Response deconstruction helpers
 , readHex2
   -- *** XML
-, XmlException(..)
 , elContent
 , elCont
 , force
@@ -499,6 +502,19 @@ newtype XmlException = XmlException { xmlErrorMessage :: String }
     deriving (Show, Typeable)
 
 instance E.Exception XmlException
+
+-- | An error that occurred during header parsing / validation.
+newtype HeaderException = HeaderException { headerErrorMessage :: String }
+    deriving (Show, Typeable)
+
+instance E.Exception HeaderException
+
+-- | An error that occurred during form parsing / validation.
+newtype FormException  = FormException { formErrorMesage :: String }
+    deriving (Show, Typeable)
+
+instance E.Exception FormException
+
 
 -- | A specific element (case-insensitive, ignoring namespace - sadly necessary), extracting only the textual contents.
 elContent :: T.Text -> Cursor -> [T.Text]
