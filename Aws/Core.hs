@@ -45,6 +45,7 @@ module Aws.Core
 , awsFalse
 , fmtTime
 , fmtRfc822Time
+, rfc822Time
 , fmtAmzTime
 , fmtTimeEpochSeconds
   -- * Transactions
@@ -471,9 +472,12 @@ awsFalse = awsBool False
 fmtTime :: String -> UTCTime -> B.ByteString
 fmtTime s t = BU.fromString $ formatTime defaultTimeLocale s t
 
+rfc822Time :: String
+rfc822Time = "%a, %_d %b %Y %H:%M:%S GMT"
+
 -- | Format time in RFC 822 format.
 fmtRfc822Time :: UTCTime -> B.ByteString
-fmtRfc822Time = fmtTime "%a, %_d %b %Y %H:%M:%S GMT"
+fmtRfc822Time = fmtTime rfc822Time
 
 -- | Format time in yyyy-mm-ddThh-mm-ss format.
 fmtAmzTime :: UTCTime -> B.ByteString
