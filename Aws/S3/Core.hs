@@ -41,8 +41,8 @@ data RequestStyle
     | VHostStyle
     deriving (Show)
 
-data S3Info
-    = S3Info {
+data S3Configuration
+    = S3Configuration {
         s3Protocol :: Protocol
       , s3Endpoint :: B.ByteString
       , s3RequestStyle :: RequestStyle
@@ -67,9 +67,9 @@ s3EndpointApSouthEast = "s3-ap-southeast-1.amazonaws.com"
 s3EndpointApNorthEast :: B.ByteString
 s3EndpointApNorthEast = "s3-ap-northeast-1.amazonaws.com"
 
-s3 :: Protocol -> B.ByteString -> Bool -> S3Info
+s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration
 s3 protocol endpoint uri 
-    = S3Info { 
+    = S3Configuration { 
          s3Protocol = protocol
        , s3Endpoint = endpoint
        , s3RequestStyle = BucketStyle
@@ -128,8 +128,8 @@ instance Show S3Query where
                        " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++
                        "]"
 
-s3SignQuery :: S3Query -> S3Info -> SignatureData -> SignedQuery
-s3SignQuery S3Query{..} S3Info{..} SignatureData{..}
+s3SignQuery :: S3Query -> S3Configuration -> SignatureData -> SignedQuery
+s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
     = SignedQuery {
         sqMethod = s3QMethod
       , sqProtocol = s3Protocol

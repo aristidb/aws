@@ -69,25 +69,25 @@ data Configuration
         -- | AWS access credentials.
       , credentials :: Credentials
         -- | SimpleDB configuration (normal requests).
-      , sdbInfo :: SdbInfo
+      , sdbConfiguration :: SdbConfiguration
         -- | SimpleDB configuration (URI-only requests).
-      , sdbInfoUri :: SdbInfo
+      , sdbConfigurationUri :: SdbConfiguration
         -- | S3 configuration (normal requests).
-      , s3Info :: S3Info
+      , s3Configuration :: S3Configuration
         -- | S3 configuration (URI-only requests).
-      , s3InfoUri :: S3Info
+      , s3ConfigurationUri :: S3Configuration
         -- | SQS configuration (normal requests).
-      , sqsInfo :: SqsInfo
+      , sqsConfiguration :: SqsConfiguration
         -- | SQS configuration (URI-only requests).
-      , sqsInfoUri :: SqsInfo
+      , sqsConfigurationUri :: SqsConfiguration
         -- | SES configuration (normal requests).
-      , sesInfo :: SesInfo
+      , sesConfiguration :: SesConfiguration
         -- | SES configuration (URI-only requests).
-      , sesInfoUri :: SesInfo
+      , sesConfigurationUri :: SesConfiguration
         -- | Route53 configuration (normal requests).
-      , route53Info :: Route53Info
+      , route53Configuration :: Route53Configuration
         -- | Route53 configuration (URI-only requests).
-      , route53InfoUri :: Route53Info
+      , route53ConfigurationUri :: Route53Configuration
         -- | The error / message logger.
       , logger :: Logger
       }
@@ -101,25 +101,25 @@ class ConfigurationFetch a where
 instance ConfigurationFetch () where
     configurationFetch _ = ()
 
-instance ConfigurationFetch SdbInfo where
-    configurationFetch = sdbInfo
-    configurationFetchUri = sdbInfoUri
+instance ConfigurationFetch SdbConfiguration where
+    configurationFetch = sdbConfiguration
+    configurationFetchUri = sdbConfigurationUri
 
-instance ConfigurationFetch S3Info where
-    configurationFetch = s3Info
-    configurationFetchUri = s3InfoUri
+instance ConfigurationFetch S3Configuration where
+    configurationFetch = s3Configuration
+    configurationFetchUri = s3ConfigurationUri
 
-instance ConfigurationFetch SqsInfo where
-    configurationFetch = sqsInfo
-    configurationFetchUri = sqsInfoUri
+instance ConfigurationFetch SqsConfiguration where
+    configurationFetch = sqsConfiguration
+    configurationFetchUri = sqsConfigurationUri
 
-instance ConfigurationFetch SesInfo where
-    configurationFetch = sesInfo
-    configurationFetchUri = sesInfoUri
+instance ConfigurationFetch SesConfiguration where
+    configurationFetch = sesConfiguration
+    configurationFetchUri = sesConfigurationUri
 
-instance ConfigurationFetch Route53Info where
-    configurationFetch = route53Info
-    configurationFetchUri = route53InfoUri
+instance ConfigurationFetch Route53Configuration where
+    configurationFetch = route53Configuration
+    configurationFetchUri = route53ConfigurationUri
 
 -- | The default configuration, with credentials loaded from environment variable or configuration file
 -- (see 'loadCredentialsDefault').
@@ -130,16 +130,16 @@ baseConfiguration = do
   return Configuration {
                       timeInfo = Timestamp
                     , credentials = cr
-                    , sdbInfo = sdbHttpsPost sdbUsEast
-                    , sdbInfoUri = sdbHttpsGet sdbUsEast
-                    , s3Info = s3 HTTP s3EndpointUsClassic False
-                    , s3InfoUri = s3 HTTP s3EndpointUsClassic True
-                    , sqsInfo = sqs HTTP sqsEndpointUsClassic False
-                    , sqsInfoUri = sqs HTTP sqsEndpointUsClassic True
-                    , sesInfo = sesHttpsPost sesUsEast
-                    , sesInfoUri = sesHttpsGet sesUsEast
-                    , route53Info = route53  -- TODO
-                    , route53InfoUri = route53 -- TODO
+                    , sdbConfiguration = sdbHttpsPost sdbUsEast
+                    , sdbConfigurationUri = sdbHttpsGet sdbUsEast
+                    , s3Configuration = s3 HTTP s3EndpointUsClassic False
+                    , s3ConfigurationUri = s3 HTTP s3EndpointUsClassic True
+                    , sqsConfiguration = sqs HTTP sqsEndpointUsClassic False
+                    , sqsConfigurationUri = sqs HTTP sqsEndpointUsClassic True
+                    , sesConfiguration = sesHttpsPost sesUsEast
+                    , sesConfigurationUri = sesHttpsGet sesUsEast
+                    , route53Configuration = route53  -- TODO
+                    , route53ConfigurationUri = route53 -- TODO
                     , logger = defaultLog Warning
                     }
 -- TODO: better error handling when credentials cannot be loaded
@@ -149,8 +149,8 @@ debugConfiguration :: IO Configuration
 debugConfiguration = do
   c <- baseConfiguration
   return c {
-      sdbInfo = sdbHttpPost sdbUsEast
-    , sdbInfoUri = sdbHttpGet sdbUsEast
+      sdbConfiguration = sdbHttpPost sdbUsEast
+    , sdbConfigurationUri = sdbHttpGet sdbUsEast
     , logger = defaultLog Debug
     }
 
@@ -163,7 +163,7 @@ debugConfiguration = do
 --     resp <- aws cfg manager request
 -- @
 aws :: (Transaction r a
-       , ConfigurationFetch (Info r))
+       , ConfigurationFetch (ServiceConfiguration r))
       => Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
@@ -179,7 +179,7 @@ aws = unsafeAws
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
 awsRef :: (Transaction r a
-       , ConfigurationFetch (Info r))
+       , ConfigurationFetch (ServiceConfiguration r))
       => Configuration -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
 awsRef = unsafeAwsRef
 
@@ -194,7 +194,7 @@ awsRef = unsafeAwsRef
 --     resp <- simpleAws cfg request
 -- @
 simpleAws :: (Transaction r a
-             , ConfigurationFetch (Info r))
+             , ConfigurationFetch (ServiceConfiguration r))
             => Configuration -> r -> IO (Response (ResponseMetadata a) a)
 simpleAws cfg request = HTTP.withManager $ \manager -> liftIO $ aws cfg manager request
 
@@ -210,7 +210,7 @@ simpleAws cfg request = HTTP.withManager $ \manager -> liftIO $ aws cfg manager 
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
 simpleAwsRef :: (Transaction r a
-             , ConfigurationFetch (Info r))
+             , ConfigurationFetch (ServiceConfiguration r))
             => Configuration -> IORef (ResponseMetadata a) -> r -> IO a
 simpleAwsRef cfg metadataRef request = HTTP.withManager $ \manager -> liftIO $ awsRef cfg manager metadataRef request
 
@@ -223,7 +223,7 @@ unsafeAws
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
       SignQuery r,
-      ConfigurationFetch (Info r)) =>
+      ConfigurationFetch (ServiceConfiguration r)) =>
      Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
 unsafeAws cfg manager request = do
   metadataRef <- newIORef mempty
@@ -241,7 +241,7 @@ unsafeAwsRef
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
       SignQuery r,
-      ConfigurationFetch (Info r)) =>
+      ConfigurationFetch (ServiceConfiguration r)) =>
      Configuration -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
 unsafeAwsRef cfg manager metadataRef request = do
   sd <- signatureData <$> timeInfo <*> credentials $ cfg
@@ -261,7 +261,7 @@ unsafeAwsRef cfg manager metadataRef request = do
 --     uri <- awsUri cfg request
 -- @
 awsUri :: (SignQuery request
-          , ConfigurationFetch (Info request))
+          , ConfigurationFetch (ServiceConfiguration request))
          => Configuration -> request -> IO B.ByteString
 awsUri cfg request = do
   let ti = timeInfo cfg

@@ -15,8 +15,8 @@
 {-# LANGUAGE UndecidableInstances #-}
   
 module Aws.Route53.Core
-( -- * Info
-  Route53Info(..)
+( -- * Configuration
+  Route53Configuration(..)
 , route53EndpointUsClassic
 , route53
 
@@ -105,7 +105,7 @@ import qualified Text.XML.Cursor      as Cu
 -- -------------------------------------------------------------------------- --
 -- Info
 
-data Route53Info = Route53Info 
+data Route53Configuration = Route53Configuration 
     { route53Protocol :: Protocol
     , route53Endpoint :: B.ByteString
     , route53Port :: Int
@@ -123,8 +123,8 @@ route53ApiVersionRecent = "2012-02-29"
 route53XmlNamespaceRecent :: Text
 route53XmlNamespaceRecent = "https://route53.amazonaws.com/doc/" `T.append` T.decodeUtf8 route53ApiVersionRecent `T.append` "/"
 
-route53 :: Route53Info
-route53 = Route53Info 
+route53 :: Route53Configuration
+route53 = Route53Configuration
     { route53Protocol = HTTPS
     , route53Endpoint = route53EndpointUsClassic
     , route53Port = defaultPort HTTPS
@@ -160,8 +160,8 @@ instance Monoid Route53Metadata where
 -- -------------------------------------------------------------------------- --
 -- Query
 
-route53SignQuery :: Method -> B.ByteString -> [(B.ByteString, B.ByteString)] -> Maybe XML.Element -> Route53Info -> SignatureData -> SignedQuery
-route53SignQuery method resource query body Route53Info{..} sd
+route53SignQuery :: Method -> B.ByteString -> [(B.ByteString, B.ByteString)] -> Maybe XML.Element -> Route53Configuration -> SignatureData -> SignedQuery
+route53SignQuery method resource query body Route53Configuration{..} sd
     = SignedQuery {
         sqMethod        = method
       , sqProtocol      = route53Protocol 

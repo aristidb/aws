@@ -33,7 +33,7 @@ getChange :: ChangeId -> GetChange
 getChange changeId = GetChange changeId
 
 instance SignQuery GetChange where
-    type Info GetChange = Route53Info
+    type ServiceConfiguration GetChange = Route53Configuration
     signQuery GetChange{..} = route53SignQuery method resource query body
       where
       method = Get

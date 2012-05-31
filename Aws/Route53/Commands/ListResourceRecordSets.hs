@@ -54,7 +54,7 @@ data ListResourceRecordSetsResponse = ListResourceRecordSetsResponse
                              } deriving (Show)
 
 instance SignQuery ListResourceRecordSets where
-    type Info ListResourceRecordSets = Route53Info
+    type ServiceConfiguration ListResourceRecordSets = Route53Configuration
     signQuery ListResourceRecordSets{..} = route53SignQuery method resource query body
       where
       method = Get

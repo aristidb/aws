@@ -27,7 +27,7 @@ data GetDate = GetDate deriving (Show)
 newtype GetDateResponse = GetDateResponse { date :: UTCTime } deriving (Show)
 
 instance SignQuery GetDate where
-  type Info GetDate = Route53Info
+  type ServiceConfiguration GetDate = Route53Configuration
   signQuery GetDate info sd = SignedQuery 
     { sqMethod = Get
     , sqProtocol = route53Protocol info

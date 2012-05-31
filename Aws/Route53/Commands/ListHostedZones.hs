@@ -39,7 +39,7 @@ listHostedZones :: ListHostedZones
 listHostedZones = ListHostedZones { lhzMaxNumberOfItems = Nothing, lhzNextToken = Nothing }
 
 instance SignQuery ListHostedZones where
-    type Info ListHostedZones = Route53Info
+    type ServiceConfiguration ListHostedZones = Route53Configuration
     signQuery ListHostedZones{..} = route53SignQuery method resource query Nothing
       where
       method = Get

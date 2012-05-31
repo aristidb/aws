@@ -40,7 +40,7 @@ data PutObjectResponse
   deriving (Show)
 
 instance SignQuery PutObject where
-    type Info PutObject = S3Info
+    type ServiceConfiguration PutObject = S3Configuration
     signQuery PutObject {..} = s3SignQuery S3Query {
                                  s3QMethod = Put
                                , s3QBucket = Just $ T.encodeUtf8 poBucket

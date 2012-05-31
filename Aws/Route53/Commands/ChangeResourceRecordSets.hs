@@ -41,7 +41,7 @@ data ChangeResourceRecordSetsResponse = ChangeResourceRecordSetsResponse
   } deriving (Show)
 
 instance SignQuery ChangeResourceRecordSets where
-    type Info ChangeResourceRecordSets = Route53Info
+    type ServiceConfiguration ChangeResourceRecordSets = Route53Configuration
     signQuery ChangeResourceRecordSets{..} = route53SignQuery method resource query body
       where
       method = Post

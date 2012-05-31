@@ -48,7 +48,7 @@ data GetBucketResponse
     deriving (Show)
 
 instance SignQuery GetBucket where
-    type Info GetBucket = S3Info
+    type ServiceConfiguration GetBucket = S3Configuration
     signQuery GetBucket {..} = s3SignQuery S3Query {
                                  s3QMethod = Get
                                , s3QBucket = Just $ T.encodeUtf8 gbBucket

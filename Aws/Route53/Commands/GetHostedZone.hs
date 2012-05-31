@@ -36,7 +36,7 @@ getHostedZone :: HostedZoneId -> GetHostedZone
 getHostedZone hostedZoneId = GetHostedZone hostedZoneId
 
 instance SignQuery GetHostedZone where
-    type Info GetHostedZone = Route53Info
+    type ServiceConfiguration GetHostedZone = Route53Configuration
     signQuery GetHostedZone{..} = route53SignQuery method resource query Nothing
       where
       method = Get

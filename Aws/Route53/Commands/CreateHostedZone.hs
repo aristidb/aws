@@ -40,7 +40,7 @@ createHostedZone :: Domain -> T.Text -> T.Text -> CreateHostedZone
 createHostedZone name callerReference comment = CreateHostedZone name callerReference comment
 
 instance SignQuery CreateHostedZone where
-    type Info CreateHostedZone = Route53Info
+    type ServiceConfiguration CreateHostedZone = Route53Configuration
     signQuery CreateHostedZone{..} = route53SignQuery method resource query body
       where
       method = Post

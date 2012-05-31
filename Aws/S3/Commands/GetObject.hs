@@ -33,7 +33,7 @@ data GetObjectResponse a
     deriving (Show)
 
 instance SignQuery (GetObject a) where
-    type Info (GetObject a) = S3Info
+    type ServiceConfiguration (GetObject a) = S3Configuration
     signQuery GetObject {..} = s3SignQuery S3Query {
                                    s3QMethod = Get
                                  , s3QBucket = Just $ T.encodeUtf8 goBucket

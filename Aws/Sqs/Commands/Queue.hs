@@ -31,7 +31,7 @@ instance ResponseConsumer r CreateQueueResponse where
           return CreateQueueResponse{ cqrQueueUrl = url}
 
 instance SignQuery CreateQueue  where
-    type Info CreateQueue  = SqsInfo
+    type ServiceConfiguration CreateQueue  = SqsConfiguration
     signQuery CreateQueue {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Nothing,
                                              sqsQuery = [("Action", Just "CreateQueue"),
@@ -56,7 +56,7 @@ instance ResponseConsumer r DeleteQueueResponse where
         parse _ = do return DeleteQueueResponse{}
           
 instance SignQuery DeleteQueue  where 
-    type Info DeleteQueue  = SqsInfo
+    type ServiceConfiguration DeleteQueue  = SqsConfiguration
     signQuery DeleteQueue {..} = sqsSignQuery SqsQuery {
                                              sqsQueueName = Just dqQueueName, 
                                              sqsQuery = [("Action", Just "DeleteQueue")]}
@@ -80,7 +80,7 @@ instance ResponseConsumer r ListQueuesResponse where
             return ListQueuesResponse { lqrQueueUrls = queues }
 
 instance SignQuery ListQueues where
-    type Info ListQueues = SqsInfo
+    type ServiceConfiguration ListQueues = SqsConfiguration
     signQuery ListQueues{..} = sqsSignQuery SqsQuery {
                                               sqsQueueName = Nothing,
                                               sqsQuery = [("Action", Just "ListQueues")] ++ catMaybes [

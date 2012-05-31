@@ -36,7 +36,7 @@ deleteHostedZone hostedZoneId = DeleteHostedZone hostedZoneId
 -- * Delete non-empty hosted zone
 
 instance SignQuery DeleteHostedZone where
-    type Info DeleteHostedZone = Route53Info
+    type ServiceConfiguration DeleteHostedZone = Route53Configuration
     signQuery DeleteHostedZone{..} = route53SignQuery method resource query body
       where
       method = Delete

@@ -25,7 +25,7 @@ createDomain :: T.Text -> CreateDomain
 createDomain name = CreateDomain { cdDomainName = name }
              
 instance SignQuery CreateDomain where
-    type Info CreateDomain = SdbInfo
+    type ServiceConfiguration CreateDomain = SdbConfiguration
     signQuery CreateDomain{..} = sdbSignQuery [("Action", "CreateDomain"), ("DomainName", T.encodeUtf8 cdDomainName)]
 
 instance ResponseConsumer r CreateDomainResponse where
@@ -48,7 +48,7 @@ deleteDomain :: T.Text -> DeleteDomain
 deleteDomain name = DeleteDomain { ddDomainName = name }
              
 instance SignQuery DeleteDomain where
-    type Info DeleteDomain = SdbInfo
+    type ServiceConfiguration DeleteDomain = SdbConfiguration
     signQuery DeleteDomain{..} = sdbSignQuery [("Action", "DeleteDomain"), ("DomainName", T.encodeUtf8 ddDomainName)]
 
 instance ResponseConsumer r DeleteDomainResponse where
@@ -79,7 +79,7 @@ domainMetadata :: T.Text -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
 instance SignQuery DomainMetadata where
-    type Info DomainMetadata = SdbInfo
+    type ServiceConfiguration DomainMetadata = SdbConfiguration
     signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", T.encodeUtf8 dmDomainName)]
 
 instance ResponseConsumer r DomainMetadataResponse where
@@ -117,7 +117,7 @@ listDomains :: ListDomains
 listDomains = ListDomains { ldMaxNumberOfDomains = Nothing, ldNextToken = Nothing }
 
 instance SignQuery ListDomains where
-    type Info ListDomains = SdbInfo
+    type ServiceConfiguration ListDomains = SdbConfiguration
     signQuery ListDomains{..} = sdbSignQuery $ catMaybes [
                                   Just ("Action", "ListDomains")
                                 , ("MaxNumberOfDomains",) . T.encodeUtf8 . T.pack . show <$> ldMaxNumberOfDomains

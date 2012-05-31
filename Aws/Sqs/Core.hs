@@ -73,8 +73,8 @@ data Endpoint
       }
     deriving (Show)
 
-data SqsInfo
-    = SqsInfo {
+data SqsConfiguration
+    = SqsConfiguration {
         sqsProtocol :: Protocol
       , sqsEndpoint :: Endpoint
       , sqsPort :: Int
@@ -127,9 +127,9 @@ sqsEndpointApNorthEast
       , endpointAllowedLocationConstraints = [locationApNorthEast]
       }
 
-sqs :: Protocol -> Endpoint -> Bool -> SqsInfo
+sqs :: Protocol -> Endpoint -> Bool -> SqsConfiguration
 sqs protocol endpoint uri 
-    = SqsInfo { 
+    = SqsConfiguration { 
         sqsProtocol = protocol
       , sqsEndpoint = endpoint
       , sqsPort = defaultPort protocol
@@ -142,8 +142,8 @@ data SqsQuery = SqsQuery{
   sqsQuery :: HTTP.Query
 }
 
-sqsSignQuery :: SqsQuery -> SqsInfo -> SignatureData -> SignedQuery
-sqsSignQuery SqsQuery{..} SqsInfo{..} SignatureData{..}
+sqsSignQuery :: SqsQuery -> SqsConfiguration -> SignatureData -> SignedQuery
+sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
     = SignedQuery {
         sqMethod = method
       , sqProtocol = sqsProtocol

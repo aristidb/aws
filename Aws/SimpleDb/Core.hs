@@ -43,8 +43,8 @@ instance Monoid SdbMetadata where
     mempty = SdbMetadata Nothing Nothing
     SdbMetadata r1 b1 `mappend` SdbMetadata r2 b2 = SdbMetadata (r1 `mplus` r2) (b1 `mplus` b2)
 
-data SdbInfo
-    = SdbInfo {
+data SdbConfiguration
+    = SdbConfiguration {
         sdbiProtocol :: Protocol
       , sdbiHttpMethod :: Method
       , sdbiHost :: B.ByteString
@@ -67,19 +67,19 @@ sdbApSoutheast = "sdb.ap-southeast-1.amazonaws.com"
 sdbApNortheast :: B.ByteString
 sdbApNortheast = "sdb.ap-northeast-1.amazonaws.com"
              
-sdbHttpGet :: B.ByteString -> SdbInfo
-sdbHttpGet endpoint = SdbInfo HTTP Get endpoint (defaultPort HTTP)
+sdbHttpGet :: B.ByteString -> SdbConfiguration
+sdbHttpGet endpoint = SdbConfiguration HTTP Get endpoint (defaultPort HTTP)
                           
-sdbHttpPost :: B.ByteString -> SdbInfo
-sdbHttpPost endpoint = SdbInfo HTTP PostQuery endpoint (defaultPort HTTP)
+sdbHttpPost :: B.ByteString -> SdbConfiguration
+sdbHttpPost endpoint = SdbConfiguration HTTP PostQuery endpoint (defaultPort HTTP)
               
-sdbHttpsGet :: B.ByteString -> SdbInfo
-sdbHttpsGet endpoint = SdbInfo HTTPS Get endpoint (defaultPort HTTPS)
+sdbHttpsGet :: B.ByteString -> SdbConfiguration
+sdbHttpsGet endpoint = SdbConfiguration HTTPS Get endpoint (defaultPort HTTPS)
              
-sdbHttpsPost :: B.ByteString -> SdbInfo
-sdbHttpsPost endpoint = SdbInfo HTTPS PostQuery endpoint (defaultPort HTTPS)
+sdbHttpsPost :: B.ByteString -> SdbConfiguration
+sdbHttpsPost endpoint = SdbConfiguration HTTPS PostQuery endpoint (defaultPort HTTPS)
 
-sdbSignQuery :: [(B.ByteString, B.ByteString)] -> SdbInfo -> SignatureData -> SignedQuery
+sdbSignQuery :: [(B.ByteString, B.ByteString)] -> SdbConfiguration -> SignatureData -> SignedQuery
 sdbSignQuery q si sd
     = SignedQuery {
         sqMethod = method
