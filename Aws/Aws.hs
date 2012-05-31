@@ -6,7 +6,6 @@ module Aws.Aws
 , defaultLog
   -- * Configuration
 , Configuration(..)
-, ConfigurationFetch
 , baseConfiguration
 , dbgConfiguration
   -- * Transaction runners
@@ -24,11 +23,6 @@ module Aws.Aws
 where
 
 import           Aws.Core
-import           Aws.S3.Core
-import           Aws.Ses.Core
-import           Aws.SimpleDb.Core
-import           Aws.Sqs.Core
-import           Aws.Route53.Core
 import           Control.Applicative
 import           Control.Monad.Trans  (liftIO)
 import           Data.Attempt         (attemptIO)
@@ -68,58 +62,9 @@ data Configuration
         timeInfo :: TimeInfo
         -- | AWS access credentials.
       , credentials :: Credentials
-        -- | SimpleDB configuration (normal requests).
-      , sdbConfiguration :: SdbConfiguration
-        -- | SimpleDB configuration (URI-only requests).
-      , sdbConfigurationUri :: SdbConfiguration
-        -- | S3 configuration (normal requests).
-      , s3Configuration :: S3Configuration
-        -- | S3 configuration (URI-only requests).
-      , s3ConfigurationUri :: S3Configuration
-        -- | SQS configuration (normal requests).
-      , sqsConfiguration :: SqsConfiguration
-        -- | SQS configuration (URI-only requests).
-      , sqsConfigurationUri :: SqsConfiguration
-        -- | SES configuration (normal requests).
-      , sesConfiguration :: SesConfiguration
-        -- | SES configuration (URI-only requests).
-      , sesConfigurationUri :: SesConfiguration
-        -- | Route53 configuration (normal requests).
-      , route53Configuration :: Route53Configuration
-        -- | Route53 configuration (URI-only requests).
-      , route53ConfigurationUri :: Route53Configuration
         -- | The error / message logger.
       , logger :: Logger
       }
-
--- | Specific parts that can be extracted from a 'Configuration' by type.
-class ConfigurationFetch a where
-    configurationFetch :: Configuration -> a
-    configurationFetchUri :: Configuration -> a
-    configurationFetchUri = configurationFetch
-
-instance ConfigurationFetch () where
-    configurationFetch _ = ()
-
-instance ConfigurationFetch SdbConfiguration where
-    configurationFetch = sdbConfiguration
-    configurationFetchUri = sdbConfigurationUri
-
-instance ConfigurationFetch S3Configuration where
-    configurationFetch = s3Configuration
-    configurationFetchUri = s3ConfigurationUri
-
-instance ConfigurationFetch SqsConfiguration where
-    configurationFetch = sqsConfiguration
-    configurationFetchUri = sqsConfigurationUri
-
-instance ConfigurationFetch SesConfiguration where
-    configurationFetch = sesConfiguration
-    configurationFetchUri = sesConfigurationUri
-
-instance ConfigurationFetch Route53Configuration where
-    configurationFetch = route53Configuration
-    configurationFetchUri = route53ConfigurationUri
 
 -- | The default configuration, with credentials loaded from environment variable or configuration file
 -- (see 'loadCredentialsDefault').
@@ -130,16 +75,6 @@ baseConfiguration = do
   return Configuration {
                       timeInfo = Timestamp
                     , credentials = cr
-                    , sdbConfiguration = defaultConfiguration
-                    , sdbConfigurationUri = defaultConfigurationUri
-                    , s3Configuration = defaultConfiguration
-                    , s3ConfigurationUri = defaultConfigurationUri
-                    , sqsConfiguration = defaultConfiguration
-                    , sqsConfigurationUri = defaultConfigurationUri
-                    , sesConfiguration = defaultConfiguration
-                    , sesConfigurationUri = defaultConfigurationUri
-                    , route53Configuration = defaultConfiguration
-                    , route53ConfigurationUri = defaultConfigurationUri
                     , logger = defaultLog Warning
                     }
 -- TODO: better error handling when credentials cannot be loaded
@@ -148,19 +83,7 @@ baseConfiguration = do
 dbgConfiguration :: IO Configuration
 dbgConfiguration = do
   c <- baseConfiguration
-  return c {
-      sdbConfiguration = debugConfiguration
-    , sdbConfigurationUri = debugConfigurationUri
-    , s3Configuration = debugConfiguration
-    , s3ConfigurationUri = debugConfigurationUri
-    , sqsConfiguration = debugConfiguration
-    , sqsConfigurationUri = debugConfigurationUri
-    , sesConfiguration = debugConfiguration
-    , sesConfigurationUri = debugConfigurationUri
-    , route53Configuration = debugConfiguration
-    , route53ConfigurationUri = debugConfigurationUri
-    , logger = defaultLog Debug
-    }
+  return c { logger = defaultLog Debug }
 
 -- | Run an AWS transaction, with HTTP manager and metadata wrapped in a 'Response'.
 -- 
@@ -168,11 +91,10 @@ dbgConfiguration = do
 -- 
 -- Usage (with existing 'HTTP.Manager'):
 -- @
---     resp <- aws cfg manager request
+--     resp <- aws cfg serviceCfg manager request
 -- @
-aws :: (Transaction r a
-       , ConfigurationFetch (ServiceConfiguration r))
-      => Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
+aws :: (Transaction r a)
+      => Configuration -> ServiceConfiguration r -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
 -- | Run an AWS transaction, with HTTP manager and metadata returned in an 'IORef'.
@@ -182,13 +104,12 @@ aws = unsafeAws
 -- Usage (with existing 'HTTP.Manager'):
 -- @
 --     ref <- newIORef mempty;
---     resp <- awsRef cfg manager request
+--     resp <- awsRef cfg serviceCfg manager request
 -- @
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
-awsRef :: (Transaction r a
-       , ConfigurationFetch (ServiceConfiguration r))
-      => Configuration -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
+awsRef :: (Transaction r a)
+      => Configuration -> ServiceConfiguration r -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
 awsRef = unsafeAwsRef
 
 -- | Run an AWS transaction, /without/ HTTP manager and with metadata wrapped in a 'Response'.
@@ -199,12 +120,11 @@ awsRef = unsafeAwsRef
 -- 
 -- Usage:
 -- @
---     resp <- simpleAws cfg request
+--     resp <- simpleAws cfg serviceCfg request
 -- @
-simpleAws :: (Transaction r a
-             , ConfigurationFetch (ServiceConfiguration r))
-            => Configuration -> r -> IO (Response (ResponseMetadata a) a)
-simpleAws cfg request = HTTP.withManager $ \manager -> liftIO $ aws cfg manager request
+simpleAws :: (Transaction r a)
+            => Configuration -> ServiceConfiguration r -> r -> IO (Response (ResponseMetadata a) a)
+simpleAws cfg scfg request = HTTP.withManager $ \manager -> liftIO $ aws cfg scfg manager request
 
 -- | Run an AWS transaction, /without/ HTTP manager and with metadata returned in an 'IORef'.
 -- 
@@ -213,14 +133,14 @@ simpleAws cfg request = HTTP.withManager $ \manager -> liftIO $ aws cfg manager 
 -- Usage:
 -- @
 --     ref <- newIORef mempty;
---     resp <- simpleAwsRef cfg request
+--     resp <- simpleAwsRef cfg serviceCfg request
 -- @
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
-simpleAwsRef :: (Transaction r a
-             , ConfigurationFetch (ServiceConfiguration r))
-            => Configuration -> IORef (ResponseMetadata a) -> r -> IO a
-simpleAwsRef cfg metadataRef request = HTTP.withManager $ \manager -> liftIO $ awsRef cfg manager metadataRef request
+simpleAwsRef :: (Transaction r a)
+            => Configuration -> ServiceConfiguration r -> IORef (ResponseMetadata a) -> r -> IO a
+simpleAwsRef cfg scfg metadataRef request = HTTP.withManager $ 
+                                              \manager -> liftIO $ awsRef cfg scfg manager metadataRef request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
 -- 
@@ -230,13 +150,12 @@ simpleAwsRef cfg metadataRef request = HTTP.withManager $ \manager -> liftIO $ a
 unsafeAws
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
-      SignQuery r,
-      ConfigurationFetch (ServiceConfiguration r)) =>
-     Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
-unsafeAws cfg manager request = do
+      SignQuery r) =>
+     Configuration -> ServiceConfiguration r -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
+unsafeAws cfg scfg manager request = do
   metadataRef <- newIORef mempty
   resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
-            unsafeAwsRef cfg manager metadataRef request
+            unsafeAwsRef cfg scfg manager metadataRef request
   metadata <- readIORef metadataRef
   return $ Response metadata resp
 
@@ -248,15 +167,14 @@ unsafeAws cfg manager request = do
 unsafeAwsRef
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
-      SignQuery r,
-      ConfigurationFetch (ServiceConfiguration r)) =>
-     Configuration -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
-unsafeAwsRef cfg manager metadataRef request = do
+      SignQuery r) =>
+     Configuration -> ServiceConfiguration r -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
+unsafeAwsRef cfg info manager metadataRef request = do
   sd <- signatureData <$> timeInfo <*> credentials $ cfg
-  let info = configurationFetch cfg
   let q = signQuery request info sd
   logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   let httpRequest = queryToHttpRequest q
+  logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
   resp <- runResourceT $ do
       HTTP.Response status _ headers body <- HTTP.http httpRequest manager
       responseConsumer request metadataRef status headers body
@@ -268,13 +186,11 @@ unsafeAwsRef cfg manager metadataRef request = do
 -- @
 --     uri <- awsUri cfg request
 -- @
-awsUri :: (SignQuery request
-          , ConfigurationFetch (ServiceConfiguration request))
-         => Configuration -> request -> IO B.ByteString
-awsUri cfg request = do
+awsUri :: (SignQuery request)
+         => Configuration -> ServiceConfiguration request -> request -> IO B.ByteString
+awsUri cfg info request = do
   let ti = timeInfo cfg
       cr = credentials cfg
-      info = configurationFetchUri cfg
   sd <- signatureData ti cr
   let q = signQuery request info sd
   logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)

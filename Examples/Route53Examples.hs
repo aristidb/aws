@@ -40,18 +40,18 @@ class (AWS.Transaction request response) => Batched request response  where
 --
 --   Executes 'getResult' in the IO monad and will thus cause an error if the 
 --   request is not successful.
-makeRequest :: (AWS.Transaction request response, AWS.ConfigurationFetch (AWS.Info request), Show request) 
-            => AWS.Configuration -> Manager -> request -> IO response
+makeRequest :: (AWS.Transaction request response, Show request) 
+            => Route53Configuration -> Manager -> request -> IO response
 makeRequest cfg manager request = AWS.aws cfg manager request >>= getResult
 
 -- | Executes the given request using the default configuration and a fresh connection manager.
 --   Extracts the enclosed response body and returns it within the IO monad.
 --
 --   Will result in an error in if request is not successful
-makeSimpleRequest :: (AWS.Transaction request response, AWS.ConfigurationFetch (AWS.Info request), Show request) 
+makeSimpleRequest :: (AWS.Transaction request response, Show request) 
             => request -> IO response
 makeSimpleRequest r = do
-  cfg <- AWS.baseConfiguration
+  cfg <- AWS.defaultConfiguration
   withManager $ \m -> do
     liftIO $ makeRequest cfg m r
 
@@ -87,7 +87,7 @@ instance Batched ListHostedZones ListHostedZonesResponse where
 -- | Get all hosted zones of the user.
 getAllZones :: IO HostedZones
 getAllZones = do
-  cfg <- AWS.baseConfiguration
+  cfg <- AWS.defaultConfiguration
   withManager $ \m -> do
     ListHostedZonesResponse zones _ <- liftIO $ requestAll (\r -> makeRequest cfg m r) listHostedZones
     return zones
@@ -132,7 +132,7 @@ instance Batched ListResourceRecordSets ListResourceRecordSetsResponse where
 --   Note the 'zName' is the domain name of the hosted zone itself.
 getResourceRecordSetsByHostedZoneName :: Domain -> IO ResourceRecordSets
 getResourceRecordSetsByHostedZoneName zName = do
-  cfg <- AWS.baseConfiguration
+  cfg <- AWS.defaultConfiguration
   hzid <- getZoneIdByName zName
   withManager $ \m -> do
     ListResourceRecordSetsResponse rs _ _ _ _ _ <- liftIO $ requestAll (\r -> makeRequest cfg m r) (listResourceRecordSets hzid)
@@ -141,7 +141,7 @@ getResourceRecordSetsByHostedZoneName zName = do
 -- | Lists all resource record sets in the hosted zone with the given hosted zone id.
 getResourceRecordSets :: HostedZoneId -> IO ResourceRecordSets
 getResourceRecordSets hzid = do
-  cfg <- AWS.baseConfiguration
+  cfg <- AWS.defaultConfiguration
   withManager $ \m -> do
     ListResourceRecordSetsResponse rs _ _ _ _ _ <- liftIO $ requestAll (\r -> makeRequest cfg m r) (listResourceRecordSets hzid)
     return rs
@@ -149,7 +149,7 @@ getResourceRecordSets hzid = do
 -- | Lists all resource record sets in the given hosted zone for the given domain.
 getResourceRecordSetsByDomain :: HostedZoneId -> Domain -> IO ResourceRecordSets
 getResourceRecordSetsByDomain hzid domain = do
-  cfg <- AWS.baseConfiguration
+  cfg <- AWS.defaultConfiguration
   withManager $ \m -> do
     ListResourceRecordSetsResponse rs _ _ _ _ _ <- liftIO $ requestAll (\r -> makeRequest cfg m r) ((listResourceRecordSets hzid){ lrrsName = Just domain})
     return rs

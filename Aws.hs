@@ -5,7 +5,6 @@ module Aws
 , defaultLog
   -- * Configuration
 , Configuration(..)
-, ConfigurationFetch
 , baseConfiguration
 , dbgConfiguration
   -- * Transaction runners
@@ -20,12 +19,15 @@ module Aws
   -- ** URI runners
 , awsUri
   -- * Response
+  -- ** Full HTTP response
+, HTTPResponseConsumer
   -- ** Metadata in responses
 , Response(..)
 , ResponseMetadata
   -- * Query
   -- ** Service configuration
 , ServiceConfiguration
+, DefaultServiceConfiguration(..)
   -- ** Expiration
 , TimeInfo(..)
   -- * Transactions
