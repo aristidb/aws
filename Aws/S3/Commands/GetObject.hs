@@ -29,7 +29,7 @@ getObject :: Bucket -> T.Text -> HTTPResponseConsumer a -> GetObject a
 getObject b o i = GetObject b o i Nothing Nothing Nothing Nothing Nothing Nothing
 
 data GetObjectResponse a
-    = GetObjectResponse a
+    = GetObjectResponse ObjectMetadata a
     deriving (Show)
 
 instance SignQuery (GetObject a) where
@@ -57,6 +57,8 @@ instance SignQuery (GetObject a) where
 instance ResponseConsumer (GetObject a) (GetObjectResponse a) where
     type ResponseMetadata (GetObjectResponse a) = S3Metadata
     responseConsumer GetObject{..} metadata status headers source
-        = GetObjectResponse <$> s3BinaryResponseConsumer goResponseConsumer metadata status headers source
+        = GetObjectResponse 
+          <$> parseObjectMetadata headers 
+          <*> s3BinaryResponseConsumer goResponseConsumer metadata status headers source
 
 instance Transaction (GetObject a) (GetObjectResponse a)

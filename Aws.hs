@@ -24,6 +24,10 @@ module Aws
   -- ** Metadata in responses
 , Response(..)
 , ResponseMetadata
+  -- ** Exception types
+, XmlException(..)
+, HeaderException(..)
+, FormException(..)
   -- * Query
   -- ** Service configuration
 , ServiceConfiguration

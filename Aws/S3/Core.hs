@@ -2,6 +2,7 @@
 module Aws.S3.Core where
 
 import           Aws.Core
+import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Attempt                   (Attempt(..))
@@ -334,6 +335,53 @@ parseObjectInfo el
                     , objectStorageClass = storageClass
                     , objectOwner        = owner
                     }
+
+data ObjectMetadata
+    = ObjectMetadata {
+        omDeleteMarker         :: Bool
+      , omETag                 :: T.Text
+      , omLastModified         :: UTCTime
+      , omVersionId            :: Maybe T.Text
+-- TODO:
+--      , omExpiration           :: Maybe (UTCTime, T.Text)
+      , omUserMetadata         :: [(T.Text, T.Text)]
+      , omMissingUserMetadata  :: Maybe T.Text
+      , omServerSideEncryption :: Maybe T.Text
+      }
+    deriving (Show)
+
+parseObjectMetadata :: F.Failure HeaderException m => HTTP.ResponseHeaders -> m ObjectMetadata
+parseObjectMetadata h = ObjectMetadata
+                        `liftM` deleteMarker
+                        `ap` etag
+                        `ap` lastModified
+                        `ap` return versionId
+--                        `ap` expiration
+                        `ap` return userMetadata
+                        `ap` return missingUserMetadata
+                        `ap` return serverSideEncryption
+  where deleteMarker = case B8.unpack `fmap` lookup "x-amz-delete-marker" h of
+                         Nothing -> return False
+                         Just "true" -> return True
+                         Just "false" -> return False
+                         Just x -> F.failure $ HeaderException ("Invalid x-amz-delete-marker " ++ x)
+        etag = case T.decodeUtf8 `fmap` lookup "ETag" h of
+                 Just x -> return x
+                 Nothing -> F.failure $ HeaderException "ETag missing"
+        lastModified = case B8.unpack `fmap` lookup "Last-Modified" h of
+                         Just ts -> case parseTime defaultTimeLocale rfc822Time ts of
+                                      Just t -> return t
+                                      Nothing -> F.failure $ HeaderException "Invalid Last-Modified"
+                         Nothing -> F.failure $ HeaderException "Last-Modified missing"
+        versionId = T.decodeUtf8 `fmap` lookup "x-amz-version-id" h
+        -- expiration = return undefined
+        userMetadata = flip mapMaybe ht $
+                       \(k, v) -> do i <- T.stripPrefix "x-amz-meta-" k
+                                     return (i, v)
+        missingUserMetadata = T.decodeUtf8 `fmap` lookup "x-amz-missing-meta" h
+        serverSideEncryption = T.decodeUtf8 `fmap` lookup "x-amz-server-side-encryption" h
+
+        ht = map ((T.decodeUtf8 . CI.foldedCase) *** T.decodeUtf8) h
 
 type LocationConstraint = T.Text
 
