@@ -103,7 +103,7 @@ import qualified Text.XML             as XML
 import qualified Text.XML.Cursor      as Cu
 
 -- -------------------------------------------------------------------------- --
--- Info
+-- Configuration
 
 data Route53Configuration = Route53Configuration 
     { route53Protocol :: Protocol
@@ -113,6 +113,13 @@ data Route53Configuration = Route53Configuration
     , route53XmlNamespace :: T.Text
 
     } deriving (Show)
+
+instance DefaultServiceConfiguration Route53Configuration where
+  defaultConfiguration = route53
+  defaultConfigurationUri = route53
+  
+  debugConfiguration = route53
+  debugConfigurationUri = route53
 
 route53EndpointUsClassic :: B.ByteString
 route53EndpointUsClassic = "route53.amazonaws.com"

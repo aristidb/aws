@@ -8,7 +8,7 @@ module Aws.Aws
 , Configuration(..)
 , ConfigurationFetch
 , baseConfiguration
-, debugConfiguration
+, dbgConfiguration
   -- * Transaction runners
   -- ** Safe runners
 , aws
@@ -130,27 +130,35 @@ baseConfiguration = do
   return Configuration {
                       timeInfo = Timestamp
                     , credentials = cr
-                    , sdbConfiguration = sdbHttpsPost sdbUsEast
-                    , sdbConfigurationUri = sdbHttpsGet sdbUsEast
-                    , s3Configuration = s3 HTTP s3EndpointUsClassic False
-                    , s3ConfigurationUri = s3 HTTP s3EndpointUsClassic True
-                    , sqsConfiguration = sqs HTTP sqsEndpointUsClassic False
-                    , sqsConfigurationUri = sqs HTTP sqsEndpointUsClassic True
-                    , sesConfiguration = sesHttpsPost sesUsEast
-                    , sesConfigurationUri = sesHttpsGet sesUsEast
-                    , route53Configuration = route53  -- TODO
-                    , route53ConfigurationUri = route53 -- TODO
+                    , sdbConfiguration = defaultConfiguration
+                    , sdbConfigurationUri = defaultConfigurationUri
+                    , s3Configuration = defaultConfiguration
+                    , s3ConfigurationUri = defaultConfigurationUri
+                    , sqsConfiguration = defaultConfiguration
+                    , sqsConfigurationUri = defaultConfigurationUri
+                    , sesConfiguration = defaultConfiguration
+                    , sesConfigurationUri = defaultConfigurationUri
+                    , route53Configuration = defaultConfiguration
+                    , route53ConfigurationUri = defaultConfigurationUri
                     , logger = defaultLog Warning
                     }
 -- TODO: better error handling when credentials cannot be loaded
 
 -- | Debug configuration, which avoids using HTTPS for some queries. DO NOT USE THIS IN PRODUCTION!
-debugConfiguration :: IO Configuration
-debugConfiguration = do
+dbgConfiguration :: IO Configuration
+dbgConfiguration = do
   c <- baseConfiguration
   return c {
-      sdbConfiguration = sdbHttpPost sdbUsEast
-    , sdbConfigurationUri = sdbHttpGet sdbUsEast
+      sdbConfiguration = debugConfiguration
+    , sdbConfigurationUri = debugConfigurationUri
+    , s3Configuration = debugConfiguration
+    , s3ConfigurationUri = debugConfigurationUri
+    , sqsConfiguration = debugConfiguration
+    , sqsConfigurationUri = debugConfigurationUri
+    , sesConfiguration = debugConfiguration
+    , sesConfigurationUri = debugConfigurationUri
+    , route53Configuration = debugConfiguration
+    , route53ConfigurationUri = debugConfigurationUri
     , logger = defaultLog Debug
     }
 

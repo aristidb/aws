@@ -65,6 +65,14 @@ data SesConfiguration
       }
     deriving (Show)
 
+instance DefaultServiceConfiguration SesConfiguration where
+    defaultConfiguration = sesHttpsPost sesUsEast
+    defaultConfigurationUri = sesHttpsGet sesUsEast
+    
+    -- HTTP is not supported right now, always use HTTPS
+    --debugConfiguration = sesHttpPost sesUsEast
+    --debugConfigurationUri = sesHttpGet sesUsEast
+
 sesUsEast :: B.ByteString
 sesUsEast = "email.us-east-1.amazonaws.com"
 

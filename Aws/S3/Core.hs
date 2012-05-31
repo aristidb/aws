@@ -52,6 +52,13 @@ data S3Configuration
       }
     deriving (Show)
 
+instance DefaultServiceConfiguration S3Configuration where
+  defaultConfiguration = s3 HTTPS s3EndpointUsClassic False
+  defaultConfigurationUri = s3 HTTPS s3EndpointUsClassic True
+  
+  debugConfiguration = s3 HTTP s3EndpointUsClassic False
+  debugConfigurationUri = s3 HTTP s3EndpointUsClassic True
+
 s3EndpointUsClassic :: B.ByteString
 s3EndpointUsClassic = "s3.amazonaws.com"
 
