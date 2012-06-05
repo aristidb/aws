@@ -47,6 +47,7 @@ data GetBucketResponse
       }
     deriving (Show)
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery GetBucket where
     type ServiceConfiguration GetBucket = S3Configuration
     signQuery GetBucket {..} = s3SignQuery S3Query {

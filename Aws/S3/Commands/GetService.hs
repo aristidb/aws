@@ -36,6 +36,7 @@ instance ResponseConsumer r GetServiceResponse where
             creationDate <- force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery GetService where
     type ServiceConfiguration GetService = S3Configuration
     signQuery GetService = s3SignQuery S3Query {

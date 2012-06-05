@@ -32,6 +32,7 @@ instance ResponseConsumer r SendMessageResponse where
           mid <- force "Missing Message Id" $ el $// Cu.laxElement "MessageId" &/ Cu.content
           return SendMessageResponse { smrMD5OfMessageBody = md5, smrMessageId = MessageId mid }
 
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery SendMessage  where
     type ServiceConfiguration SendMessage  = SqsConfiguration
     signQuery SendMessage {..} = sqsSignQuery SqsQuery {
@@ -55,6 +56,7 @@ instance ResponseConsumer r DeleteMessageResponse where
       where
         parse _ = do return DeleteMessageResponse {}
           
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery DeleteMessage  where 
     type ServiceConfiguration DeleteMessage  = SqsConfiguration
     signQuery DeleteMessage {..} = sqsSignQuery SqsQuery {
@@ -121,6 +123,7 @@ instance ResponseConsumer r ReceiveMessageResponse where
           let messages = concat $ el $// Cu.laxElement "Message" &| readMessage
           return ReceiveMessageResponse{ rmrMessages = messages }
 
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery ReceiveMessage  where
     type ServiceConfiguration ReceiveMessage  = SqsConfiguration
     signQuery ReceiveMessage {..} = sqsSignQuery SqsQuery {
@@ -150,6 +153,7 @@ instance ResponseConsumer r ChangeMessageVisibilityResponse where
       where 
         parse _ = do return ChangeMessageVisibilityResponse{}
     
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery ChangeMessageVisibility  where 
     type ServiceConfiguration ChangeMessageVisibility  = SqsConfiguration
     signQuery ChangeMessageVisibility {..} = sqsSignQuery SqsQuery { 

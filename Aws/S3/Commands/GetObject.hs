@@ -32,6 +32,7 @@ data GetObjectResponse a
     = GetObjectResponse ObjectMetadata a
     deriving (Show)
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery (GetObject a) where
     type ServiceConfiguration (GetObject a) = S3Configuration
     signQuery GetObject {..} = s3SignQuery S3Query {

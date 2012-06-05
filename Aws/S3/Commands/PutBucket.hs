@@ -21,6 +21,7 @@ data PutBucketResponse
     = PutBucketResponse
     deriving (Show)
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery PutBucket where
     type ServiceConfiguration PutBucket = S3Configuration
 

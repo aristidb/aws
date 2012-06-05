@@ -29,6 +29,7 @@ data GetAttributesResponse
 getAttributes :: T.Text -> T.Text -> GetAttributes
 getAttributes item domain = GetAttributes { gaItemName = item, gaAttributeName = Nothing, gaConsistentRead = False, gaDomainName = domain }
 
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery GetAttributes where
     type ServiceConfiguration GetAttributes = SdbConfiguration
     signQuery GetAttributes{..}
@@ -68,6 +69,7 @@ putAttributes item attributes domain = PutAttributes {
                                        , paDomainName = domain 
                                        }
                                        
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery PutAttributes where
     type ServiceConfiguration PutAttributes = SdbConfiguration
     signQuery PutAttributes{..}
@@ -103,6 +105,7 @@ deleteAttributes item attributes domain = DeleteAttributes {
                                        , daDomainName = domain 
                                        }
                                        
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery DeleteAttributes where
     type ServiceConfiguration DeleteAttributes = SdbConfiguration
     signQuery DeleteAttributes{..}
@@ -131,6 +134,7 @@ data BatchPutAttributesResponse
 batchPutAttributes :: [Item [Attribute SetAttribute]] -> T.Text -> BatchPutAttributes
 batchPutAttributes items domain = BatchPutAttributes { bpaItems = items, bpaDomainName = domain }
 
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery BatchPutAttributes where
     type ServiceConfiguration BatchPutAttributes = SdbConfiguration
     signQuery BatchPutAttributes{..}
@@ -159,6 +163,7 @@ data BatchDeleteAttributesResponse
 batchDeleteAttributes :: [Item [Attribute DeleteAttribute]] -> T.Text -> BatchDeleteAttributes
 batchDeleteAttributes items domain = BatchDeleteAttributes { bdaItems = items, bdaDomainName = domain }
 
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery BatchDeleteAttributes where
     type ServiceConfiguration BatchDeleteAttributes = SdbConfiguration
     signQuery BatchDeleteAttributes{..}

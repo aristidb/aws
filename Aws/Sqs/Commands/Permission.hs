@@ -31,6 +31,7 @@ instance ResponseConsumer r AddPermissionResponse where
          parse _ = do
            return AddPermissionResponse {}
         
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery AddPermission  where 
     type ServiceConfiguration AddPermission  = SqsConfiguration
     signQuery AddPermission {..} = sqsSignQuery SqsQuery {
@@ -56,6 +57,7 @@ instance ResponseConsumer r RemovePermissionResponse where
         parse _ = do
           return RemovePermissionResponse {}  
           
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery RemovePermission  where 
     type ServiceConfiguration RemovePermission  = SqsConfiguration
     signQuery RemovePermission {..} = sqsSignQuery SqsQuery {

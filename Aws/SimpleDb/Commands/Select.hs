@@ -30,6 +30,7 @@ data SelectResponse
 select :: T.Text -> Select
 select expr = Select { sSelectExpression = expr, sConsistentRead = False, sNextToken = Nothing }
 
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery Select where
     type ServiceConfiguration Select = SdbConfiguration
     signQuery Select{..}

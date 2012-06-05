@@ -39,6 +39,7 @@ data PutObjectResponse
     }
   deriving (Show)
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery PutObject where
     type ServiceConfiguration PutObject = S3Configuration
     signQuery PutObject {..} = s3SignQuery S3Query {
