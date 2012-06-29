@@ -30,8 +30,8 @@ data PutObject = PutObject {
   poMetadata :: [(T.Text,T.Text)]
 }
 
-putObject :: T.Text -> Bucket -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
-putObject obj bucket body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
+putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
 
 data PutObjectResponse 
   = PutObjectResponse {
