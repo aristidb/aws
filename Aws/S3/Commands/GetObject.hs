@@ -58,8 +58,8 @@ instance SignQuery (GetObject a) where
 instance ResponseConsumer (GetObject a) (GetObjectResponse a) where
     type ResponseMetadata (GetObjectResponse a) = S3Metadata
     responseConsumer GetObject{..} metadata status headers source
-        = GetObjectResponse 
-          <$> parseObjectMetadata headers 
-          <*> s3BinaryResponseConsumer goResponseConsumer metadata status headers source
+        = do rsp <- s3BinaryResponseConsumer goResponseConsumer metadata status headers source
+             om <- parseObjectMetadata headers
+             return $ GetObjectResponse om rsp
 
 instance Transaction (GetObject a) (GetObjectResponse a)
