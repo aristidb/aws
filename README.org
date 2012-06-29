@@ -94,8 +94,10 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.6 series (upcoming)
 
-- 0.6.0 (upcoming) ::
-    S3: Made parameter order to S3.putObject consistent with S3.getObject. (BREAKING!)
+- 0.6.0 (upcoming)
+  - API Cleanup
+    - General: Use Crypto.Hash.MD5.MD5 when a Content-MD5 hash is required, instead of ByteString.
+    - S3: Made parameter order to S3.putObject consistent with S3.getObject.
 
 ** 0.5 series
 
