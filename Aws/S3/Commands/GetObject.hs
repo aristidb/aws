@@ -17,6 +17,7 @@ data GetObject a
         goBucket :: Bucket
       , goObjectName :: Object
       , goResponseConsumer :: HTTPResponseConsumer a
+      , goVersionId :: Maybe T.Text
       , goResponseContentType :: Maybe T.Text
       , goResponseContentLanguage :: Maybe T.Text
       , goResponseExpires :: Maybe T.Text
@@ -26,7 +27,7 @@ data GetObject a
       }
 
 getObject :: Bucket -> T.Text -> HTTPResponseConsumer a -> GetObject a
-getObject b o i = GetObject b o i Nothing Nothing Nothing Nothing Nothing Nothing
+getObject b o i = GetObject b o i Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 data GetObjectResponse a
     = GetObjectResponse ObjectMetadata a
@@ -39,9 +40,11 @@ instance SignQuery (GetObject a) where
                                    s3QMethod = Get
                                  , s3QBucket = Just $ T.encodeUtf8 goBucket
                                  , s3QObject = Just $ T.encodeUtf8 goObjectName
-                                 , s3QSubresources = []
+                                 , s3QSubresources = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
+                                                       ("versionId",) <$> goVersionId
+                                                     ]
                                  , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
-                                               ("response-content-type",) <$> goResponseContentType
+                                                ("response-content-type",) <$> goResponseContentType
                                               , ("response-content-language",) <$> goResponseContentLanguage
                                               , ("response-expires",) <$> goResponseExpires
                                               , ("response-cache-control",) <$> goResponseCacheControl
@@ -58,8 +61,8 @@ instance SignQuery (GetObject a) where
 instance ResponseConsumer (GetObject a) (GetObjectResponse a) where
     type ResponseMetadata (GetObjectResponse a) = S3Metadata
     responseConsumer GetObject{..} metadata status headers source
-        = GetObjectResponse 
-          <$> parseObjectMetadata headers 
-          <*> s3BinaryResponseConsumer goResponseConsumer metadata status headers source
+        = do rsp <- s3BinaryResponseConsumer goResponseConsumer metadata status headers source
+             om <- parseObjectMetadata headers
+             return $ GetObjectResponse om rsp
 
 instance Transaction (GetObject a) (GetObjectResponse a)

@@ -92,6 +92,13 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
+** 0.6 series (upcoming)
+
+- 0.6.0 (upcoming)
+  - API Cleanup
+    - General: Use Crypto.Hash.MD5.MD5 when a Content-MD5 hash is required, instead of ByteString.
+    - S3: Made parameter order to S3.putObject consistent with S3.getObject.
+
 ** 0.5 series
 
 - 0.5.0 ::
@@ -113,6 +120,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 - 0.3.2 :: Add awsRef / simpleAwsRef request variants for those who prefer an =IORef= over a =Data.Attempt.Attempt= value.
            Also improve README and add simple example.
+
 * Resources
 
 - [[https://github.com/aristidb/aws][aws on Github]]
