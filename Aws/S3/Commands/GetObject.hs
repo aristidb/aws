@@ -5,9 +5,8 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Arrow         (second)
 import           Data.ByteString.Char8 ({- IsString -})
-import           Data.Maybe
+import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import qualified Network.HTTP.Types    as HTTP
@@ -40,11 +39,11 @@ instance SignQuery (GetObject a) where
                                    s3QMethod = Get
                                  , s3QBucket = Just $ T.encodeUtf8 goBucket
                                  , s3QObject = Just $ T.encodeUtf8 goObjectName
-                                 , s3QSubresources = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
-                                                       ("versionId",) <$> goVersionId
+                                 , s3QSubresources = HTTP.toQuery [
+                                                       ("versionId" :: B8.ByteString,) <$> goVersionId
                                                      ]
-                                 , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
-                                                ("response-content-type",) <$> goResponseContentType
+                                 , s3QQuery = HTTP.toQuery [
+                                                ("response-content-type" :: B8.ByteString,) <$> goResponseContentType
                                               , ("response-content-language",) <$> goResponseContentLanguage
                                               , ("response-expires",) <$> goResponseExpires
                                               , ("response-cache-control",) <$> goResponseCacheControl

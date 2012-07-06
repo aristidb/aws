@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts #-}
+{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts, Rank2Types #-}
 module Aws.S3.Core where
 
 import           Aws.Core
@@ -146,7 +146,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       , sqHost = B.intercalate "." $ catMaybes host
       , sqPort = s3Port
       , sqPath = mconcat $ catMaybes path
-      , sqQuery = sortedSubresources ++ s3QQuery ++ authQuery
+      , sqQuery = sortedSubresources ++ s3QQuery ++ authQuery :: HTTP.Query
       , sqDate = Just signatureTime
       , sqAuthorization = authorization
       , sqContentType = s3QContentType
@@ -189,9 +189,9 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
           where amzHeader (k, v) = Blaze.copyByteString (CI.foldedCase k) `mappend` Blaze8.fromChar ':' `mappend` Blaze.copyByteString v
       (authorization, authQuery) = case ti of
                                  AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
-                                 AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ makeAuthQuery time)
+                                 AbsoluteExpires time -> (Nothing, HTTP.toQuery $ makeAuthQuery time)
       makeAuthQuery time
-          = [("Expires", fmtTimeEpochSeconds time)
+          = [("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)
             , ("AWSAccessKeyId", accessKeyID signatureCredentials)
             , ("SignatureMethod", "HmacSHA256")
             , ("Signature", sig)]

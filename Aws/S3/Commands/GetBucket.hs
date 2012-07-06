@@ -5,15 +5,15 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Arrow              (second)
-import           Data.ByteString.Char8      ({- IsString -})
+import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
-import           Text.XML.Cursor            (($/), (&|), (&//))
-import qualified Data.Text                  as T
-import qualified Data.Text.Encoding         as T
+import           Text.XML.Cursor       (($/), (&|), (&//))
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
 import qualified Data.Traversable
-import qualified Network.HTTP.Types         as HTTP
-import qualified Text.XML.Cursor            as Cu
+import qualified Network.HTTP.Types    as HTTP
+import qualified Text.XML.Cursor       as Cu
 
 data GetBucket
     = GetBucket {
@@ -55,8 +55,8 @@ instance SignQuery GetBucket where
                                , s3QBucket = Just $ T.encodeUtf8 gbBucket
                                , s3QObject = Nothing
                                , s3QSubresources = []
-                               , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
-                                              ("delimiter",) <$> gbDelimiter
+                               , s3QQuery = HTTP.toQuery [
+                                              ("delimiter" :: B8.ByteString ,) <$> gbDelimiter
                                             , ("marker",) <$> gbMarker
                                             , ("max-keys",) . T.pack . show <$> gbMaxKeys
                                             , ("prefix",) <$> gbPrefix
