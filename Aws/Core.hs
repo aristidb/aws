@@ -76,7 +76,7 @@ import           Data.Attempt             (Attempt(..))
 import           Data.ByteString          (ByteString)
 import           Data.ByteString.Char8    ({- IsString -})
 import           Data.Char
-import           Data.Conduit             (Source, ResourceT, ($$))
+import           Data.Conduit             (ResourceT, ($$+-))
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -138,7 +138,7 @@ tellMetadataRef r m = modifyIORef r (`mappend` m)
 -- | A full HTTP response parser. Takes HTTP status, response headers, and response body.
 type HTTPResponseConsumer a =  HTTP.Status
                             -> HTTP.ResponseHeaders
-                            -> Source (ResourceT IO) ByteString
+                            -> C.ResumableSource (ResourceT IO) ByteString
                             -> ResourceT IO a
 
 -- | Class for types that AWS HTTP responses can be parsed into.
@@ -157,7 +157,7 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
     responseConsumer _ _ status headers bufsource = do
-      chunks <- bufsource $$ CL.consume
+      chunks <- bufsource $$+- CL.consume
       return (HTTP.Response status HTTP.http11 headers $ L.fromChunks chunks)
 
 -- | Associates a request type and a response type in a bi-directional way.
@@ -560,7 +560,7 @@ xmlCursorConsumer ::
     -> IORef m
     -> HTTPResponseConsumer a
 xmlCursorConsumer parse metadataRef _status _headers source
-    = do doc <- source $$ XML.sinkDoc XML.def
+    = do doc <- source $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata

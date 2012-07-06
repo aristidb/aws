@@ -6,7 +6,7 @@ import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Attempt                   (Attempt(..))
-import           Data.Conduit                   (($$))
+import           Data.Conduit                   (($$+-))
 import           Data.Function
 import           Data.IORef
 import           Data.List
@@ -224,7 +224,7 @@ s3BinaryResponseConsumer inner metadataRef = s3ResponseConsumer inner metadataRe
 
 s3ErrorResponseConsumer :: HTTPResponseConsumer a
 s3ErrorResponseConsumer status _headers source
-    = do doc <- source $$ XML.sinkDoc XML.def
+    = do doc <- source $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Success err      -> C.monadThrow err

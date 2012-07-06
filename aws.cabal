@@ -6,7 +6,7 @@ Name:                aws
 -- The package version. See the Haskell package versioning policy
 -- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
 -- standards guiding when and how versions should be incremented.
-Version:             0.5.0
+Version:             0.6.0
 
 -- A short (one-line) description of the package.
 Synopsis:            Amazon Web Services (AWS) for Haskell
@@ -95,14 +95,15 @@ Library
                        bytestring           == 0.9.*,
                        case-insensitive     >= 0.2     && < 0.5,
                        cereal               == 0.3.*,
-                       conduit              >= 0.4     && < 0.5,
+                       conduit              >= 0.5     && < 0.6,
+                       containers           >= 0.4,
                        crypto-api           >= 0.9,
                        cryptohash           >= 0.6     && < 0.8,
                        directory            >= 1.0     && < 1.2,
                        failure              >= 0.1.0.1 && < 0.3,
                        filepath             >= 1.1     && < 1.4,
-                       http-conduit         >= 1.4     && < 1.5,
-                       http-types           >= 0.6     && < 0.7,
+                       http-conduit         >= 1.5     && < 1.6,
+                       http-types           >= 0.7     && < 0.8,
                        lifted-base          == 0.1.*,
                        mtl                  == 2.*,
                        monad-control        >= 0.3,
@@ -111,7 +112,7 @@ Library
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2.0 && < 0.4,
                        utf8-string          == 0.3.*,
-                       xml-conduit          >= 0.7.0
+                       xml-conduit          >= 1.0.1 && <1.1
 
   GHC-Options: -Wall
 

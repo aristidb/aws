@@ -6,7 +6,7 @@ import           Aws.S3.Core                    (LocationConstraint, locationUsC
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Attempt                   (Attempt(..))
-import           Data.Conduit                   (($$))
+import           Data.Conduit                   (($$+-))
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -215,7 +215,7 @@ sqsXmlResponseConsumer parse metadataRef = sqsResponseConsumer (xmlCursorConsume
 
 sqsErrorResponseConsumer :: HTTPResponseConsumer a
 sqsErrorResponseConsumer status _headers source
-    = do doc <- source $$ XML.sinkDoc XML.def
+    = do doc <- source $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Success err -> C.monadThrow err
