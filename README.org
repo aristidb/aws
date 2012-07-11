@@ -60,7 +60,7 @@ import Data.Monoid
 
 {- A small function to save the object's data into a file. -}
 saveObject :: Aws.HTTPResponseConsumer ()
-saveObject status headers source = source $$ sinkFile "cloud-remote.pdf"
+saveObject status headers source = source $$+- sinkFile "cloud-remote.pdf"
 
 main :: IO ()
 main = do
