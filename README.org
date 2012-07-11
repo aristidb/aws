@@ -99,9 +99,9 @@ Feature ideas:
 - Change ServiceConfiguration concept so as to indicate in the type whether this is for URI-only requests (i.e.
   awsUri)
 
-** 0.6 series (upcoming)
+** 0.6 series
 
-- 0.6.0 (upcoming)
+- 0.6.0
   - API Cleanup
     - General: Use Crypto.Hash.MD5.MD5 when a Content-MD5 hash is required, instead of ByteString.
     - S3: Made parameter order to S3.putObject consistent with S3.getObject.
