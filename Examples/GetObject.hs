@@ -15,7 +15,7 @@ main :: IO ()
 main = do
   {- Set up AWS credentials and the default configuration. -}
   cfg <- Aws.baseConfiguration
-  let s3Cfg = Aws.defaultConfiguration
+  let s3Cfg = Aws.defServiceConfig
 
   {- Create an IORef to store the response Metadata (so it is also available in case of an error). -}
   metadataRef <- newIORef mempty

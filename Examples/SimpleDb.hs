@@ -9,7 +9,7 @@ main :: IO ()
 main = do
   {- Load configuration -}
   cfg <- Aws.baseConfiguration
-  let sdbCfg = Aws.defaultConfiguration
+  let sdbCfg = Aws.defServiceConfig
 
   putStrLn "Making request..."
 

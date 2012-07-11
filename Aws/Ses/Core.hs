@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, RecordWildCards, OverloadedStrings, DataKinds, KindSignatures, FlexibleInstances #-}
 module Aws.Ses.Core
     ( SesError(..)
     , SesMetadata(..)
@@ -58,31 +58,30 @@ instance Monoid SesMetadata where
     mempty = SesMetadata Nothing
     SesMetadata r1 `mappend` SesMetadata r2 = SesMetadata (r1 `mplus` r2)
 
-data SesConfiguration
+data SesConfiguration (qt :: QueryType)
     = SesConfiguration {
         sesiHttpMethod :: Method
       , sesiHost       :: B.ByteString
       }
     deriving (Show)
 
-instance DefaultServiceConfiguration SesConfiguration where
-    defaultConfiguration = sesHttpsPost sesUsEast
-    defaultConfigurationUri = sesHttpsGet sesUsEast
-    
-    -- HTTP is not supported right now, always use HTTPS
-    --debugConfiguration = sesHttpPost sesUsEast
-    --debugConfigurationUri = sesHttpGet sesUsEast
+-- HTTP is not supported right now, always use HTTPS
+instance DefaultServiceConfiguration (SesConfiguration NormalQuery) where
+    defServiceConfig = sesHttpsPost sesUsEast
+
+instance DefaultServiceConfiguration (SesConfiguration UriOnlyQuery) where
+    defServiceConfig = sesHttpsGet sesUsEast
 
 sesUsEast :: B.ByteString
 sesUsEast = "email.us-east-1.amazonaws.com"
 
-sesHttpsGet :: B.ByteString -> SesConfiguration
+sesHttpsGet :: B.ByteString -> SesConfiguration qt
 sesHttpsGet endpoint = SesConfiguration Get endpoint
 
-sesHttpsPost :: B.ByteString -> SesConfiguration
+sesHttpsPost :: B.ByteString -> SesConfiguration NormalQuery
 sesHttpsPost endpoint = SesConfiguration PostQuery endpoint
 
-sesSignQuery :: [(B.ByteString, B.ByteString)] -> SesConfiguration -> SignatureData -> SignedQuery
+sesSignQuery :: [(B.ByteString, B.ByteString)] -> SesConfiguration qt -> SignatureData -> SignedQuery
 sesSignQuery query si sd
     = SignedQuery {
         sqMethod        = sesiHttpMethod si

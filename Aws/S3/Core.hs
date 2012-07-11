@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts, Rank2Types #-}
+{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts, Rank2Types, DataKinds, KindSignatures, FlexibleInstances #-}
 module Aws.S3.Core where
 
 import           Aws.Core
@@ -44,7 +44,7 @@ data RequestStyle
     | VHostStyle
     deriving (Show)
 
-data S3Configuration
+data S3Configuration (qt :: QueryType)
     = S3Configuration {
         s3Protocol :: Protocol
       , s3Endpoint :: B.ByteString
@@ -55,12 +55,14 @@ data S3Configuration
       }
     deriving (Show)
 
-instance DefaultServiceConfiguration S3Configuration where
-  defaultConfiguration = s3 HTTPS s3EndpointUsClassic False
-  defaultConfigurationUri = s3 HTTPS s3EndpointUsClassic True
+instance DefaultServiceConfiguration (S3Configuration NormalQuery) where
+  defServiceConfig = s3 HTTPS s3EndpointUsClassic False
   
-  debugConfiguration = s3 HTTP s3EndpointUsClassic False
-  debugConfigurationUri = s3 HTTP s3EndpointUsClassic True
+  debugServiceConfig = s3 HTTP s3EndpointUsClassic False
+
+instance DefaultServiceConfiguration (S3Configuration UriOnlyQuery) where
+  defServiceConfig = s3 HTTPS s3EndpointUsClassic True
+  debugServiceConfig = s3 HTTP s3EndpointUsClassic True
 
 s3EndpointUsClassic :: B.ByteString
 s3EndpointUsClassic = "s3.amazonaws.com"
@@ -77,7 +79,7 @@ s3EndpointApSouthEast = "s3-ap-southeast-1.amazonaws.com"
 s3EndpointApNorthEast :: B.ByteString
 s3EndpointApNorthEast = "s3-ap-northeast-1.amazonaws.com"
 
-s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration
+s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration qt
 s3 protocol endpoint uri 
     = S3Configuration { 
          s3Protocol = protocol
@@ -138,7 +140,7 @@ instance Show S3Query where
                        " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++
                        "]"
 
-s3SignQuery :: S3Query -> S3Configuration -> SignatureData -> SignedQuery
+s3SignQuery :: S3Query -> S3Configuration qt -> SignatureData -> SignedQuery
 s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
     = SignedQuery {
         sqMethod = s3QMethod

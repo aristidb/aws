@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, TypeFamilies, FlexibleContexts, FlexibleInstances, DeriveFunctor, OverloadedStrings, RecordWildCards, DeriveDataTypeable, Rank2Types, ExistentialQuantification #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, TypeFamilies, FlexibleContexts, FlexibleInstances, DeriveFunctor, OverloadedStrings, RecordWildCards, DeriveDataTypeable, Rank2Types, ExistentialQuantification, DataKinds #-}
 module Aws.Core
 ( -- * Response
   -- ** Metadata in responses
@@ -24,6 +24,7 @@ module Aws.Core
 , xmlCursorConsumer
   -- * Query
 , SignedQuery(..)
+, QueryType(..)
 , queryToHttpRequest
 , queryToUri
   -- ** Expiration
@@ -392,13 +393,19 @@ signatureData rti cr = do
   let ti = makeAbsoluteTimeInfo rti now
   return SignatureData { signatureTimeInfo = ti, signatureTime = now, signatureCredentials = cr }
 
+-- | Query type: either normal or URI-only queries.
+-- (Used as a kind only.)
+data QueryType
+  = NormalQuery
+  | UriOnlyQuery
+
 -- | A "signable" request object. Assembles together the Query, and signs it in one go.
 class SignQuery r where
     -- | Additional information, like API endpoints and service-specific preferences.
-    type ServiceConfiguration r :: *
+    type ServiceConfiguration r :: QueryType -> *
     
     -- | Create a 'SignedQuery' from a request, additional 'Info', and 'SignatureData'.
-    signQuery :: r -> ServiceConfiguration r -> SignatureData -> SignedQuery
+    signQuery :: r -> ServiceConfiguration r x -> SignatureData -> SignedQuery
 
 -- | Supported crypto hashes for the signature.
 data AuthorizationHash
@@ -427,19 +434,12 @@ signature cr ah input = Base64.encode sig
 
 -- | Default configuration for a specific service.
 class DefaultServiceConfiguration config where
-    -- | Default service configuration for normal requests.
-    defaultConfiguration :: config
-    
-    -- | Default service configuration for URI-only requests.
-    defaultConfigurationUri :: config
+    -- | Default service configuration.
+    defServiceConfig :: config
 
-    -- | Default debugging-only configuration for normal requests. (Normally using HTTP instead of HTTPS for easier debugging.)
-    debugConfiguration :: config
-    debugConfiguration = defaultConfiguration
-
-    -- | Default debugging-only configuration for URI-only requests. (Normally using HTTP instead of HTTPS for easier debugging.)
-    debugConfigurationUri :: config
-    debugConfigurationUri = defaultConfigurationUri
+    -- | Default debugging-only configuration. (Normally using HTTP instead of HTTPS for easier debugging.)
+    debugServiceConfig :: config
+    debugServiceConfig = defServiceConfig
 
 -- | @queryList f prefix xs@ constructs a query list from a list of elements @xs@, using a common prefix @prefix@,
 -- and a transformer function @f@.
