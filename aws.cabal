@@ -41,6 +41,7 @@ Build-type:          Simple
 -- a README.
 Extra-source-files:  README.org
                      Examples/GetObject.hs
+                     Examples/SimpleDb.hs
 
 -- Constraint on the version of Cabal needed to build this package.
 Cabal-version:       >=1.8
