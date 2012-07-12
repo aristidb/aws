@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings, DataKinds #-}
 module Aws.Aws
 ( -- * Logging
   LogLevel(..)
@@ -93,7 +93,11 @@ dbgConfiguration = do
 --     resp <- aws cfg serviceCfg manager request
 -- @
 aws :: (Transaction r a, MonadIO io)
-      => Configuration -> ServiceConfiguration r -> HTTP.Manager -> r -> io (Response (ResponseMetadata a) a)
+      => Configuration 
+      -> ServiceConfiguration r NormalQuery 
+      -> HTTP.Manager 
+      -> r 
+      -> io (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
 -- | Run an AWS transaction, with HTTP manager and metadata returned in an 'IORef'.
@@ -108,7 +112,12 @@ aws = unsafeAws
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
 awsRef :: (Transaction r a, MonadIO io)
-      => Configuration -> ServiceConfiguration r -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> io a
+      => Configuration 
+      -> ServiceConfiguration r NormalQuery 
+      -> HTTP.Manager 
+      -> IORef (ResponseMetadata a) 
+      -> r 
+      -> io a
 awsRef = unsafeAwsRef
 
 -- | Run an AWS transaction, /without/ HTTP manager and with metadata wrapped in a 'Response'.
@@ -122,7 +131,10 @@ awsRef = unsafeAwsRef
 --     resp <- simpleAws cfg serviceCfg request
 -- @
 simpleAws :: (Transaction r a, MonadIO io)
-            => Configuration -> ServiceConfiguration r -> r -> io (Response (ResponseMetadata a) a)
+            => Configuration 
+            -> ServiceConfiguration r NormalQuery
+            -> r 
+            -> io (Response (ResponseMetadata a) a)
 simpleAws cfg scfg request = liftIO $ HTTP.withManager $ \manager -> aws cfg scfg manager request
 
 -- | Run an AWS transaction, /without/ HTTP manager and with metadata returned in an 'IORef'.
@@ -137,7 +149,11 @@ simpleAws cfg scfg request = liftIO $ HTTP.withManager $ \manager -> aws cfg scf
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
 simpleAwsRef :: (Transaction r a, MonadIO io)
-            => Configuration -> ServiceConfiguration r -> IORef (ResponseMetadata a) -> r -> io a
+            => Configuration 
+            -> ServiceConfiguration r NormalQuery 
+            -> IORef (ResponseMetadata a) 
+            -> r 
+            -> io a
 simpleAwsRef cfg scfg metadataRef request = liftIO $ HTTP.withManager $ 
                                               \manager -> awsRef cfg scfg manager metadataRef request
 
@@ -151,7 +167,7 @@ unsafeAws
       Monoid (ResponseMetadata a),
       SignQuery r,
       MonadIO io) =>
-     Configuration -> ServiceConfiguration r -> HTTP.Manager -> r -> io (Response (ResponseMetadata a) a)
+     Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> r -> io (Response (ResponseMetadata a) a)
 unsafeAws cfg scfg manager request = liftIO $ do
   metadataRef <- newIORef mempty
   resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
@@ -169,7 +185,7 @@ unsafeAwsRef
       Monoid (ResponseMetadata a),
       SignQuery r,
       MonadIO io) =>
-     Configuration -> ServiceConfiguration r -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> io a
+     Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> io a
 unsafeAwsRef cfg info manager metadataRef request = liftIO $ do
   sd <- signatureData <$> timeInfo <*> credentials $ cfg
   let q = signQuery request info sd
@@ -188,7 +204,7 @@ unsafeAwsRef cfg info manager metadataRef request = liftIO $ do
 --     uri <- awsUri cfg request
 -- @
 awsUri :: (SignQuery request, MonadIO io)
-         => Configuration -> ServiceConfiguration request -> request -> io B.ByteString
+         => Configuration -> ServiceConfiguration request UriOnlyQuery -> request -> io B.ByteString
 awsUri cfg info request = liftIO $ do
   let ti = timeInfo cfg
       cr = credentials cfg
