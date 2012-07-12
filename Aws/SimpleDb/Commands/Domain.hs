@@ -24,6 +24,7 @@ data CreateDomainResponse
 createDomain :: T.Text -> CreateDomain
 createDomain name = CreateDomain { cdDomainName = name }
              
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery CreateDomain where
     type ServiceConfiguration CreateDomain = SdbConfiguration
     signQuery CreateDomain{..} = sdbSignQuery [("Action", "CreateDomain"), ("DomainName", T.encodeUtf8 cdDomainName)]
@@ -47,6 +48,7 @@ data DeleteDomainResponse
 deleteDomain :: T.Text -> DeleteDomain
 deleteDomain name = DeleteDomain { ddDomainName = name }
              
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery DeleteDomain where
     type ServiceConfiguration DeleteDomain = SdbConfiguration
     signQuery DeleteDomain{..} = sdbSignQuery [("Action", "DeleteDomain"), ("DomainName", T.encodeUtf8 ddDomainName)]
@@ -78,6 +80,7 @@ data DomainMetadataResponse
 domainMetadata :: T.Text -> DomainMetadata
 domainMetadata name = DomainMetadata { dmDomainName = name }
 
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery DomainMetadata where
     type ServiceConfiguration DomainMetadata = SdbConfiguration
     signQuery DomainMetadata{..} = sdbSignQuery [("Action", "DomainMetadata"), ("DomainName", T.encodeUtf8 dmDomainName)]
@@ -116,6 +119,7 @@ data ListDomainsResponse
 listDomains :: ListDomains
 listDomains = ListDomains { ldMaxNumberOfDomains = Nothing, ldNextToken = Nothing }
 
+-- | ServiceConfiguration: 'SdbConfiguration'
 instance SignQuery ListDomains where
     type ServiceConfiguration ListDomains = SdbConfiguration
     signQuery ListDomains{..} = sdbSignQuery $ catMaybes [

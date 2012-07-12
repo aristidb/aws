@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, TypeFamilies, FlexibleContexts, FlexibleInstances, DeriveFunctor, OverloadedStrings, RecordWildCards, DeriveDataTypeable #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, TypeFamilies, FlexibleContexts, FlexibleInstances, DeriveFunctor, OverloadedStrings, RecordWildCards, DeriveDataTypeable, Rank2Types, ExistentialQuantification #-}
 module Aws.Core
 ( -- * Response
   -- ** Metadata in responses
@@ -72,11 +72,11 @@ import           Control.Applicative
 import           Control.Arrow
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Data.Attempt                (Attempt(..))
-import           Data.ByteString             (ByteString)
-import           Data.ByteString.Char8       ({- IsString -})
+import           Data.Attempt             (Attempt(..))
+import           Data.ByteString          (ByteString)
+import           Data.ByteString.Char8    ({- IsString -})
 import           Data.Char
-import           Data.Conduit                (Source, ResourceT, ($$))
+import           Data.Conduit             (ResourceT, ($$+-))
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -86,30 +86,31 @@ import           Data.Typeable
 import           Data.Word
 import           System.Directory
 import           System.Environment
-import           System.FilePath             ((</>))
+import           System.FilePath          ((</>))
 import           System.Locale
-import           Text.XML.Cursor             hiding (force, forceM)
-import qualified Blaze.ByteString.Builder    as Blaze
-import qualified Control.Exception           as E
-import qualified Control.Failure             as F
-import qualified Crypto.Classes              as Crypto
-import qualified Crypto.HMAC                 as HMAC
-import qualified Crypto.Hash.SHA1            as SHA1
-import qualified Crypto.Hash.SHA256          as SHA256
-import qualified Data.ByteString             as B
-import qualified Data.ByteString.Base64      as Base64
-import qualified Data.ByteString.Lazy        as L
-import qualified Data.ByteString.UTF8        as BU
-import qualified Data.Conduit                as C
-import qualified Data.Conduit.List           as CL
-import qualified Data.Serialize              as Serialize
-import qualified Data.Text                   as T
-import qualified Data.Text.Encoding          as T
-import qualified Data.Text.IO                as T
-import qualified Network.HTTP.Conduit        as HTTP
-import qualified Network.HTTP.Types          as HTTP
-import qualified Text.XML                    as XML
-import qualified Text.XML.Cursor             as Cu
+import           Text.XML.Cursor          hiding (force, forceM)
+import qualified Blaze.ByteString.Builder as Blaze
+import qualified Control.Exception        as E
+import qualified Control.Failure          as F
+import qualified Crypto.Classes           as Crypto
+import qualified Crypto.HMAC              as HMAC
+import qualified Crypto.Hash.MD5          as MD5
+import qualified Crypto.Hash.SHA1         as SHA1
+import qualified Crypto.Hash.SHA256       as SHA256
+import qualified Data.ByteString          as B
+import qualified Data.ByteString.Base64   as Base64
+import qualified Data.ByteString.Lazy     as L
+import qualified Data.ByteString.UTF8     as BU
+import qualified Data.Conduit             as C
+import qualified Data.Conduit.List        as CL
+import qualified Data.Serialize           as Serialize
+import qualified Data.Text                as T
+import qualified Data.Text.Encoding       as T
+import qualified Data.Text.IO             as T
+import qualified Network.HTTP.Conduit     as HTTP
+import qualified Network.HTTP.Types       as HTTP
+import qualified Text.XML                 as XML
+import qualified Text.XML.Cursor          as Cu
 
 -- | A response with metadata. Can also contain an error response, or an internal error, via 'Attempt'.
 -- 
@@ -137,7 +138,7 @@ tellMetadataRef r m = modifyIORef r (`mappend` m)
 -- | A full HTTP response parser. Takes HTTP status, response headers, and response body.
 type HTTPResponseConsumer a =  HTTP.Status
                             -> HTTP.ResponseHeaders
-                            -> Source (ResourceT IO) ByteString
+                            -> C.ResumableSource (ResourceT IO) ByteString
                             -> ResourceT IO a
 
 -- | Class for types that AWS HTTP responses can be parsed into.
@@ -156,7 +157,7 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
     responseConsumer _ _ status headers bufsource = do
-      chunks <- bufsource $$ CL.consume
+      chunks <- bufsource $$+- CL.consume
       return (HTTP.Response status HTTP.http11 headers $ L.fromChunks chunks)
 
 -- | Associates a request type and a response type in a bi-directional way.
@@ -290,7 +291,7 @@ data SignedQuery
         -- | Request body content type.
       , sqContentType :: Maybe B.ByteString
         -- | Request body content MD5.
-      , sqContentMd5 :: Maybe B.ByteString
+      , sqContentMd5 :: Maybe MD5.MD5
         -- | Additional Amazon "amz" headers.
       , sqAmzHeaders :: HTTP.RequestHeaders
         -- | Additional non-"amz" headers.
@@ -316,7 +317,7 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.queryString = HTTP.renderQuery False sqQuery
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
-                                        , fmap (\md5 -> ("Content-MD5", md5)) sqContentMd5
+                                        , fmap (\md5 -> ("Content-MD5", Serialize.encode md5)) sqContentMd5
                                         , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
                               ++ sqAmzHeaders
                               ++ sqOtherHeaders
@@ -559,7 +560,7 @@ xmlCursorConsumer ::
     -> IORef m
     -> HTTPResponseConsumer a
 xmlCursorConsumer parse metadataRef _status _headers source
-    = do doc <- source $$ XML.sinkDoc XML.def
+    = do doc <- source $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata

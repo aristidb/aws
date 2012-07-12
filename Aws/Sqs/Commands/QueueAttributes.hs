@@ -41,6 +41,7 @@ formatAttributes attrs =
     1 -> [("AttributeName", Just $ B.pack $ T.unpack $ printQueueAttribute $ attrs !! 0)]
     _ -> zipWith (\ x y -> ((B.concat ["AttributeName.", B.pack $ show $ y]), Just $ B.pack $ T.unpack $ printQueueAttribute x) ) attrs [1 :: Integer ..]
 
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery GetQueueAttributes where
     type ServiceConfiguration GetQueueAttributes = SqsConfiguration
     signQuery GetQueueAttributes{..} = sqsSignQuery SqsQuery {
@@ -65,6 +66,7 @@ instance ResponseConsumer r SetQueueAttributesResponse where
         parse _ = do
           return SetQueueAttributesResponse {}
           
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery SetQueueAttributes  where 
     type ServiceConfiguration SetQueueAttributes  = SqsConfiguration
     signQuery SetQueueAttributes {..} = sqsSignQuery SqsQuery { 

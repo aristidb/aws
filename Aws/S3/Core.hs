@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts #-}
+{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts, Rank2Types #-}
 module Aws.S3.Core where
 
 import           Aws.Core
@@ -6,7 +6,7 @@ import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Attempt                   (Attempt(..))
-import           Data.Conduit                   (($$))
+import           Data.Conduit                   (($$+-))
 import           Data.Function
 import           Data.IORef
 import           Data.List
@@ -20,10 +20,12 @@ import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
 import qualified Control.Failure                as F
+import qualified Crypto.Hash.MD5                as MD5
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.CaseInsensitive           as CI
 import qualified Data.Conduit                   as C
+import qualified Data.Serialize                 as Serialize
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import qualified Network.HTTP.Conduit           as HTTP
@@ -121,7 +123,7 @@ data S3Query
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QContentType :: Maybe B.ByteString
-      , s3QContentMd5 :: Maybe B.ByteString
+      , s3QContentMd5 :: Maybe MD5.MD5
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
       , s3QRequestBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
@@ -144,7 +146,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       , sqHost = B.intercalate "." $ catMaybes host
       , sqPort = s3Port
       , sqPath = mconcat $ catMaybes path
-      , sqQuery = sortedSubresources ++ s3QQuery ++ authQuery
+      , sqQuery = sortedSubresources ++ s3QQuery ++ authQuery :: HTTP.Query
       , sqDate = Just signatureTime
       , sqAuthorization = authorization
       , sqContentType = s3QContentType
@@ -176,7 +178,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       sig = signature signatureCredentials HmacSHA1 stringToSign
       stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
                        [[Blaze.copyByteString $ httpMethod s3QMethod]
-                       , [maybe mempty Blaze.copyByteString s3QContentMd5]
+                       , [maybe mempty (Blaze.copyByteString . Serialize.encode) s3QContentMd5]
                        , [maybe mempty Blaze.copyByteString s3QContentType]
                        , [Blaze.copyByteString $ case ti of
                                                    AbsoluteTimestamp time -> fmtRfc822Time time
@@ -187,9 +189,9 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
           where amzHeader (k, v) = Blaze.copyByteString (CI.foldedCase k) `mappend` Blaze8.fromChar ':' `mappend` Blaze.copyByteString v
       (authorization, authQuery) = case ti of
                                  AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
-                                 AbsoluteExpires time -> (Nothing, HTTP.simpleQueryToQuery $ makeAuthQuery time)
+                                 AbsoluteExpires time -> (Nothing, HTTP.toQuery $ makeAuthQuery time)
       makeAuthQuery time
-          = [("Expires", fmtTimeEpochSeconds time)
+          = [("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)
             , ("AWSAccessKeyId", accessKeyID signatureCredentials)
             , ("SignatureMethod", "HmacSHA256")
             , ("Signature", sig)]
@@ -222,7 +224,7 @@ s3BinaryResponseConsumer inner metadataRef = s3ResponseConsumer inner metadataRe
 
 s3ErrorResponseConsumer :: HTTPResponseConsumer a
 s3ErrorResponseConsumer status _headers source
-    = do doc <- source $$ XML.sinkDoc XML.def
+    = do doc <- source $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Success err      -> C.monadThrow err

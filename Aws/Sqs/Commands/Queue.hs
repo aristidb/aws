@@ -30,6 +30,7 @@ instance ResponseConsumer r CreateQueueResponse where
           url <- force "Missing Queue Url" $ el $// Cu.laxElement "QueueUrl" &/ Cu.content
           return CreateQueueResponse{ cqrQueueUrl = url}
 
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery CreateQueue  where
     type ServiceConfiguration CreateQueue  = SqsConfiguration
     signQuery CreateQueue {..} = sqsSignQuery SqsQuery {
@@ -55,6 +56,7 @@ instance ResponseConsumer r DeleteQueueResponse where
       where
         parse _ = do return DeleteQueueResponse{}
           
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery DeleteQueue  where 
     type ServiceConfiguration DeleteQueue  = SqsConfiguration
     signQuery DeleteQueue {..} = sqsSignQuery SqsQuery {
@@ -79,6 +81,7 @@ instance ResponseConsumer r ListQueuesResponse where
             let queues = el $// Cu.laxElement "QueueUrl" &/ Cu.content
             return ListQueuesResponse { lqrQueueUrls = queues }
 
+-- | ServiceConfiguration: 'SqsConfiguration'
 instance SignQuery ListQueues where
     type ServiceConfiguration ListQueues = SqsConfiguration
     signQuery ListQueues{..} = sqsSignQuery SqsQuery {

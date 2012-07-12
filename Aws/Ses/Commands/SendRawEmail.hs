@@ -20,6 +20,7 @@ data SendRawEmail =
       }
     deriving (Eq, Ord, Show, Typeable)
 
+-- | ServiceConfiguration: 'SesConfiguration'
 instance SignQuery SendRawEmail where
     type ServiceConfiguration SendRawEmail = SesConfiguration
     signQuery SendRawEmail {..} =

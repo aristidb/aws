@@ -23,6 +23,7 @@ import           Aws.Core
 import           Text.Hamlet.XML            (xml)
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
+import           Data.Map                   (empty)
 import qualified Text.XML                   as XML
 import qualified Data.ByteString            as B
 
@@ -47,7 +48,7 @@ instance SignQuery ChangeResourceRecordSets where
       method = Post
       resource = (T.encodeUtf8 . qualifiedIdText) crrHostedZoneId `B.append` "/rrset"
       query = []
-      body = Just $ XML.Element "ChangeResourceRecordSetsRequest" []
+      body = Just $ XML.Element "ChangeResourceRecordSetsRequest" empty
              [xml|
              <ChangeBatch>
                $maybe c <- crrComment

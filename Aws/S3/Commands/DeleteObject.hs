@@ -16,6 +16,7 @@ data DeleteObject = DeleteObject {
 data DeleteObjectResponse = DeleteObjectResponse{
 }
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery DeleteObject where
     type ServiceConfiguration DeleteObject = S3Configuration
     signQuery DeleteObject {..} = s3SignQuery S3Query {

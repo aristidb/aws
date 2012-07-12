@@ -51,7 +51,7 @@ instance ResponseConsumer r GetDateResponse where
     where
     -- TODO add proper error handling
     date = fromJust $ do 
-      str <- findHeaderValue headers HTTP.headerDate
+      str <- findHeaderValue headers HTTP.hDate
       -- FIXME: this is probably to restrictive. We should support full rfc1123
       parseTime defaultTimeLocale "%a, %d %b %Y %H:%M:%S %Z" (unpack str)
 

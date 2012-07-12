@@ -4,6 +4,7 @@ module Aws.S3.Commands.PutBucket where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Monad
+import qualified Data.Map             as M
 import qualified Data.Text            as T
 import qualified Data.Text.Encoding   as T
 import qualified Network.HTTP.Conduit as HTTP
@@ -21,6 +22,7 @@ data PutBucketResponse
     = PutBucketResponse
     deriving (Show)
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery PutBucket where
     type ServiceConfiguration PutBucket = S3Configuration
 
@@ -47,11 +49,11 @@ instance SignQuery PutBucket where
                                            })
         where root = XML.Element {
                                XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}CreateBucketConfiguration"
-                             , XML.elementAttributes = []
+                             , XML.elementAttributes = M.empty
                              , XML.elementNodes = [
                                                    XML.NodeElement (XML.Element {
                                                                              XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}LocationConstraint"
-                                                                           , XML.elementAttributes = []
+                                                                           , XML.elementAttributes = M.empty
                                                                            , XML.elementNodes = [XML.NodeContent pbLocationConstraint]
                                                                            })
                                                   ]

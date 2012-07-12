@@ -22,6 +22,7 @@ import           Aws.Core
 import           Aws.Route53.Core
 import           Text.Hamlet.XML            (xml)
 import qualified Data.Text                  as T
+import           Data.Map                   (empty)
 import qualified Text.XML                   as XML
 
 data CreateHostedZone = CreateHostedZone
@@ -46,7 +47,7 @@ instance SignQuery CreateHostedZone where
       method = Post
       resource = "/hostedzone"
       query = []
-      body = Just $ XML.Element "CreateHostedZoneRequest" []
+      body = Just $ XML.Element "CreateHostedZoneRequest" empty
              [xml|
              <Name>#{dText chzName}
              <CallerReference>#{chzCallerReference}

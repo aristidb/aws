@@ -106,7 +106,7 @@ sdbSignQuery q si sd
       }
     where
       ah = HmacSHA256
-      q' = HTTP.simpleQueryToQuery . sort $ q ++ ("Version", "2009-04-15") : queryAuth
+      q' = HTTP.toQuery . sort $ q ++ ("Version", "2009-04-15") : queryAuth
       ti = signatureTimeInfo sd
       cr = signatureCredentials sd
       queryAuth = [case ti of

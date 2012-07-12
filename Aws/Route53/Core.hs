@@ -74,7 +74,7 @@ module Aws.Route53.Core
   -- | This functions extend 'Network.HTTP.Types'
 , findHeader
 , findHeaderValue
-, headerRequestId
+, hRequestId
 ) where
 
 import           Aws.Core
@@ -82,26 +82,28 @@ import           Data.IORef
 import           Data.Monoid
 import           Data.String
 import           Data.Typeable
-import           Control.Monad        (MonadPlus, mzero, mplus, liftM)
-import           Data.List            (find)
-import           Data.Maybe           (listToMaybe, fromJust)
-import           Data.Text            (Text, unpack)
-import           Data.Text.Encoding   (decodeUtf8)
-import           Data.Time            (UTCTime)
-import           Data.Time.Format     (parseTime)
-import           System.Locale        (defaultTimeLocale)
-import           Text.Hamlet.XML      (xml)
-import           Text.XML             (elementAttributes)
-import           Text.XML.Cursor      (($/), ($//), (&|), ($.//), laxElement)
-import qualified Control.Exception    as C
-import qualified Control.Failure      as F
-import qualified Data.ByteString      as B
-import qualified Data.Text            as T
-import qualified Data.Text.Encoding   as T
-import qualified Network.HTTP.Conduit as HTTP
-import qualified Network.HTTP.Types   as HTTP
-import qualified Text.XML             as XML
-import qualified Text.XML.Cursor      as Cu
+import           Control.Monad             (MonadPlus, mzero, mplus, liftM)
+import           Data.List                 (find)
+import           Data.Map                  (insert, empty)
+import           Data.Maybe                (listToMaybe, fromJust)
+import           Data.Text                 (Text, unpack)
+import           Data.Text.Encoding        (decodeUtf8)
+import           Data.Time                 (UTCTime)
+import           Data.Time.Format          (parseTime)
+import           System.Locale             (defaultTimeLocale)
+import           Text.Hamlet.XML           (xml)
+import           Text.XML                  (elementAttributes)
+import           Text.XML.Cursor           (($/), ($//), (&|), ($.//), laxElement)
+import qualified Control.Exception         as C
+import qualified Control.Failure           as F
+import qualified Data.ByteString           as B
+import qualified Data.Text                 as T
+import qualified Data.Text.Encoding        as T
+import qualified Network.HTTP.Conduit      as HTTP
+import qualified Network.HTTP.Types        as HTTP
+import qualified Network.HTTP.Types.Header as HTTP
+import qualified Text.XML                  as XML
+import qualified Text.XML.Cursor           as Cu
 
 -- -------------------------------------------------------------------------- --
 -- Configuration
@@ -202,7 +204,7 @@ route53SignQuery method resource query body Route53Configuration{..} sd
                      , XML.documentRoot = b { elementAttributes = addNamespace (elementAttributes b) }
                      , XML.documentEpilogue = []
                      }
-      addNamespace attrs = maybe (("xmlns",route53XmlNamespace):attrs) (const attrs) $ lookup "xmlns" attrs
+      addNamespace attrs = insert "xmlns" route53XmlNamespace attrs
                            
 
 -- -------------------------------------------------------------------------- --
@@ -220,7 +222,7 @@ route53ResponseConsumer inner metadataRef status headers =
     xmlCursorConsumer parse metadataRef status headers
     where
       parse cursor = do
-        tellMetadata . Route53Metadata . fmap decodeUtf8 $ findHeaderValue headers headerRequestId
+        tellMetadata . Route53Metadata . fmap decodeUtf8 $ findHeaderValue headers hRequestId
         case cursor $/ Cu.laxElement "Error" of
           []      -> inner cursor
           (err:_) -> fromError err
@@ -321,7 +323,7 @@ instance Route53Parseable HostedZone where
 
 instance Route53XmlSerializable HostedZone where
 
-  toXml HostedZone{..} = XML.Element "HostedZone" [] [xml|
+  toXml HostedZone{..} = XML.Element "HostedZone" empty [xml|
     <Id>#{idText hzId}
     <Name>#{dText hzName}
     <CallerReference>#{hzCallerReference}
@@ -331,7 +333,7 @@ instance Route53XmlSerializable HostedZone where
     |]
 
 instance Route53XmlSerializable HostedZones where
-  toXml hostedZones = XML.Element "HostedZones" [] $ (XML.NodeElement . toXml) `map` hostedZones
+  toXml hostedZones = XML.Element "HostedZones" empty $ (XML.NodeElement . toXml) `map` hostedZones
 
 -- -------------------------------------------------------------------------- --
 -- Delegation Set
@@ -423,7 +425,7 @@ type ResourceRecordSets = [ResourceRecordSet]
 
 instance Route53XmlSerializable ResourceRecordSet where
 
-  toXml ResourceRecordSet{..} = XML.Element "ResourceRecordSet" [] [xml|
+  toXml ResourceRecordSet{..} = XML.Element "ResourceRecordSet" empty [xml|
     <Name>#{dText rrsName}
     <Type>#{typeToText rrsType}
     $maybe a <- rrsAliasTarget
@@ -443,10 +445,10 @@ instance Route53XmlSerializable ResourceRecordSet where
     |]
 
 instance Route53XmlSerializable ResourceRecord where
-  toXml ResourceRecord{..} = XML.Element "ResourceRecord" [] [xml|  <Value>#{value} |]
+  toXml ResourceRecord{..} = XML.Element "ResourceRecord" empty [xml|  <Value>#{value} |]
 
 instance Route53XmlSerializable AliasTarget where
-  toXml AliasTarget{..} = XML.Element "AliasTarget" [] [xml|
+  toXml AliasTarget{..} = XML.Element "AliasTarget" empty [xml|
     <HostedZoneId>#{idText atHostedZoneId}
     <DNSName>#{dText atDNSName}
     |]
@@ -549,12 +551,12 @@ intToText = T.pack . show
 -- -------------------------------------------------------------------------- --
 -- Utility methods that extend the functionality of 'Network.HTTP.Types' 
 
-headerRequestId :: HTTP.Ascii -> HTTP.Header
-headerRequestId = (,) "x-amzn-requestid"
+hRequestId :: HTTP.HeaderName
+hRequestId = "x-amzn-requestid"
 
-findHeader :: [HTTP.Header] -> (HTTP.Ascii -> HTTP.Header) -> Maybe HTTP.Header
-findHeader headers header = find (\h@(_,v) -> h == header v) headers
+findHeader:: [HTTP.Header] -> HTTP.HeaderName -> Maybe HTTP.Header
+findHeader headers hName = find ((==hName).fst) headers
 
-findHeaderValue :: [HTTP.Header] -> (HTTP.Ascii -> HTTP.Header) -> Maybe HTTP.Ascii
-findHeaderValue headers = fmap snd . findHeader headers
+findHeaderValue :: [HTTP.Header] -> HTTP.HeaderName -> Maybe B.ByteString
+findHeaderValue headers hName = lookup hName headers
 

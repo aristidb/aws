@@ -60,7 +60,7 @@ import Data.Monoid
 
 {- A small function to save the object's data into a file. -}
 saveObject :: Aws.HTTPResponseConsumer ()
-saveObject status headers source = source $$ sinkFile "cloud-remote.pdf"
+saveObject status headers source = source $$+- sinkFile "cloud-remote.pdf"
 
 main :: IO ()
 main = do
@@ -91,6 +91,37 @@ You can also find this example in the source distribution in the ~Examples/~ fol
   ~PathStyle~. Note that such bucket names are only allowed in the US standard region, so your endpoint needs to be US standard.
 
 * Release Notes
+
+** 0.7 series (planned)
+
+Feature ideas:
+
+- Change ServiceConfiguration concept so as to indicate in the type whether this is for URI-only requests (i.e.
+  awsUri)
+
+** 0.6 series
+
+- 0.6.0
+  - API Cleanup
+    - General: Use Crypto.Hash.MD5.MD5 when a Content-MD5 hash is required, instead of ByteString.
+    - S3: Made parameter order to S3.putObject consistent with S3.getObject.
+  - Updated dependencies:
+    - conduit 0.5 (as well as http-conduit 1.5 and xml-conduit 1.0).
+    - http-types 0.7.
+  - Minor changes.
+  - Internal changes (notable for people who want to add more commands):
+    - http-types' new 'QueryLike' interface allows creating query lists more conveniently.
+
+** 0.5 series
+
+- 0.5.0 ::
+    New configuration system: configuration split into general and service-specific parts.
+
+    Significantly improved API reference documentation.
+
+    Re-organised modules to make library easier to understand.
+
+    Smaller improvements.
 
 ** 0.4 series
 
