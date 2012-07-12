@@ -2,25 +2,19 @@
 module Aws.S3.Commands.PutObject
 where
 
-import           Aws.Http
-import           Aws.Response
-import           Aws.S3.Info
-import           Aws.S3.Metadata
-import           Aws.S3.Model
-import           Aws.S3.Query
-import           Aws.S3.Response
-import           Aws.Signature
-import           Aws.Transaction
+import           Aws.Core
+import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Arrow              (second)
-import           Data.ByteString.Char8      ({- IsString -})
+import           Control.Arrow         (second)
+import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
-import qualified Data.ByteString.Char8      as B
-import qualified Data.CaseInsensitive       as CI
-import qualified Data.Text                  as T
-import qualified Data.Text.Encoding         as T
-import qualified Network.HTTP.Conduit       as HTTP
-import qualified Data.Conduit       as C
+import qualified Crypto.Hash.MD5       as MD5
+import qualified Data.ByteString.Char8 as B
+import qualified Data.CaseInsensitive  as CI
+import qualified Data.Conduit          as C
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
+import qualified Network.HTTP.Conduit  as HTTP
 
 data PutObject = PutObject {
   poObjectName :: T.Text,
@@ -29,7 +23,7 @@ data PutObject = PutObject {
   poCacheControl :: Maybe T.Text,
   poContentDisposition :: Maybe T.Text,
   poContentEncoding :: Maybe T.Text,
-  poContentMD5 :: Maybe B.ByteString,
+  poContentMD5 :: Maybe MD5.MD5,
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
@@ -37,8 +31,8 @@ data PutObject = PutObject {
   poMetadata :: [(T.Text,T.Text)]
 }
 
-putObject :: T.Text -> Bucket -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
-putObject obj bucket body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
+putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
 
 data PutObjectResponse 
   = PutObjectResponse {
@@ -46,8 +40,9 @@ data PutObjectResponse
     }
   deriving (Show)
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery PutObject where
-    type Info PutObject = S3Info
+    type ServiceConfiguration PutObject = S3Configuration
     signQuery PutObject {..} = s3SignQuery S3Query {
                                  s3QMethod = Put
                                , s3QBucket = Just $ T.encodeUtf8 poBucket

@@ -1,19 +1,30 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
 module Aws.Aws
+( -- * Logging
+  LogLevel(..)
+, Logger
+, defaultLog
+  -- * Configuration
+, Configuration(..)
+, baseConfiguration
+, dbgConfiguration
+  -- * Transaction runners
+  -- ** Safe runners
+, aws
+, awsRef
+, simpleAws
+, simpleAwsRef
+  -- ** Unsafe runners
+, unsafeAws
+, unsafeAwsRef
+  -- ** URI runners
+, awsUri
+)
 where
 
-import           Aws.Credentials
-import           Aws.Http
-import           Aws.Query
-import           Aws.Response
-import           Aws.S3.Info
-import           Aws.Ses.Info
-import           Aws.Signature
-import           Aws.SimpleDb.Info
-import           Aws.Sqs.Info
-import           Aws.Transaction
+import           Aws.Core
 import           Control.Applicative
-import           Control.Monad.Trans  (liftIO)
+import           Control.Monad.Trans  (MonadIO(liftIO))
 import           Data.Attempt         (attemptIO)
 import           Data.Conduit         (runResourceT)
 import           Data.IORef
@@ -25,6 +36,7 @@ import qualified Data.Text            as T
 import qualified Data.Text.IO         as T
 import qualified Network.HTTP.Conduit as HTTP
 
+-- | The severity of a log message, in rising order.
 data LogLevel
     = Debug
     | Info
@@ -32,133 +44,154 @@ data LogLevel
     | Error
     deriving (Show, Eq, Ord)
 
-data Configuration
-    = Configuration {
-       timeInfo :: TimeInfo
-      , credentials :: Credentials
-      , sdbInfo :: SdbInfo
-      , sdbInfoUri :: SdbInfo
-      , s3Info :: S3Info
-      , s3InfoUri :: S3Info
-      , sqsInfo :: SqsInfo
-      , sqsInfoUri :: SqsInfo
-      , sesInfo :: SesInfo
-      , sesInfoUri :: SesInfo
-      , logger :: LogLevel -> T.Text -> IO ()
-      }
+-- | The interface for any logging function. Takes log level and a log message, and can perform an arbitrary
+-- IO action.
+type Logger = LogLevel -> T.Text -> IO ()
 
-defaultLog :: LogLevel -> LogLevel -> T.Text -> IO ()
+-- | The default logger @defaultLog minLevel@, which prints log messages above level @minLevel@ to @stderr@.
+defaultLog :: LogLevel -> Logger
 defaultLog minLevel lev t | lev >= minLevel = T.hPutStrLn stderr $ T.concat [T.pack $ show lev, ": ", t]
                           | otherwise       = return ()
 
-class ConfigurationFetch a where
-    configurationFetch :: Configuration -> a
-    configurationFetchUri :: Configuration -> a
-    configurationFetchUri = configurationFetch
+-- | The configuration for an AWS request. You can use multiple configurations in parallel, even over the same HTTP
+-- connection manager.
+data Configuration
+    = Configuration {
+        -- | Whether to restrict the signature validity with a plain timestamp, or with explicit expiration
+        -- (absolute or relative).
+        timeInfo :: TimeInfo
+        -- | AWS access credentials.
+      , credentials :: Credentials
+        -- | The error / message logger.
+      , logger :: Logger
+      }
 
-instance ConfigurationFetch () where
-    configurationFetch _ = ()
-
-instance ConfigurationFetch SdbInfo where
-    configurationFetch = sdbInfo
-    configurationFetchUri = sdbInfoUri
-
-instance ConfigurationFetch S3Info where
-    configurationFetch = s3Info
-    configurationFetchUri = s3InfoUri
-
-instance ConfigurationFetch SqsInfo where
-    configurationFetch = sqsInfo
-    configurationFetchUri = sqsInfoUri
-
-instance ConfigurationFetch SesInfo where
-    configurationFetch = sesInfo
-    configurationFetchUri = sesInfoUri
-
-baseConfiguration :: IO Configuration
+-- | The default configuration, with credentials loaded from environment variable or configuration file
+-- (see 'loadCredentialsDefault').
+baseConfiguration :: MonadIO io => io Configuration
 baseConfiguration = do
   Just cr <- loadCredentialsDefault
   return Configuration {
                       timeInfo = Timestamp
                     , credentials = cr
-                    , sdbInfo = sdbHttpsPost sdbUsEast
-                    , sdbInfoUri = sdbHttpsGet sdbUsEast
-                    , s3Info = s3 HTTP s3EndpointUsClassic False
-                    , s3InfoUri = s3 HTTP s3EndpointUsClassic True
-                    , sqsInfo = sqs HTTP sqsEndpointUsClassic False
-                    , sqsInfoUri = sqs HTTP sqsEndpointUsClassic True
-                    , sesInfo = sesHttpsPost sesUsEast
-                    , sesInfoUri = sesHttpsGet sesUsEast
                     , logger = defaultLog Warning
                     }
 -- TODO: better error handling when credentials cannot be loaded
 
-debugConfiguration :: IO Configuration
-debugConfiguration = do
+-- | Debug configuration, which avoids using HTTPS for some queries. DO NOT USE THIS IN PRODUCTION!
+dbgConfiguration :: MonadIO io => io Configuration
+dbgConfiguration = do
   c <- baseConfiguration
-  return c {
-      sdbInfo = sdbHttpPost sdbUsEast
-    , sdbInfoUri = sdbHttpGet sdbUsEast
-    , logger = defaultLog Debug
-    }
+  return c { logger = defaultLog Debug }
 
-aws :: (Transaction r a
-       , ConfigurationFetch (Info r))
-      => Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
+-- | Run an AWS transaction, with HTTP manager and metadata wrapped in a 'Response'.
+-- 
+-- All errors are caught and wrapped in the 'Response' value.
+-- 
+-- Usage (with existing 'HTTP.Manager'):
+-- @
+--     resp <- aws cfg serviceCfg manager request
+-- @
+aws :: (Transaction r a, MonadIO io)
+      => Configuration -> ServiceConfiguration r -> HTTP.Manager -> r -> io (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
-awsRef :: (Transaction r a
-       , ConfigurationFetch (Info r))
-      => Configuration -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
+-- | Run an AWS transaction, with HTTP manager and metadata returned in an 'IORef'.
+-- 
+-- Errors are not caught, and need to be handled with exception handlers.
+-- 
+-- Usage (with existing 'HTTP.Manager'):
+-- @
+--     ref <- newIORef mempty;
+--     resp <- awsRef cfg serviceCfg manager request
+-- @
+
+-- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
+awsRef :: (Transaction r a, MonadIO io)
+      => Configuration -> ServiceConfiguration r -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> io a
 awsRef = unsafeAwsRef
 
-simpleAws :: (Transaction r a
-             , ConfigurationFetch (Info r))
-            => Configuration -> r -> IO (Response (ResponseMetadata a) a)
-simpleAws cfg request = HTTP.withManager $ \manager -> liftIO $ aws cfg manager request
+-- | Run an AWS transaction, /without/ HTTP manager and with metadata wrapped in a 'Response'.
+-- 
+-- Note that this is potentially less efficient than using 'aws', because HTTP connections cannot be re-used.
+-- 
+-- All errors are caught and wrapped in the 'Response' value.
+-- 
+-- Usage:
+-- @
+--     resp <- simpleAws cfg serviceCfg request
+-- @
+simpleAws :: (Transaction r a, MonadIO io)
+            => Configuration -> ServiceConfiguration r -> r -> io (Response (ResponseMetadata a) a)
+simpleAws cfg scfg request = liftIO $ HTTP.withManager $ \manager -> aws cfg scfg manager request
 
-simpleAwsRef :: (Transaction r a
-             , ConfigurationFetch (Info r))
-            => Configuration -> IORef (ResponseMetadata a) -> r -> IO a
-simpleAwsRef cfg metadataRef request = HTTP.withManager $ \manager -> liftIO $ awsRef cfg manager metadataRef request
+-- | Run an AWS transaction, /without/ HTTP manager and with metadata returned in an 'IORef'.
+-- 
+-- Errors are not caught, and need to be handled with exception handlers.
+-- 
+-- Usage:
+-- @
+--     ref <- newIORef mempty;
+--     resp <- simpleAwsRef cfg serviceCfg request
+-- @
 
+-- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
+simpleAwsRef :: (Transaction r a, MonadIO io)
+            => Configuration -> ServiceConfiguration r -> IORef (ResponseMetadata a) -> r -> io a
+simpleAwsRef cfg scfg metadataRef request = liftIO $ HTTP.withManager $ 
+                                              \manager -> awsRef cfg scfg manager metadataRef request
+
+-- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
+-- 
+-- This is especially useful for debugging and development, you should not have to use it in production.
+-- 
+-- All errors are caught and wrapped in the 'Response' value.
 unsafeAws
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
       SignQuery r,
-      ConfigurationFetch (Info r)) =>
-     Configuration -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
-unsafeAws cfg manager request = do
+      MonadIO io) =>
+     Configuration -> ServiceConfiguration r -> HTTP.Manager -> r -> io (Response (ResponseMetadata a) a)
+unsafeAws cfg scfg manager request = liftIO $ do
   metadataRef <- newIORef mempty
   resp <- attemptIO (id :: E.SomeException -> E.SomeException) $
-            unsafeAwsRef cfg manager metadataRef request
+            unsafeAwsRef cfg scfg manager metadataRef request
   metadata <- readIORef metadataRef
   return $ Response metadata resp
 
+-- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
+-- 
+-- This is especially useful for debugging and development, you should not have to use it in production.
+-- 
+-- Errors are not caught, and need to be handled with exception handlers.
 unsafeAwsRef
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
       SignQuery r,
-      ConfigurationFetch (Info r)) =>
-     Configuration -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
-unsafeAwsRef cfg manager metadataRef request = do
+      MonadIO io) =>
+     Configuration -> ServiceConfiguration r -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> io a
+unsafeAwsRef cfg info manager metadataRef request = liftIO $ do
   sd <- signatureData <$> timeInfo <*> credentials $ cfg
-  let info = configurationFetch cfg
   let q = signQuery request info sd
   logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   let httpRequest = queryToHttpRequest q
+  logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
   resp <- runResourceT $ do
       HTTP.Response status _ headers body <- HTTP.http httpRequest manager
       responseConsumer request metadataRef status headers body
   return resp
 
-awsUri :: (SignQuery request
-          , ConfigurationFetch (Info request))
-         => Configuration -> request -> IO B.ByteString
-awsUri cfg request = do
+-- | Run a URI-only AWS transaction. Returns a URI that can be sent anywhere. Does not work with all requests.
+-- 
+-- Usage:
+-- @
+--     uri <- awsUri cfg request
+-- @
+awsUri :: (SignQuery request, MonadIO io)
+         => Configuration -> ServiceConfiguration request -> request -> io B.ByteString
+awsUri cfg info request = liftIO $ do
   let ti = timeInfo cfg
       cr = credentials cfg
-      info = configurationFetchUri cfg
   sd <- signatureData ti cr
   let q = signQuery request info sd
   logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)

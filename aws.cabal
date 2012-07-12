@@ -6,7 +6,7 @@ Name:                aws
 -- The package version. See the Haskell package versioning policy
 -- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
 -- standards guiding when and how versions should be incremented.
-Version:             0.4.1
+Version:             0.6.0
 
 -- A short (one-line) description of the package.
 Synopsis:            Amazon Web Services (AWS) for Haskell
@@ -41,6 +41,7 @@ Build-type:          Simple
 -- a README.
 Extra-source-files:  README.org
                      Examples/GetObject.hs
+                     Examples/SimpleDb.hs
 
 -- Constraint on the version of Cabal needed to build this package.
 Cabal-version:       >=1.8
@@ -48,7 +49,7 @@ Cabal-version:       >=1.8
 Source-repository this
   type: git
   location: https://github.com/aristidb/aws.git
-  tag: 0.4.1
+  tag: 0.5.0
 
 Source-repository head
   type: git
@@ -59,10 +60,7 @@ Library
   Exposed-modules:
                        Aws,
                        Aws.Aws,
-                       Aws.Credentials,
-                       Aws.Http,
-                       Aws.Query,
-                       Aws.Response,
+                       Aws.Core,
                        Aws.S3,
                        Aws.S3.Commands,
                        Aws.S3.Commands.DeleteObject,
@@ -71,62 +69,24 @@ Library
                        Aws.S3.Commands.GetService,
                        Aws.S3.Commands.PutBucket,
                        Aws.S3.Commands.PutObject,
-                       Aws.S3.Error,
-                       Aws.S3.Info,
-                       Aws.S3.Metadata,
-                       Aws.S3.Model,
-                       Aws.S3.Query,
-                       Aws.S3.Response,
-                       Aws.Signature,
+                       Aws.S3.Core,
                        Aws.SimpleDb,
                        Aws.SimpleDb.Commands,
-                       Aws.SimpleDb.Commands.BatchDeleteAttributes,
-                       Aws.SimpleDb.Commands.BatchPutAttributes,
-                       Aws.SimpleDb.Commands.CreateDomain,
-                       Aws.SimpleDb.Commands.DeleteAttributes,
-                       Aws.SimpleDb.Commands.DeleteDomain,
-                       Aws.SimpleDb.Commands.DomainMetadata,
-                       Aws.SimpleDb.Commands.GetAttributes,
-                       Aws.SimpleDb.Commands.ListDomains,
-                       Aws.SimpleDb.Commands.PutAttributes,
+                       Aws.SimpleDb.Commands.Attributes,
+                       Aws.SimpleDb.Commands.Domain,
                        Aws.SimpleDb.Commands.Select,
-                       Aws.SimpleDb.Error,
-                       Aws.SimpleDb.Info,
-                       Aws.SimpleDb.Metadata,
-                       Aws.SimpleDb.Model,
-                       Aws.SimpleDb.Query,
-                       Aws.SimpleDb.Response,
+                       Aws.SimpleDb.Core,
                        Aws.Sqs,
                        Aws.Sqs.Commands,
-                       Aws.Sqs.Commands.AddPermission,
-                       Aws.Sqs.Commands.DeleteMessage,
-                       Aws.Sqs.Commands.DeleteQueue,
-                       Aws.Sqs.Commands.ListQueues,
-                       Aws.Sqs.Commands.GetQueueAttributes,
-                       Aws.Sqs.Commands.ChangeMessageVisibility,
-                       Aws.Sqs.Commands.CreateQueue,
-                       Aws.Sqs.Commands.ReceiveMessage,
-                       Aws.Sqs.Commands.RemovePermission,
-                       Aws.Sqs.Commands.SendMessage,
-                       Aws.Sqs.Commands.SetQueueAttributes,
-                       Aws.Sqs.Error,
-                       Aws.Sqs.Info,
-                       Aws.Sqs.Metadata,
-                       Aws.Sqs.Model,
-                       Aws.Sqs.Query,
-                       Aws.Sqs.Response,
+                       Aws.Sqs.Commands.Permission,
+                       Aws.Sqs.Commands.Message,
+                       Aws.Sqs.Commands.Queue,
+                       Aws.Sqs.Commands.QueueAttributes,
+                       Aws.Sqs.Core,
                        Aws.Ses,
                        Aws.Ses.Commands,
                        Aws.Ses.Commands.SendRawEmail,
-                       Aws.Ses.Error,
-                       Aws.Ses.Info,
-                       Aws.Ses.Metadata,
-                       Aws.Ses.Model,
-                       Aws.Ses.Query,
-                       Aws.Ses.Response,
-                       Aws.Transaction,
-                       Aws.Util,
-                       Aws.Xml
+                       Aws.Ses.Core
 
   -- Packages needed in order to build this package.
   Build-depends:       attempt              >= 0.3.1.1 && < 0.5,
@@ -136,14 +96,15 @@ Library
                        bytestring           == 0.9.*,
                        case-insensitive     >= 0.2     && < 0.5,
                        cereal               == 0.3.*,
-                       conduit              >= 0.4     && < 0.5,
+                       conduit              >= 0.5     && < 0.6,
+                       containers           >= 0.4,
                        crypto-api           >= 0.9,
                        cryptohash           >= 0.6     && < 0.8,
                        directory            >= 1.0     && < 1.2,
                        failure              >= 0.1.0.1 && < 0.3,
                        filepath             >= 1.1     && < 1.4,
-                       http-conduit         >= 1.4     && < 1.5,
-                       http-types           >= 0.6     && < 0.7,
+                       http-conduit         >= 1.5     && < 1.6,
+                       http-types           >= 0.7     && < 0.8,
                        lifted-base          == 0.1.*,
                        mtl                  == 2.*,
                        monad-control        >= 0.3,
@@ -152,7 +113,7 @@ Library
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2.0 && < 0.4,
                        utf8-string          == 0.3.*,
-                       xml-conduit          >= 0.7.0
+                       xml-conduit          >= 1.0.1 && <1.1
 
   GHC-Options: -Wall
 

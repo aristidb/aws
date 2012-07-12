@@ -1,24 +1,11 @@
-module Aws.Sqs.Commands(
-  module Aws.Sqs.Commands.AddPermission,
-  module Aws.Sqs.Commands.DeleteMessage,
-  module Aws.Sqs.Commands.DeleteQueue,
-  module Aws.Sqs.Commands.ListQueues,
-  module Aws.Sqs.Commands.GetQueueAttributes,
-  module Aws.Sqs.Commands.ChangeMessageVisibility,
-  module Aws.Sqs.Commands.CreateQueue,
-  module Aws.Sqs.Commands.ReceiveMessage,
-  module Aws.Sqs.Commands.RemovePermission,
-  module Aws.Sqs.Commands.SendMessage,
-  module Aws.Sqs.Commands.SetQueueAttributes
-)where
-import Aws.Sqs.Commands.AddPermission
-import Aws.Sqs.Commands.DeleteMessage
-import Aws.Sqs.Commands.DeleteQueue
-import Aws.Sqs.Commands.ListQueues
-import Aws.Sqs.Commands.GetQueueAttributes
-import Aws.Sqs.Commands.ChangeMessageVisibility
-import Aws.Sqs.Commands.CreateQueue
-import Aws.Sqs.Commands.ReceiveMessage
-import Aws.Sqs.Commands.RemovePermission
-import Aws.Sqs.Commands.SendMessage
-import Aws.Sqs.Commands.SetQueueAttributes
+module Aws.Sqs.Commands (
+  module Aws.Sqs.Commands.Message,
+  module Aws.Sqs.Commands.Permission,
+  module Aws.Sqs.Commands.Queue,
+  module Aws.Sqs.Commands.QueueAttributes
+) where
+
+import Aws.Sqs.Commands.Message
+import Aws.Sqs.Commands.Permission
+import Aws.Sqs.Commands.Queue
+import Aws.Sqs.Commands.QueueAttributes

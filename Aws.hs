@@ -1,23 +1,51 @@
 module Aws
-(
-  module Aws.Aws
-, module Aws.Credentials
-, module Aws.Http
-, module Aws.Query
-, module Aws.Response
-, module Aws.Signature
-, module Aws.Transaction
-, module Aws.Util
-, module Aws.Xml
+( -- * Logging
+  LogLevel(..)
+, Logger
+, defaultLog
+  -- * Configuration
+, Configuration(..)
+, baseConfiguration
+, dbgConfiguration
+  -- * Transaction runners
+  -- ** Safe runners
+, aws
+, awsRef
+, simpleAws
+, simpleAwsRef
+  -- ** Unsafe runners
+, unsafeAws
+, unsafeAwsRef
+  -- ** URI runners
+, awsUri
+  -- * Response
+  -- ** Full HTTP response
+, HTTPResponseConsumer
+  -- ** Metadata in responses
+, Response(..)
+, ResponseMetadata
+  -- ** Exception types
+, XmlException(..)
+, HeaderException(..)
+, FormException(..)
+  -- * Query
+  -- ** Service configuration
+, ServiceConfiguration
+, DefaultServiceConfiguration(..)
+  -- ** Expiration
+, TimeInfo(..)
+  -- * Transactions
+, Transaction
+  -- * Credentials
+, Credentials(..)
+, credentialsDefaultFile
+, credentialsDefaultKey
+, loadCredentialsFromFile
+, loadCredentialsFromEnv
+, loadCredentialsFromEnvOrFile
+, loadCredentialsDefault
 )
 where
 
 import Aws.Aws
-import Aws.Credentials
-import Aws.Http
-import Aws.Query
-import Aws.Response
-import Aws.Signature
-import Aws.Transaction
-import Aws.Util
-import Aws.Xml
+import Aws.Core

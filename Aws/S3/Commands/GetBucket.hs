@@ -2,26 +2,18 @@
 module Aws.S3.Commands.GetBucket
 where
 
-import           Aws.Http
-import           Aws.Response
-import           Aws.S3.Info
-import           Aws.S3.Metadata
-import           Aws.S3.Model
-import           Aws.S3.Query
-import           Aws.S3.Response
-import           Aws.Signature
-import           Aws.Transaction
-import           Aws.Xml
+import           Aws.Core
+import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Arrow              (second)
-import           Data.ByteString.Char8      ({- IsString -})
+import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
-import           Text.XML.Cursor            (($/), (&|), (&//))
-import qualified Data.Text                  as T
-import qualified Data.Text.Encoding         as T
+import           Text.XML.Cursor       (($/), (&|), (&//))
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as T
 import qualified Data.Traversable
-import qualified Network.HTTP.Types         as HTTP
-import qualified Text.XML.Cursor            as Cu
+import qualified Network.HTTP.Types    as HTTP
+import qualified Text.XML.Cursor       as Cu
 
 data GetBucket
     = GetBucket {
@@ -55,15 +47,16 @@ data GetBucketResponse
       }
     deriving (Show)
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery GetBucket where
-    type Info GetBucket = S3Info
+    type ServiceConfiguration GetBucket = S3Configuration
     signQuery GetBucket {..} = s3SignQuery S3Query {
                                  s3QMethod = Get
                                , s3QBucket = Just $ T.encodeUtf8 gbBucket
                                , s3QObject = Nothing
                                , s3QSubresources = []
-                               , s3QQuery = HTTP.simpleQueryToQuery $ map (second T.encodeUtf8) $ catMaybes [
-                                              ("delimiter",) <$> gbDelimiter
+                               , s3QQuery = HTTP.toQuery [
+                                              ("delimiter" :: B8.ByteString ,) <$> gbDelimiter
                                             , ("marker",) <$> gbMarker
                                             , ("max-keys",) . T.pack . show <$> gbMaxKeys
                                             , ("prefix",) <$> gbPrefix

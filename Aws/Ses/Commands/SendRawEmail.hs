@@ -8,15 +8,8 @@ import Data.Text (Text)
 import Data.Typeable
 import Text.XML.Cursor (($//))
 
-import Aws.Signature
-import Aws.Response
-import Aws.Transaction
-import Aws.Xml
-import Aws.Ses.Info
-import Aws.Ses.Query
-import Aws.Ses.Metadata
-import Aws.Ses.Model
-import Aws.Ses.Response
+import Aws.Core
+import Aws.Ses.Core
 
 -- | Send a raw e-mail message.
 data SendRawEmail =
@@ -27,8 +20,9 @@ data SendRawEmail =
       }
     deriving (Eq, Ord, Show, Typeable)
 
+-- | ServiceConfiguration: 'SesConfiguration'
 instance SignQuery SendRawEmail where
-    type Info SendRawEmail = SesInfo
+    type ServiceConfiguration SendRawEmail = SesConfiguration
     signQuery SendRawEmail {..} =
         sesSignQuery $ ("Action", "SendRawEmail") :
                        concat [ sesAsQuery srmDestinations

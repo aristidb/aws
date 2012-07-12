@@ -2,16 +2,8 @@
 module Aws.S3.Commands.GetService
 where
 
-import           Aws.Http
-import           Aws.Response
-import           Aws.S3.Info
-import           Aws.S3.Metadata
-import           Aws.S3.Model
-import           Aws.S3.Query
-import           Aws.S3.Response
-import           Aws.Signature
-import           Aws.Transaction
-import           Aws.Xml
+import           Aws.Core
+import           Aws.S3.Core
 import           Data.Maybe
 import           Data.Time.Format
 import           System.Locale
@@ -44,8 +36,9 @@ instance ResponseConsumer r GetServiceResponse where
             creationDate <- force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery GetService where
-    type Info GetService = S3Info
+    type ServiceConfiguration GetService = S3Configuration
     signQuery GetService = s3SignQuery S3Query {
                                 s3QMethod = Get
                               , s3QBucket = Nothing

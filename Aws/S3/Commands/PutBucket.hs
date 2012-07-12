@@ -1,16 +1,10 @@
 {-# LANGUAGE RecordWildCards, TypeFamilies, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances #-}
 module Aws.S3.Commands.PutBucket where
 
-import           Aws.Http
-import           Aws.Response
-import           Aws.S3.Info
-import           Aws.S3.Metadata
-import           Aws.S3.Model
-import           Aws.S3.Query
-import           Aws.S3.Response
-import           Aws.Signature
-import           Aws.Transaction
+import           Aws.Core
+import           Aws.S3.Core
 import           Control.Monad
+import qualified Data.Map             as M
 import qualified Data.Text            as T
 import qualified Data.Text.Encoding   as T
 import qualified Network.HTTP.Conduit as HTTP
@@ -28,8 +22,9 @@ data PutBucketResponse
     = PutBucketResponse
     deriving (Show)
 
+-- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery PutBucket where
-    type Info PutBucket = S3Info
+    type ServiceConfiguration PutBucket = S3Configuration
 
     signQuery PutBucket{..} = s3SignQuery (S3Query {
                                              s3QMethod       = Put
@@ -54,11 +49,11 @@ instance SignQuery PutBucket where
                                            })
         where root = XML.Element {
                                XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}CreateBucketConfiguration"
-                             , XML.elementAttributes = []
+                             , XML.elementAttributes = M.empty
                              , XML.elementNodes = [
                                                    XML.NodeElement (XML.Element {
                                                                              XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}LocationConstraint"
-                                                                           , XML.elementAttributes = []
+                                                                           , XML.elementAttributes = M.empty
                                                                            , XML.elementNodes = [XML.NodeContent pbLocationConstraint]
                                                                            })
                                                   ]
