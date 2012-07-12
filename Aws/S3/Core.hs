@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts, Rank2Types, DataKinds, KindSignatures, FlexibleInstances #-}
+{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts, Rank2Types, FlexibleInstances #-}
 module Aws.S3.Core where
 
 import           Aws.Core
@@ -44,7 +44,7 @@ data RequestStyle
     | VHostStyle
     deriving (Show)
 
-data S3Configuration (qt :: QueryType)
+data S3Configuration qt
     = S3Configuration {
         s3Protocol :: Protocol
       , s3Endpoint :: B.ByteString

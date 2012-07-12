@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, OverloadedStrings, RecordWildCards, FlexibleContexts, DataKinds, KindSignatures, FlexibleInstances #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, OverloadedStrings, RecordWildCards, FlexibleContexts, FlexibleInstances #-}
 module Aws.Sqs.Core where
 
 import           Aws.Core
@@ -73,7 +73,7 @@ data Endpoint
       }
     deriving (Show)
 
-data SqsConfiguration (qt :: QueryType)
+data SqsConfiguration qt
     = SqsConfiguration {
         sqsProtocol :: Protocol
       , sqsEndpoint :: Endpoint

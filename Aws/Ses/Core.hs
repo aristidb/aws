@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, RecordWildCards, OverloadedStrings, DataKinds, KindSignatures, FlexibleInstances #-}
+{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, RecordWildCards, OverloadedStrings, FlexibleInstances #-}
 module Aws.Ses.Core
     ( SesError(..)
     , SesMetadata(..)
@@ -58,7 +58,7 @@ instance Monoid SesMetadata where
     mempty = SesMetadata Nothing
     SesMetadata r1 `mappend` SesMetadata r2 = SesMetadata (r1 `mplus` r2)
 
-data SesConfiguration (qt :: QueryType)
+data SesConfiguration qt
     = SesConfiguration {
         sesiHttpMethod :: Method
       , sesiHost       :: B.ByteString

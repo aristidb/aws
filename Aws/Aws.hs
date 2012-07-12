@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings, DataKinds #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
 module Aws.Aws
 ( -- * Logging
   LogLevel(..)
