@@ -124,13 +124,12 @@ Library
         FlexibleContexts,
         FlexibleInstances,
         FunctionalDependencies,
-        DataKinds,
-        KindSignatures,
         DeriveFunctor,
         DeriveDataTypeable,
         OverloadedStrings,
         TupleSections,
-        ScopedTypeVariables
+        ScopedTypeVariables,
+        EmptyDataDecls
 
   -- Modules not exported by this package.
   -- Other-modules:
