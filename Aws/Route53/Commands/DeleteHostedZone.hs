@@ -35,6 +35,7 @@ deleteHostedZone hostedZoneId = DeleteHostedZone hostedZoneId
 -- Delete add convenience methods:
 -- * Delete non-empty hosted zone
 
+-- | ServiceConfiguration: 'Route53Configuration'
 instance SignQuery DeleteHostedZone where
     type ServiceConfiguration DeleteHostedZone = Route53Configuration
     signQuery DeleteHostedZone{..} = route53SignQuery method resource query body
@@ -54,5 +55,5 @@ instance ResponseConsumer r DeleteHostedZoneResponse where
             changeInfo <- r53Parse cursor
             return $ DeleteHostedZoneResponse changeInfo
 
-instance Transaction DeleteHostedZone DeleteHostedZoneResponse where
+instance Transaction DeleteHostedZone DeleteHostedZoneResponse
 

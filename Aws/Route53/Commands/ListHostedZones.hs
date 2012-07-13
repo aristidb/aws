@@ -38,6 +38,7 @@ data ListHostedZonesResponse = ListHostedZonesResponse
 listHostedZones :: ListHostedZones
 listHostedZones = ListHostedZones { lhzMaxNumberOfItems = Nothing, lhzNextToken = Nothing }
 
+-- | ServiceConfiguration: 'Route53Configuration'
 instance SignQuery ListHostedZones where
     type ServiceConfiguration ListHostedZones = Route53Configuration
     signQuery ListHostedZones{..} = route53SignQuery method resource query Nothing
@@ -60,5 +61,5 @@ instance ResponseConsumer r ListHostedZonesResponse where
             let nextToken = listToMaybe $ cursor $// elContent "NextMarker"
             return $ ListHostedZonesResponse zones nextToken
 
-instance Transaction ListHostedZones ListHostedZonesResponse where
+instance Transaction ListHostedZones ListHostedZonesResponse
 

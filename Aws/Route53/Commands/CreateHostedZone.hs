@@ -40,6 +40,7 @@ data CreateHostedZoneResponse = CreateHostedZoneResponse
 createHostedZone :: Domain -> T.Text -> T.Text -> CreateHostedZone
 createHostedZone name callerReference comment = CreateHostedZone name callerReference comment
 
+-- | ServiceConfiguration: 'Route53Configuration'
 instance SignQuery CreateHostedZone where
     type ServiceConfiguration CreateHostedZone = Route53Configuration
     signQuery CreateHostedZone{..} = route53SignQuery method resource query body
@@ -67,5 +68,5 @@ instance ResponseConsumer r CreateHostedZoneResponse where
             delegationSet <- r53Parse cursor
             return $ CreateHostedZoneResponse zone changeInfo delegationSet
 
-instance Transaction CreateHostedZone CreateHostedZoneResponse where
+instance Transaction CreateHostedZone CreateHostedZoneResponse
 

@@ -41,6 +41,7 @@ data ChangeResourceRecordSetsResponse = ChangeResourceRecordSetsResponse
   { crrsrChangeInfo :: ChangeInfo
   } deriving (Show)
 
+-- | ServiceConfiguration: 'Route53Configuration'
 instance SignQuery ChangeResourceRecordSets where
     type ServiceConfiguration ChangeResourceRecordSets = Route53Configuration
     signQuery ChangeResourceRecordSets{..} = route53SignQuery method resource query body
@@ -70,5 +71,5 @@ instance ResponseConsumer r ChangeResourceRecordSetsResponse where
             changeInfo <- r53Parse cursor
             return $ ChangeResourceRecordSetsResponse changeInfo
 
-instance Transaction ChangeResourceRecordSets ChangeResourceRecordSetsResponse where
+instance Transaction ChangeResourceRecordSets ChangeResourceRecordSetsResponse
 

@@ -26,6 +26,7 @@ data GetDate = GetDate deriving (Show)
 
 newtype GetDateResponse = GetDateResponse { date :: UTCTime } deriving (Show)
 
+-- | ServiceConfiguration: 'Route53Configuration'
 instance SignQuery GetDate where
   type ServiceConfiguration GetDate = Route53Configuration
   signQuery GetDate info sd = SignedQuery 
@@ -58,5 +59,5 @@ instance ResponseConsumer r GetDateResponse where
 getDate :: GetDate
 getDate = GetDate
 
-instance Transaction GetDate GetDateResponse where
+instance Transaction GetDate GetDateResponse
 

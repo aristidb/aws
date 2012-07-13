@@ -16,7 +16,7 @@ import Data.List              (find)
 import Data.Maybe             (fromJust)
 import Data.Attempt           (Attempt(..), fromAttempt)
 import Data.Semigroup         (Semigroup, (<>))
-import Data.Monoid            (Monoid, mempty, mappend)
+import Data.Monoid            (Monoid, mappend)
 
 import Control.Monad (guard)
 import Control.Applicative    ((<$>))

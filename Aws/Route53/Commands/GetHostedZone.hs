@@ -35,6 +35,7 @@ data GetHostedZoneResponse = GetHostedZoneResponse
 getHostedZone :: HostedZoneId -> GetHostedZone
 getHostedZone hostedZoneId = GetHostedZone hostedZoneId
 
+-- | ServiceConfiguration: 'Route53Configuration'
 instance SignQuery GetHostedZone where
     type ServiceConfiguration GetHostedZone = Route53Configuration
     signQuery GetHostedZone{..} = route53SignQuery method resource query Nothing
@@ -54,5 +55,5 @@ instance ResponseConsumer r GetHostedZoneResponse where
             delegationSet <- r53Parse cursor
             return $ GetHostedZoneResponse zone delegationSet
 
-instance Transaction GetHostedZone GetHostedZoneResponse where
+instance Transaction GetHostedZone GetHostedZoneResponse
 

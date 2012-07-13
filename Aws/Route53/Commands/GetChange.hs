@@ -32,6 +32,7 @@ data GetChangeResponse = GetChangeResponse
 getChange :: ChangeId -> GetChange
 getChange changeId = GetChange changeId
 
+-- | ServiceConfiguration: 'Route53Configuration'
 instance SignQuery GetChange where
     type ServiceConfiguration GetChange = Route53Configuration
     signQuery GetChange{..} = route53SignQuery method resource query body
@@ -51,5 +52,5 @@ instance ResponseConsumer r GetChangeResponse where
             changeInfo <- r53Parse cursor
             return $ GetChangeResponse changeInfo
 
-instance Transaction GetChange GetChangeResponse where
+instance Transaction GetChange GetChangeResponse
 

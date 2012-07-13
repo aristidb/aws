@@ -53,6 +53,7 @@ data ListResourceRecordSetsResponse = ListResourceRecordSetsResponse
                              , lrrsrNextRecordIdentifier :: Maybe T.Text  -- ^ TODO check constraint
                              } deriving (Show)
 
+-- | ServiceConfiguration: 'Route53Configuration'
 instance SignQuery ListResourceRecordSets where
     type ServiceConfiguration ListResourceRecordSets = Route53Configuration
     signQuery ListResourceRecordSets{..} = route53SignQuery method resource query body
@@ -81,5 +82,5 @@ instance ResponseConsumer r ListResourceRecordSetsResponse where
             let nextRecordIdentifier = listToMaybe $ cursor $// elContent "NextRecordIdentifier"
             return $ ListResourceRecordSetsResponse resourceRecordSets isTruncated maxItems nextRecordName nextRecordType nextRecordIdentifier
 
-instance Transaction ListResourceRecordSets ListResourceRecordSetsResponse where
+instance Transaction ListResourceRecordSets ListResourceRecordSetsResponse
 
