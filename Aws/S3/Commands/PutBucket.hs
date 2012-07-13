@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards, TypeFamilies, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances #-}
 module Aws.S3.Commands.PutBucket where
 
 import           Aws.Core

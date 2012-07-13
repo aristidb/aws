@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, RecordWildCards, OverloadedStrings, DataKinds, KindSignatures, FlexibleInstances #-}
 module Aws.Ses.Core
     ( SesError(..)
     , SesMetadata(..)

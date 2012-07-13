@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards, TypeFamilies, MultiParamTypeClasses, OverloadedStrings #-}
 module Aws.Ses.Commands.SendRawEmail
     ( SendRawEmail(..)
     , SendRawEmailResponse(..)

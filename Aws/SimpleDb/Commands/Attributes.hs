@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 module Aws.SimpleDb.Commands.Attributes where
 
 import           Aws.Core

@@ -1,4 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, TypeFamilies, FlexibleContexts, FlexibleInstances, DeriveFunctor, OverloadedStrings, RecordWildCards, DeriveDataTypeable, Rank2Types, ExistentialQuantification, DataKinds #-}
 module Aws.Core
 ( -- * Response
   -- ** Metadata in responses

@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, OverloadedStrings, RecordWildCards, FlexibleContexts, DataKinds, KindSignatures, FlexibleInstances #-}
 module Aws.Sqs.Core where
 
 import           Aws.Core

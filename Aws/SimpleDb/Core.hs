@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, RecordWildCards, OverloadedStrings, FlexibleContexts, DataKinds, KindSignatures, FlexibleInstances #-}
 module Aws.SimpleDb.Core where
 
 import           Aws.Core

@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, FlexibleInstances, OverloadedStrings #-}
 module Aws.S3.Commands.GetService
 where
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, RecordWildCards, FlexibleContexts, Rank2Types, DataKinds, KindSignatures, FlexibleInstances #-}
 module Aws.S3.Core where
 
 import           Aws.Core
