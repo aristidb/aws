@@ -1,7 +1,7 @@
---
--- Copyright (c) 2012 Lars Kuhtz - http://lars.kuhtz.eu/
--- License: BSD3 (see https://raw.github.com/aristidb/aws/master/LICENSE)
---
+-- ------------------------------------------------------ --
+-- Copyright © 2012 AlephCloud Systems, Inc.
+-- ------------------------------------------------------ --
+
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
