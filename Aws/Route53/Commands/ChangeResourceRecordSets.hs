@@ -2,14 +2,6 @@
 -- Copyright © 2012 AlephCloud Systems, Inc.
 -- ------------------------------------------------------ --
 
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TypeFamilies #-} 
-{-# LANGUAGE FlexibleInstances #-} 
-{-# LANGUAGE MultiParamTypeClasses #-} 
-{-# LANGUAGE OverloadedStrings #-} 
-{-# LANGUAGE TupleSections #-} 
-
 -- | POST ChangeResourceRecordSetrs
 --
 --   Creates, changes, or deletes resource records sets.

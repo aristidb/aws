@@ -2,19 +2,6 @@
 -- Copyright © 2012 AlephCloud Systems, Inc.
 -- ------------------------------------------------------ --
 
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RecordWildCards #-} 
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
-  
 module Aws.Route53.Core
 ( -- * Configuration
   Route53Configuration(..)
@@ -108,7 +95,7 @@ import qualified Text.XML.Cursor           as Cu
 -- -------------------------------------------------------------------------- --
 -- Configuration
 
-data Route53Configuration = Route53Configuration 
+data Route53Configuration qt = Route53Configuration
     { route53Protocol :: Protocol
     , route53Endpoint :: B.ByteString
     , route53Port :: Int
@@ -117,12 +104,13 @@ data Route53Configuration = Route53Configuration
 
     } deriving (Show)
 
-instance DefaultServiceConfiguration Route53Configuration where
-  defaultConfiguration = route53
-  defaultConfigurationUri = route53
+instance DefaultServiceConfiguration (Route53Configuration NormalQuery) where
+  defServiceConfig = route53
+  debugServiceConfig = route53
   
-  debugConfiguration = route53
-  debugConfigurationUri = route53
+instance DefaultServiceConfiguration (Route53Configuration UriOnlyQuery) where
+  defServiceConfig = route53
+  debugServiceConfig = route53
 
 route53EndpointUsClassic :: B.ByteString
 route53EndpointUsClassic = "route53.amazonaws.com"
@@ -133,7 +121,7 @@ route53ApiVersionRecent = "2012-02-29"
 route53XmlNamespaceRecent :: Text
 route53XmlNamespaceRecent = "https://route53.amazonaws.com/doc/" `T.append` T.decodeUtf8 route53ApiVersionRecent `T.append` "/"
 
-route53 :: Route53Configuration
+route53 :: Route53Configuration qt
 route53 = Route53Configuration
     { route53Protocol = HTTPS
     , route53Endpoint = route53EndpointUsClassic
@@ -170,7 +158,13 @@ instance Monoid Route53Metadata where
 -- -------------------------------------------------------------------------- --
 -- Query
 
-route53SignQuery :: Method -> B.ByteString -> [(B.ByteString, B.ByteString)] -> Maybe XML.Element -> Route53Configuration -> SignatureData -> SignedQuery
+route53SignQuery :: Method 
+                 -> B.ByteString 
+                 -> [(B.ByteString, B.ByteString)] 
+                 -> Maybe XML.Element 
+                 -> Route53Configuration qt 
+                 -> SignatureData 
+                 -> SignedQuery
 route53SignQuery method resource query body Route53Configuration{..} sd
     = SignedQuery {
         sqMethod        = method

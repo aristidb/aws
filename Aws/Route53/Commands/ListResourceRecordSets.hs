@@ -2,14 +2,6 @@
 -- Copyright © 2012 AlephCloud Systems, Inc.
 -- ------------------------------------------------------ --
 
-{-# LANGUAGE RecordWildCards #-} 
-{-# LANGUAGE TypeFamilies #-} 
-{-# LANGUAGE FlexibleInstances #-} 
-{-# LANGUAGE MultiParamTypeClasses #-} 
-{-# LANGUAGE OverloadedStrings #-} 
-{-# LANGUAGE TupleSections #-} 
-{-# LANGUAGE ScopedTypeVariables #-} 
-
 -- | GET ListResourceRecordSets
 --
 --   Lists the resource record sets for a Route53 hosted zone. The hosted zone is identifed by

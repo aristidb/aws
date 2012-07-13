@@ -2,8 +2,6 @@
 -- Copyright © 2012 AlephCloud Systems, Inc.
 -- ------------------------------------------------------ --
 
-{-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
-
 -- | DELETE DeleteHostedZone
 --
 --   Delete a particular Route53 hosted zone identified through its 'hostedZoneId'.

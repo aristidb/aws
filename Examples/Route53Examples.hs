@@ -25,8 +25,9 @@ import Control.Monad.IO.Class (MonadIO)
 import Network.HTTP.Conduit   (Manager, withManager)
 
 import Aws                    (aws, Response(..), Transaction, DefaultServiceConfiguration, 
-                               ServiceConfiguration, defaultConfiguration, baseConfiguration,
+                               ServiceConfiguration, defServiceConfig, baseConfiguration,
                                ResponseMetadata)
+import Aws.Core               (NormalQuery)
 import Aws.Route53
 
 -- -------------------------------------------------------------------------- --
@@ -66,12 +67,12 @@ requestAll mkRequest request = do
 makeDefaultRequest :: ( Transaction r a
                       , Functor m
                       , MonadIO m
-                      , DefaultServiceConfiguration (ServiceConfiguration r)
+                      , DefaultServiceConfiguration (ServiceConfiguration r NormalQuery)
                       ) 
                    => Manager -> r -> m (Response (ResponseMetadata a) a)
 makeDefaultRequest manager request = do
     cfg <- baseConfiguration
-    let scfg = defaultConfiguration
+    let scfg = defServiceConfig
     aws cfg scfg manager request
 
 -- | Executes the given request using the default configuration and a fresh 
@@ -82,7 +83,7 @@ makeDefaultRequest manager request = do
 --
 makeSingleRequest :: (Transaction r a
                      , Show r
-                     , DefaultServiceConfiguration (ServiceConfiguration r)
+                     , DefaultServiceConfiguration (ServiceConfiguration r NormalQuery)
                      ) 
                   => r -> IO a
 makeSingleRequest r = do
@@ -98,7 +99,7 @@ makeSingleRequest r = do
 makeSingleRequestAll :: (Transaction r a
                         , Batched r a
                         , Show r
-                        , DefaultServiceConfiguration (ServiceConfiguration r)
+                        , DefaultServiceConfiguration (ServiceConfiguration r NormalQuery)
                         ) 
                      => r -> IO a
 makeSingleRequestAll r = 

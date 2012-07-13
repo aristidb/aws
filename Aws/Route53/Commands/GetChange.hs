@@ -2,13 +2,6 @@
 -- Copyright © 2012 AlephCloud Systems, Inc.
 -- ------------------------------------------------------ --
 
-{-# LANGUAGE RecordWildCards #-} 
-{-# LANGUAGE TypeFamilies #-} 
-{-# LANGUAGE FlexibleInstances #-} 
-{-# LANGUAGE MultiParamTypeClasses #-} 
-{-# LANGUAGE OverloadedStrings #-} 
-{-# LANGUAGE TupleSections #-}  
-
 -- | GET GetChange
 --
 --   Returns the current status of change batch request.

@@ -18,6 +18,8 @@ module Aws
 , unsafeAwsRef
   -- ** URI runners
 , awsUri
+  -- ** Iterated runners
+, awsIteratedAll
   -- * Response
   -- ** Full HTTP response
 , HTTPResponseConsumer
@@ -36,6 +38,7 @@ module Aws
 , TimeInfo(..)
   -- * Transactions
 , Transaction
+, IteratedTransaction
   -- * Credentials
 , Credentials(..)
 , credentialsDefaultFile

@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeFamilies, RecordWildCards, TupleSections, OverloadedStrings, MultiParamTypeClasses, FlexibleInstances, UndecidableInstances, GADTs, RankNTypes #-}
 module Aws.S3.Commands.GetObject
 where
 

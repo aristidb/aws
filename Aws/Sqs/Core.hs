@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, MultiParamTypeClasses, OverloadedStrings, RecordWildCards, FlexibleContexts #-}
 module Aws.Sqs.Core where
 
 import           Aws.Core
@@ -73,7 +72,7 @@ data Endpoint
       }
     deriving (Show)
 
-data SqsConfiguration
+data SqsConfiguration qt
     = SqsConfiguration {
         sqsProtocol :: Protocol
       , sqsEndpoint :: Endpoint
@@ -83,11 +82,13 @@ data SqsConfiguration
       }
     deriving (Show)
 
-instance DefaultServiceConfiguration SqsConfiguration where
-    defaultConfiguration = sqs HTTPS sqsEndpointUsClassic False
-    defaultConfigurationUri = sqs HTTPS sqsEndpointUsClassic True
-    debugConfiguration = sqs HTTP sqsEndpointUsClassic False
-    debugConfigurationUri = sqs HTTP sqsEndpointUsClassic True
+instance DefaultServiceConfiguration (SqsConfiguration NormalQuery) where
+    defServiceConfig = sqs HTTPS sqsEndpointUsClassic False
+    debugServiceConfig = sqs HTTP sqsEndpointUsClassic False
+
+instance DefaultServiceConfiguration (SqsConfiguration UriOnlyQuery) where
+    defServiceConfig = sqs HTTPS sqsEndpointUsClassic True
+    debugServiceConfig = sqs HTTP sqsEndpointUsClassic True
   
 sqsEndpointUsClassic :: Endpoint
 sqsEndpointUsClassic 
@@ -133,7 +134,7 @@ sqsEndpointApNorthEast
       , endpointAllowedLocationConstraints = [locationApNorthEast]
       }
 
-sqs :: Protocol -> Endpoint -> Bool -> SqsConfiguration
+sqs :: Protocol -> Endpoint -> Bool -> SqsConfiguration qt
 sqs protocol endpoint uri 
     = SqsConfiguration { 
         sqsProtocol = protocol
@@ -148,7 +149,7 @@ data SqsQuery = SqsQuery{
   sqsQuery :: HTTP.Query
 }
 
-sqsSignQuery :: SqsQuery -> SqsConfiguration -> SignatureData -> SignedQuery
+sqsSignQuery :: SqsQuery -> SqsConfiguration qt -> SignatureData -> SignedQuery
 sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
     = SignedQuery {
         sqMethod = method

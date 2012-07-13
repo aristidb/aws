@@ -1,10 +1,10 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, TypeFamilies, FlexibleContexts, FlexibleInstances, DeriveFunctor, OverloadedStrings, RecordWildCards, DeriveDataTypeable, Rank2Types, ExistentialQuantification #-}
 module Aws.Core
 ( -- * Response
   -- ** Metadata in responses
   Response(..)
 , tellMetadata
 , tellMetadataRef
+, mapMetadata
   -- ** Response data consumers
 , HTTPResponseConsumer
 , ResponseConsumer(..)
@@ -24,6 +24,8 @@ module Aws.Core
 , xmlCursorConsumer
   -- * Query
 , SignedQuery(..)
+, NormalQuery
+, UriOnlyQuery
 , queryToHttpRequest
 , queryToUri
   -- ** Expiration
@@ -50,6 +52,8 @@ module Aws.Core
 , fmtTimeEpochSeconds
   -- * Transactions
 , Transaction
+, IteratedTransaction(..)
+, maybeCombineIteratedResponse
   -- * Credentials
 , Credentials(..)
 , credentialsDefaultFile
@@ -122,6 +126,10 @@ data Response m a = Response m (Attempt a)
 tellMetadata :: m -> Response m ()
 tellMetadata m = Response m (return ())
 
+-- | Apply a function to the metadata.
+mapMetadata :: (m -> n) -> Response m a -> Response n a
+mapMetadata f (Response m a) = Response (f m) a
+
 instance Monoid m => Monad (Response m) where
     return x = Response mempty (Success x)
     Response m1 (Failure e) >>= _ = Response m1 (Failure e)
@@ -169,6 +177,15 @@ instance ResponseConsumer r (HTTP.Response L.ByteString) where
 class (SignQuery r, ResponseConsumer r a)
       => Transaction r a
       | r -> a, a -> r
+
+-- | A transaction that may need to be split over multiple requests, for example because of upstream response size limits.
+class Transaction r a => IteratedTransaction r a | r -> a , a -> r where
+    nextIteratedRequest :: r -> a -> Maybe r
+    combineIteratedResponse :: a -> a -> a
+
+maybeCombineIteratedResponse :: IteratedTransaction r a => Maybe a -> a -> a
+maybeCombineIteratedResponse Nothing x = x
+maybeCombineIteratedResponse (Just x) y = combineIteratedResponse x y
 
 -- | AWS access credentials.
 data Credentials
@@ -392,13 +409,18 @@ signatureData rti cr = do
   let ti = makeAbsoluteTimeInfo rti now
   return SignatureData { signatureTimeInfo = ti, signatureTime = now, signatureCredentials = cr }
 
+-- | Tag type for normal queries.
+data NormalQuery
+-- | Tag type for URI-only queries.
+data UriOnlyQuery
+
 -- | A "signable" request object. Assembles together the Query, and signs it in one go.
-class SignQuery r where
+class SignQuery request where
     -- | Additional information, like API endpoints and service-specific preferences.
-    type ServiceConfiguration r :: *
+    type ServiceConfiguration request :: * {- Query Type -} -> *
     
     -- | Create a 'SignedQuery' from a request, additional 'Info', and 'SignatureData'.
-    signQuery :: r -> ServiceConfiguration r -> SignatureData -> SignedQuery
+    signQuery :: request -> ServiceConfiguration request queryType -> SignatureData -> SignedQuery
 
 -- | Supported crypto hashes for the signature.
 data AuthorizationHash
@@ -427,19 +449,12 @@ signature cr ah input = Base64.encode sig
 
 -- | Default configuration for a specific service.
 class DefaultServiceConfiguration config where
-    -- | Default service configuration for normal requests.
-    defaultConfiguration :: config
-    
-    -- | Default service configuration for URI-only requests.
-    defaultConfigurationUri :: config
+    -- | Default service configuration.
+    defServiceConfig :: config
 
-    -- | Default debugging-only configuration for normal requests. (Normally using HTTP instead of HTTPS for easier debugging.)
-    debugConfiguration :: config
-    debugConfiguration = defaultConfiguration
-
-    -- | Default debugging-only configuration for URI-only requests. (Normally using HTTP instead of HTTPS for easier debugging.)
-    debugConfigurationUri :: config
-    debugConfigurationUri = defaultConfigurationUri
+    -- | Default debugging-only configuration. (Normally using HTTP instead of HTTPS for easier debugging.)
+    debugServiceConfig :: config
+    debugServiceConfig = defServiceConfig
 
 -- | @queryList f prefix xs@ constructs a query list from a list of elements @xs@, using a common prefix @prefix@,
 -- and a transformer function @f@.

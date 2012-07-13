@@ -5,6 +5,9 @@
 The ~aws~ package attempts to provide support for using Amazon Web Services like S3 (storage), SQS (queuing) and others
 to Haskell programmers. The ultimate goal is to support all Amazon Web Services.
 
+(If you are viewing this README online, please note that you can find the README
+for the latest stable version at https://github.com/aristidb/aws/blob/stable/README.org).
+
 * Installation
 
 Make sure you have a recent GHC installed, as well as cabal-install, and installation should be as easy as:
@@ -66,7 +69,7 @@ main :: IO ()
 main = do
   {- Set up AWS credentials and the default configuration. -}
   cfg <- Aws.baseConfiguration
-  let s3Cfg = Aws.defaultConfiguration
+  let s3Cfg = Aws.defServiceConfig
 
   {- Create an IORef to store the response Metadata (so it is also available in case of an error). -}
   metadataRef <- newIORef mempty
@@ -92,12 +95,12 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
-** 0.7 series (planned)
+** 0.7 series (upcoming)
 
-Feature ideas:
-
-- Change ServiceConfiguration concept so as to indicate in the type whether this is for URI-only requests (i.e.
-  awsUri)
+- 0.7.0
+  - Change ServiceConfiguration concept so as to indicate in the type whether this is for URI-only requests
+    (i.e. awsUri)
+  - Direct support for iterated transaction, i.e. such where multiple HTTP requests might be necessary due to e.g. response size limits.
 
 ** 0.6 series
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections #-}
 module Aws.SimpleDb.Commands.Select
 where
 
@@ -51,3 +50,7 @@ instance ResponseConsumer r SelectResponse where
                 return $ SelectResponse items nextToken
 
 instance Transaction Select SelectResponse
+
+instance IteratedTransaction Select SelectResponse where
+  nextIteratedRequest req SelectResponse{srNextToken=nt} = req{sNextToken=nt} <$ nt
+  combineIteratedResponse (SelectResponse s1 _) (SelectResponse s2 nt2) = SelectResponse (s1 ++ s2) nt2

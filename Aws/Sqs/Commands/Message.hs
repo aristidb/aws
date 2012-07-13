@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards, TypeFamilies, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, TupleSections, ScopedTypeVariables, FlexibleContexts #-}
 
 module Aws.Sqs.Commands.Message where
 

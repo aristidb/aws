@@ -1,0 +1,13 @@
+:set -XRecordWildCards
+:set -XTypeFamilies
+:set -XMultiParamTypeClasses
+:set -XFlexibleContexts
+:set -XFlexibleInstances
+:set -XFunctionalDependencies
+:set -XDataKinds
+:set -XKindSignatures
+:set -XDeriveFunctor
+:set -XDeriveDataTypeable
+:set -XOverloadedStrings
+:set -XTupleSections
+:set -XScopedTypeVariables
