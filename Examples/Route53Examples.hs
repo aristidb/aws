@@ -34,8 +34,8 @@ import Aws.Route53
 
 instance (Monoid m, Semigroup a) => Semigroup (Response m a) where
      (Response m0 (Success a0)) <> (Response m1 (Success a1)) = Response (m0 `mappend` m1) (Success (a0 <> a1))
-     (Response m0 (Success _))  <> (Response m1 (Failure e))  = Response (m0 `mappend` m1) (Failure e)
-     (Response m0 (Failure e))  <> (Response m1 _)            = Response (m0 `mappend` m1) (Failure e)
+     (Response m0 (Success _))  <> (Response m1 e)            = Response (m0 `mappend` m1) e
+     r                          <> _                          = r
 
 -- | extract result of an 'Attempt' from a 'Response'
 --
