@@ -4,6 +4,7 @@ module Aws.Core
   Response(..)
 , tellMetadata
 , tellMetadataRef
+, mapMetadata
   -- ** Response data consumers
 , HTTPResponseConsumer
 , ResponseConsumer(..)
@@ -51,6 +52,8 @@ module Aws.Core
 , fmtTimeEpochSeconds
   -- * Transactions
 , Transaction
+, IteratedTransaction(..)
+, maybeCombineIteratedResponse
   -- * Credentials
 , Credentials(..)
 , credentialsDefaultFile
@@ -123,6 +126,10 @@ data Response m a = Response m (Attempt a)
 tellMetadata :: m -> Response m ()
 tellMetadata m = Response m (return ())
 
+-- | Apply a function to the metadata.
+mapMetadata :: (m -> n) -> Response m a -> Response n a
+mapMetadata f (Response m a) = Response (f m) a
+
 instance Monoid m => Monad (Response m) where
     return x = Response mempty (Success x)
     Response m1 (Failure e) >>= _ = Response m1 (Failure e)
@@ -170,6 +177,15 @@ instance ResponseConsumer r (HTTP.Response L.ByteString) where
 class (SignQuery r, ResponseConsumer r a)
       => Transaction r a
       | r -> a, a -> r
+
+-- | A transaction that may need to be split over multiple requests, for example because of upstream response size limits.
+class Transaction r a => IteratedTransaction r a | r -> a , a -> r where
+    nextIteratedRequest :: r -> a -> Maybe r
+    combineIteratedResponse :: a -> a -> a
+
+maybeCombineIteratedResponse :: IteratedTransaction r a => Maybe a -> a -> a
+maybeCombineIteratedResponse Nothing x = x
+maybeCombineIteratedResponse (Just x) y = combineIteratedResponse x y
 
 -- | AWS access credentials.
 data Credentials

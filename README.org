@@ -100,6 +100,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 - 0.7.0
   - Change ServiceConfiguration concept so as to indicate in the type whether this is for URI-only requests
     (i.e. awsUri)
+  - Direct support for iterated transaction, i.e. such where multiple HTTP requests might be necessary due to e.g. response size limits.
 
 ** 0.6 series
 

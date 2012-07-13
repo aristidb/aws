@@ -137,3 +137,7 @@ instance ResponseConsumer r ListDomainsResponse where
                 return $ ListDomainsResponse names nextToken
 
 instance Transaction ListDomains ListDomainsResponse
+
+instance IteratedTransaction ListDomains ListDomainsResponse where
+  nextIteratedRequest req ListDomainsResponse{ldrNextToken=nt} = req{ldNextToken=nt} <$ nt
+  combineIteratedResponse (ListDomainsResponse dn1 _) (ListDomainsResponse dn2 nt2) = ListDomainsResponse (dn1 ++ dn2) nt2

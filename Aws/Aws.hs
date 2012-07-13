@@ -18,13 +18,16 @@ module Aws.Aws
 , unsafeAwsRef
   -- ** URI runners
 , awsUri
+  -- * Iterated runners
+, awsIteratedAll
 )
 where
 
 import           Aws.Core
 import           Control.Applicative
+import           Control.Monad
 import           Control.Monad.Trans  (MonadIO(liftIO))
-import           Data.Attempt         (attemptIO)
+import           Data.Attempt         (attemptIO, Attempt(Success, Failure))
 import           Data.Conduit         (runResourceT)
 import           Data.IORef
 import           Data.Monoid
@@ -211,4 +214,21 @@ awsUri cfg info request = liftIO $ do
   let q = signQuery request info sd
   logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   return $ queryToUri q
-
+  
+-- | Run an iterated AWS transaction. May make multiple HTTP requests.
+awsIteratedAll :: (IteratedTransaction r a, MonadIO io)
+                  => Configuration
+                  -> ServiceConfiguration r NormalQuery
+                  -> HTTP.Manager
+                  -> r
+                  -> io (Response [ResponseMetadata a] a)
+awsIteratedAll cfg scfg manager req_ = go req_ Nothing
+  where go request prevResp = do Response meta respAttempt <- aws cfg scfg manager request
+                                 case maybeCombineIteratedResponse prevResp <$> respAttempt of
+                                   f@(Failure _) -> return (Response [meta] f)
+                                   s@(Success resp) -> 
+                                     case nextIteratedRequest request resp of
+                                       Nothing -> 
+                                         return (Response [meta] s)
+                                       Just nextRequest -> 
+                                         mapMetadata (meta:) `liftM` go nextRequest (Just resp)
