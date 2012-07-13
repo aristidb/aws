@@ -43,7 +43,7 @@ data RequestStyle
     | VHostStyle
     deriving (Show)
 
-data S3Configuration (qt :: QueryType)
+data S3Configuration qt
     = S3Configuration {
         s3Protocol :: Protocol
       , s3Endpoint :: B.ByteString

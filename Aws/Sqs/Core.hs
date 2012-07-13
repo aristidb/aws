@@ -72,7 +72,7 @@ data Endpoint
       }
     deriving (Show)
 
-data SqsConfiguration (qt :: QueryType)
+data SqsConfiguration qt
     = SqsConfiguration {
         sqsProtocol :: Protocol
       , sqsEndpoint :: Endpoint
