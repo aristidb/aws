@@ -334,7 +334,7 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.queryString = HTTP.renderQuery False sqQuery
       , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
-                                        , fmap (\md5 -> ("Content-MD5", Serialize.encode md5)) sqContentMd5
+                                        , fmap (\md5 -> ("Content-MD5", Base64.encode $ Serialize.encode md5)) sqContentMd5
                                         , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
                               ++ sqAmzHeaders
                               ++ sqOtherHeaders
