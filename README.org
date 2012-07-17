@@ -101,6 +101,9 @@ Feature ideas:
 
 ** 0.6 series
 
+- 0.6.1
+  - Fix for MD5 encoding issue in S3 PutObject requests.
+
 - 0.6.0
   - API Cleanup
     - General: Use Crypto.Hash.MD5.MD5 when a Content-MD5 hash is required, instead of ByteString.
