@@ -11,23 +11,25 @@
 
 module Route53.Samples where
 
-import Data.Text              (Text)
-import Data.List              (find)
-import Data.Maybe             (fromJust)
-import Data.Attempt           (Attempt(..), fromAttempt)
-import Data.Semigroup         (Semigroup, (<>))
-import Data.Monoid            (Monoid, mappend)
+import Data.Text                 (Text)
+import Data.List                 (find)
+import Data.Maybe                (fromJust, listToMaybe)
+import Data.Attempt              (Attempt(..), fromAttempt)
+import Data.Semigroup            (Semigroup, (<>))
+import Data.Monoid               (Monoid, mappend)
 
-import Control.Monad (guard)
-import Control.Applicative    ((<$>))
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad             (guard, mzero, mplus)
+import Control.Applicative       ((<$>))
+import Control.Monad.IO.Class    (MonadIO, liftIO)
+import Control.Monad.Trans.Maybe (runMaybeT)
+import Control.Monad.Trans.List  (runListT)
 
-import Network.HTTP.Conduit   (Manager, withManager)
+import Network.HTTP.Conduit      (Manager, withManager)
 
-import Aws                    (aws, Response(..), Transaction, DefaultServiceConfiguration, 
-                               ServiceConfiguration, defServiceConfig, baseConfiguration,
-                               ResponseMetadata)
-import Aws.Core               (NormalQuery)
+import Aws                       (aws, Response(..), Transaction, DefaultServiceConfiguration, 
+                                  ServiceConfiguration, defServiceConfig, baseConfiguration,
+                                  ResponseMetadata)
+import Aws.Core                  (NormalQuery)
 import Aws.Route53
 
 -- -------------------------------------------------------------------------- --
@@ -226,10 +228,10 @@ getResourceRecordSetsByType hzid dnsRecordType =
 -- | Returns the resource record set of the given type for the given domain in 
 --   the given hosted zone.
 --
-getResourceRecords :: HostedZoneId -> Domain -> RecordType -> IO ResourceRecordSet
+getResourceRecords :: HostedZoneId -> Domain -> RecordType -> IO (Maybe ResourceRecordSet)
 getResourceRecords cid domain rtype = do
     let req = ListResourceRecordSets cid (Just domain) (Just rtype) Nothing (Just 1)
-    head . lrrsrResourceRecordSets <$> (makeSingleRequest $ req)
+    listToMaybe . lrrsrResourceRecordSets <$> (makeSingleRequest $ req)
 
 -- | Updates the resouce records of the given type for the given domain in the 
 --   given hosted zone using the given mapping function.
@@ -238,20 +240,20 @@ getResourceRecords cid domain rtype = do
 --   Aws.Route53 module. In a production environment one would reuse the same 
 --   connection manager and configuration for all involved requests.
 --
-updateRecords :: HostedZoneId 
+modifyRecords :: HostedZoneId 
               -> Domain 
               -> RecordType 
-              -> ([ResourceRecord] 
-              -> [ResourceRecord]) 
-              -> IO (ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse)
-updateRecords cid domain rtype f = do
-  -- Fixme fail more gracefully
-  rrs <- getResourceRecords cid domain rtype
-  let rrs' = rrs { rrsRecords = f (rrsRecords rrs) }
-  -- Handle errors gracefully. What if we fail in the middle?
-  r1 <- makeSingleRequest $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)]
-  r2 <- makeSingleRequest $ ChangeResourceRecordSets cid Nothing [(CREATE, rrs')]
-  return (r1, r2)
+              -> ([ResourceRecord] -> [ResourceRecord]) 
+              -> IO (Maybe (ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse))
+modifyRecords cid domain rtype f = runMaybeT $ do
+    -- Fixme fail more gracefully
+    Just rrs <- liftIO $ getResourceRecords cid domain rtype
+    let rrs' = rrs { rrsRecords = f (rrsRecords rrs) }
+    
+    -- Handle errors gracefully. What if we fail in the middle?
+    r1 <- liftIO . makeSingleRequest $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)]
+    r2 <- liftIO . makeSingleRequest $ ChangeResourceRecordSets cid Nothing [(CREATE, rrs')]
+    return (r1, r2)
 
 -- | Updates the A record for the given domain in the given zone to the given 
 --   IP address (encoded as Text).
@@ -259,7 +261,20 @@ updateRecords cid domain rtype f = do
 updateARecord :: HostedZoneId 
               -> Domain 
               -> Text 
-              -> IO (ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse)
-updateARecord cid domain newIP = updateRecords cid domain A (const [ResourceRecord newIP])
+              -> IO (Maybe (ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse))
+updateARecord cid domain newIP = modifyRecords cid domain A (const [ResourceRecord newIP])
 
+setARecord :: HostedZoneId
+           -> Domain
+           -> Int
+           -> Text
+           -> IO [ChangeResourceRecordSetsResponse]
+setARecord cid domain ttl ip = runListT $ do
+       maybeRrs <- liftIO $ getResourceRecords cid domain A
+       case maybeRrs of
+           Just rrs -> liftIO $ makeSingleRequest $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)]
+           Nothing -> mzero
+        `mplus` do
+            let rr = simpleResourceRecordSet domain A ttl ip
+            liftIO . makeSingleRequest $ ChangeResourceRecordSets cid Nothing [(CREATE, rr)]
 
