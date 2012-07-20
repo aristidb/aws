@@ -2,12 +2,9 @@
 -- Copyright © 2012 AlephCloud Systems, Inc.
 -- ------------------------------------------------------ --
 
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
 
 module Route53.Samples where
 
@@ -15,10 +12,8 @@ import Data.Text                 (Text)
 import Data.List                 (find)
 import Data.Maybe                (fromJust, listToMaybe)
 import Data.Attempt              (Attempt(..), fromAttempt)
-import Data.Semigroup            (Semigroup, (<>))
-import Data.Monoid               (Monoid, mappend)
 
-import Control.Monad             (guard, mzero, mplus)
+import Control.Monad             (mzero, mplus)
 import Control.Applicative       ((<$>))
 import Control.Monad.IO.Class    (MonadIO, liftIO)
 import Control.Monad.Trans.Maybe (runMaybeT)
@@ -28,43 +23,20 @@ import Network.HTTP.Conduit      (Manager, withManager)
 
 import Aws                       (aws, Response(..), Transaction, DefaultServiceConfiguration, 
                                   ServiceConfiguration, defServiceConfig, baseConfiguration,
-                                  ResponseMetadata)
-import Aws.Core                  (NormalQuery)
+                                  ResponseMetadata, awsIteratedAll)
+import Aws.Core                  (NormalQuery, IteratedTransaction)
 import Aws.Route53
 
 -- -------------------------------------------------------------------------- --
 -- Request Utils
-
-instance (Monoid m, Semigroup a) => Semigroup (Response m a) where
-     (Response m0 (Success a0)) <> (Response m1 (Success a1)) = Response (m0 `mappend` m1) (Success (a0 <> a1))
-     (Response m0 (Success _))  <> (Response m1 e)            = Response (m0 `mappend` m1) e
-     r                          <> _                          = r
 
 -- | extract result of an 'Attempt' from a 'Response'
 --
 getResult :: Response m a -> Attempt a
 getResult (Response _ a) = a
 
--- | A class for transactions with batched responses. Allows to
---   iterate and concatenate all responses.
---
---   Minimal complete implementation: 'nextRequest'.
---
-class (Transaction r a, Semigroup a) => Batched r a  where
-    nextRequest :: r -> (Response (ResponseMetadata a) a) -> Maybe r
-
-requestAll :: (Batched r a, MonadIO m, Functor m) 
-           => (r -> m (Response (ResponseMetadata a) a)) 
-           -> r 
-           -> m (Response (ResponseMetadata a) a) 
-requestAll mkRequest request = do
-    response <- mkRequest request
-    case nextRequest request response of
-        Nothing -> return response
-        Just r -> (response <>) <$> requestAll mkRequest r
-
--- | Make a request using with the base configuration and the default
---   service configuration
+-- | Make a request using the base configuration and the default
+--   service configuration.
 --
 makeDefaultRequest :: ( Transaction r a
                       , Functor m
@@ -76,6 +48,20 @@ makeDefaultRequest manager request = do
     cfg <- baseConfiguration
     let scfg = defServiceConfig
     aws cfg scfg manager request
+
+-- | Make an iterated request using the base configuration and the default
+--   service configuration.
+--
+makeDefaultRequestAll :: ( IteratedTransaction r a
+                         , Functor m
+                         , MonadIO m
+                         , DefaultServiceConfiguration (ServiceConfiguration r NormalQuery)
+                         ) 
+                      => Manager -> r -> m (Response [ResponseMetadata a] a)
+makeDefaultRequestAll manager request = do
+    cfg <- baseConfiguration
+    let scfg = defServiceConfig
+    awsIteratedAll cfg scfg manager request
 
 -- | Executes the given request using the default configuration and a fresh 
 --   connection manager. Extracts the enclosed response body and returns it 
@@ -91,21 +77,19 @@ makeSingleRequest :: (Transaction r a
 makeSingleRequest r = do
     fromAttempt =<< getResult <$> (withManager (\m -> makeDefaultRequest m r))
 
--- | Iterates request with batched responses until all batched are received 
---   using the default configuration and a fresh connection manager. The 
---   enclosed response bodies are extracted, concatenated (using 'mappend'
---   from 'Data.Monoid'), and returned within the IO monad.
+-- | Executes the given iterated request using the default configuration and a fresh 
+--   connection manager. Extracts the enclosed response body and returns it 
+--   within the IO monad.
 --
 --   The result is wrapped in an 'Attempt'.
 --
-makeSingleRequestAll :: (Transaction r a
-                        , Batched r a
+makeSingleRequestAll :: (IteratedTransaction r a
                         , Show r
                         , DefaultServiceConfiguration (ServiceConfiguration r NormalQuery)
                         ) 
                      => r -> IO a
-makeSingleRequestAll r = 
-    fromAttempt =<< getResult <$> withManager (\m -> requestAll (makeDefaultRequest m) r)
+makeSingleRequestAll r = do
+    fromAttempt =<< getResult <$> (withManager (\m -> makeDefaultRequestAll m r))
 
 -- | Given a Changeid returns the change info status for the corresponding 
 --   request.
@@ -129,18 +113,6 @@ getChangeResourceRecordSetsResponseChangeId response = getChangeId crrsrChangeIn
 
 -- -------------------------------------------------------------------------- --
 -- Hosted Zones
-
-instance Semigroup ListHostedZonesResponse where
-    a <> b = ListHostedZonesResponse 
-           { lhzrHostedZones = lhzrHostedZones a <> lhzrHostedZones b
-           , lhzrNextToken = lhzrNextToken b
-           }
-
-
-instance Batched ListHostedZones ListHostedZonesResponse where
-    nextRequest _ (Response _ (Failure _)) = Nothing
-    nextRequest _ (Response _ (Success ListHostedZonesResponse{..})) = 
-        ListHostedZones Nothing . Just <$> lhzrNextToken
 
 -- | Get all hosted zones of the user.
 --
@@ -172,26 +144,6 @@ getZoneIdByName hzName = hzId <$> getZoneByName hzName
 simpleResourceRecordSet :: Domain -> RecordType -> Int -> Text -> ResourceRecordSet
 simpleResourceRecordSet domain rtype ttl value = 
     ResourceRecordSet domain rtype Nothing Nothing Nothing Nothing (Just ttl) [(ResourceRecord value)]
-
-instance Semigroup ListResourceRecordSetsResponse where
-    a <> b = ListResourceRecordSetsResponse
-           { lrrsrResourceRecordSets = lrrsrResourceRecordSets a ++ lrrsrResourceRecordSets b
-           , lrrsrIsTruncated = lrrsrIsTruncated b
-           , lrrsrNextRecordName = lrrsrNextRecordName b
-           , lrrsrNextRecordType = lrrsrNextRecordType b
-           , lrrsrNextRecordIdentifier = lrrsrNextRecordIdentifier b
-           , lrrsrMaxItems = lrrsrMaxItems b
-           }
-
-instance Batched ListResourceRecordSets ListResourceRecordSetsResponse where
-    nextRequest _ (Response _ (Failure _)) = Nothing 
-    nextRequest ListResourceRecordSets{..} (Response _ (Success ListResourceRecordSetsResponse{..})) = do
-        guard (lrrsrIsTruncated)
-        return $ ListResourceRecordSets lrrsHostedZoneId 
-                                        lrrsrNextRecordName 
-                                        lrrsrNextRecordType 
-                                        lrrsrNextRecordIdentifier 
-                                        lrrsrMaxItems
 
 -- | Returns the resource record sets in the hosted zone with the given domain
 --   name.
@@ -258,16 +210,10 @@ modifyRecords cid domain rtype f = runMaybeT $ do
 -- | Updates the A record for the given domain in the given zone to the given 
 --   IP address (encoded as Text).
 --
-updateARecord :: HostedZoneId 
-              -> Domain 
-              -> Text 
-              -> IO (Maybe (ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse))
-updateARecord cid domain newIP = modifyRecords cid domain A (const [ResourceRecord newIP])
-
-setARecord :: HostedZoneId
-           -> Domain
-           -> Int
-           -> Text
+setARecord :: HostedZoneId -- ^ Zone ID
+           -> Domain       -- ^ Domain
+           -> Int          -- ^ TTL for the record
+           -> Text         -- ^ The new value for the A record, an IPv4 address
            -> IO [ChangeResourceRecordSetsResponse]
 setARecord cid domain ttl ip = runListT $ do
        maybeRrs <- liftIO $ getResourceRecords cid domain A
@@ -277,4 +223,3 @@ setARecord cid domain ttl ip = runListT $ do
         `mplus` do
             let rr = simpleResourceRecordSet domain A ttl ip
             liftIO . makeSingleRequest $ ChangeResourceRecordSets cid Nothing [(CREATE, rr)]
-

@@ -19,6 +19,7 @@ import           Aws.Core
 import           Aws.Route53.Core
 import           Data.Maybe                 (catMaybes, listToMaybe)
 import           Control.Applicative        ((<$>))
+import           Control.Monad              (guard)
 import           Text.XML.Cursor            (($//), (&|), ($/))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
@@ -75,4 +76,21 @@ instance ResponseConsumer r ListResourceRecordSetsResponse where
             return $ ListResourceRecordSetsResponse resourceRecordSets isTruncated maxItems nextRecordName nextRecordType nextRecordIdentifier
 
 instance Transaction ListResourceRecordSets ListResourceRecordSetsResponse
+
+instance IteratedTransaction ListResourceRecordSets ListResourceRecordSetsResponse where
+    nextIteratedRequest ListResourceRecordSets{..} ListResourceRecordSetsResponse{..} = do
+        guard lrrsrIsTruncated
+        return $ ListResourceRecordSets lrrsHostedZoneId 
+                                        lrrsrNextRecordName 
+                                        lrrsrNextRecordType 
+                                        lrrsrNextRecordIdentifier 
+                                        lrrsrMaxItems
+    combineIteratedResponse a b = ListResourceRecordSetsResponse
+           { lrrsrResourceRecordSets = lrrsrResourceRecordSets a ++ lrrsrResourceRecordSets b
+           , lrrsrIsTruncated = lrrsrIsTruncated b
+           , lrrsrNextRecordName = lrrsrNextRecordName b
+           , lrrsrNextRecordType = lrrsrNextRecordType b
+           , lrrsrNextRecordIdentifier = lrrsrNextRecordIdentifier b
+           , lrrsrMaxItems = lrrsrMaxItems b
+           }
 

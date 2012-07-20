@@ -13,7 +13,7 @@ module Aws.Route53.Commands.ListHostedZones where
 import           Aws.Core
 import           Aws.Route53.Core
 import           Data.Maybe
-import           Control.Applicative        ((<$>))
+import           Control.Applicative        ((<$>), (<$))
 import           Text.XML.Cursor            (($//))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
@@ -55,4 +55,8 @@ instance ResponseConsumer r ListHostedZonesResponse where
             return $ ListHostedZonesResponse zones nextToken
 
 instance Transaction ListHostedZones ListHostedZonesResponse
+
+instance IteratedTransaction ListHostedZones ListHostedZonesResponse where
+    nextIteratedRequest req ListHostedZonesResponse{ lhzrNextToken = nt } = req { lhzNextToken = nt } <$ nt
+    combineIteratedResponse (ListHostedZonesResponse z0 _) (ListHostedZonesResponse z1 nt) = ListHostedZonesResponse (z0 ++ z1) nt
 
