@@ -1,3 +1,7 @@
+-- ------------------------------------------------------ --
+-- Copyright © 2012 AlephCloud Systems, Inc.
+-- ------------------------------------------------------ --
+
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
@@ -49,7 +53,7 @@ dyndnsargs = DynDnsArgs
            }
            &= verbosity
            &= program "DynDNS"
-           &= summary "DynDNS v0.1, (C) AlephCloud System, Inc. 2012"
+           &= summary "DynDNS 0.1, © 2012 AlephCloud System, Inc."
            &= help "Regulary check and set the A record of the DNS name local machine to the effective public IP address"
            &= details [ "Uses AWS Route53 as DNS server backend."
                       , "An Route53 account is need with a configured hosted zone."

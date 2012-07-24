@@ -1,3 +1,7 @@
+-- ------------------------------------------------------ --
+-- Copyright © 2012 AlephCloud Systems, Inc.
+-- ------------------------------------------------------ --
+
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module AttemptT 
