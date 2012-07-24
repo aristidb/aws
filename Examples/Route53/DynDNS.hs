@@ -23,12 +23,15 @@ import Control.Monad.IO.Class (liftIO)
 
 import Network.DNS (lookup, makeResolvSeed, defaultResolvConf, withResolver, TYPE(A), RDATA(RD_A))
 
+import qualified Aws as Aws
 import Aws.Route53 (Domain(..), ChangeResourceRecordSetsResponse)
+
 import Utils hiding (retry)
 import qualified Utils (retry)
 import AttemptT
 
 import System.Console.CmdArgs
+
 
 -- -------------------------------------------------------------------------- --
 -- Command Line Arguments and Configuration
@@ -40,16 +43,20 @@ data DynDnsArgs = DynDnsArgs
                 , sleep :: Int
                 , retry :: Int
                 , retry_sleep :: Int
+                , aws_keys_file :: FilePath
+                , aws_key :: String
                 } deriving (Show, Data, Typeable)
 
 dyndnsargs :: DynDnsArgs
 dyndnsargs = DynDnsArgs
-           { ttl = 60 &= help "The time to live header for the A record of the subdomain" &= typ "SECONDS"
-           , sleep = 60 &= help "The time to sleep after each check and possible reset of the A record of the subdomain" &= typ "SECONDS"
-           , retry = 4 &= help "The number of times network requests are retried" &= typ "INTEGER"
-           , retry_sleep = 1 &= help "The time to wait between two retries" &= typ "SECONDS"
-           , hosted_zone = def &= argPos 0 &= typ "HostedZone" -- &= help "The domain of the Route53 hosted zone" &= typ "ABSOLUTE DNSNAME"
-           , subdomain = def &= argPos 1 &= typ "SubDomain" -- &= help "The subdomain (relative to hosted zone domain)" &= typ "RELATIVE DNSNAME"
+           { ttl = 60 &= help "Value of the time to live header for the A record of the subdomain (default: 60)" &= typ "SECONDS"
+           , sleep = 60 &= help "Time to sleep after each check and possible reset of the A record of the subdomain (default: 60)" &= typ "SECONDS"
+           , retry = 4 &= help "Number of times network requests are retried (default: 4)" &= typ "INTEGER"
+           , retry_sleep = 1 &= help "Time to wait between two retries (defaul: 1)" &= typ "SECONDS"
+           , aws_keys_file = def &= help "File with the AWS access keys (default: ~/.aws-keys)" &= typFile
+           , aws_key = def &= help "Aws key to use (default: default)" &= typ "STRING"
+           , hosted_zone = def &= argPos 0 &= typ "HostedZone"
+           , subdomain = def &= argPos 1 &= typ "SubDomain"
            }
            &= verbosity
            &= program "DynDNS"
@@ -71,6 +78,7 @@ data Config = Config
             , confSleep :: Int
             , confRetry :: Int
             , confRetrySleep :: Int
+            , confAws :: Aws.Configuration
             }
 
 logError :: String -> IO ()
@@ -143,17 +151,43 @@ check conf _ = do
 
 setip :: Config -> IPv4 -> IO (Attempt [ChangeResourceRecordSetsResponse])
 setip conf ip = runAttemptT $ do
-    zid <- ret . AttemptT . liftIO $ getZoneIdByName (confHostedZone conf)
-    ret . AttemptT . liftIO $ setARecordRetry zid (confDomain conf) (confTtl conf) ip
+    zid <- ret . AttemptT . liftIO $ getZoneIdByName awsconf (confHostedZone conf)
+    ret . AttemptT . liftIO $ setARecordRetry awsconf zid (confDomain conf) (confTtl conf) ip
     where
     ret = Utils.retry (confRetrySleep conf) (confRetry conf)
+    awsconf = confAws conf
 
 -- -------------------------------------------------------------------------- --
 -- Main
 --
+
+awsConfiguration :: DynDnsArgs -> IO Aws.Configuration
+awsConfiguration a = do
+    maybeCreds <- awsCredentials (aws_keys_file a) (aws_key a)
+    creds <- case maybeCreds of
+        Nothing -> error "Failed to load AWS Credentials."
+        Just x  -> return x
+    verb <- getVerbosity
+    return $ Aws.Configuration
+           { Aws.timeInfo    = Aws.Timestamp
+           , Aws.credentials = creds
+           , Aws.logger      = awsLogger verb
+           }
+    where
+    awsLogger Quiet  = Aws.defaultLog Aws.Error
+    awsLogger Normal = Aws.defaultLog Aws.Warning
+    awsLogger Loud   = Aws.defaultLog Aws.Debug
+
+    awsCredentials file key | file == def && key == def = Aws.loadCredentialsDefault
+                            | key == def                = Aws.loadCredentialsFromFile file Aws.credentialsDefaultKey
+                            | file == def               = do f <- Aws.credentialsDefaultFile
+                                                             Aws.loadCredentialsFromEnvOrFile f (pack key)
+                            | otherwise                 = Aws.loadCredentialsFromFile file (pack key)
+
 main :: IO ()
 main = do
     a <- cmdArgs dyndnsargs
+    awsConf <- awsConfiguration a
 
     let conf = Config
              { confHostedZone = Domain . pack . hosted_zone $ a
@@ -162,6 +196,7 @@ main = do
              , confSleep = sleep a
              , confRetry = retry a
              , confRetrySleep = retry_sleep a
+             , confAws = awsConf
              }
 
     let dom        = dText (confDomain conf)
