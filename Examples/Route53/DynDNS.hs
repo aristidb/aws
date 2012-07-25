@@ -9,14 +9,20 @@ module Main where
 
 import Prelude hiding (lookup)
 
-import System.IO (hPutStrLn, stderr)
+import System.IO (stderr, Handle, withFile, BufferMode(LineBuffering), IOMode(AppendMode), hSetBuffering)
+import System.Locale (defaultTimeLocale)
 
 import Network.HTTP.Conduit (simpleHttp)
 import qualified Data.ByteString.Lazy.Char8 as B8 (unpack)
-import Data.Text (unpack, pack, append)
+import Data.Text (Text, pack, append)
+import Data.Text.IO (hPutStrLn)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Attempt
+import Data.Monoid ((<>))
 import Data.IP (IPv4)
+import Data.Time.Clock (getCurrentTime)
+import Data.Time.Format (formatTime)
+import Control.Monad (when)
 import Control.Applicative ((<$>))
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class (liftIO)
@@ -24,6 +30,7 @@ import Control.Monad.IO.Class (liftIO)
 import Network.DNS (lookup, makeResolvSeed, defaultResolvConf, withResolver, TYPE(A), RDATA(RD_A))
 
 import qualified Aws as Aws
+import Aws (LogLevel(..), Logger)
 import Aws.Route53 (Domain(..), ChangeResourceRecordSetsResponse)
 
 import Utils hiding (retry)
@@ -43,6 +50,7 @@ data DynDnsArgs = DynDnsArgs
                 , sleep :: Int
                 , retry :: Int
                 , retry_sleep :: Int
+                , log_file :: FilePath
                 , aws_keys_file :: FilePath
                 , aws_key :: String
                 } deriving (Show, Data, Typeable)
@@ -55,6 +63,7 @@ dyndnsargs = DynDnsArgs
            , retry_sleep = 1 &= help "Time to wait between two retries (defaul: 1)" &= typ "SECONDS"
            , aws_keys_file = def &= help "File with the AWS access keys (default: ~/.aws-keys)" &= typFile
            , aws_key = def &= help "Aws key to use (default: default)" &= typ "STRING"
+           , log_file = def &= help "File with where the logs will be written to (default: stderr)" &= typFile
            , hosted_zone = def &= argPos 0 &= typ "HostedZone"
            , subdomain = def &= argPos 1 &= typ "SubDomain"
            }
@@ -79,16 +88,30 @@ data Config = Config
             , confRetry :: Int
             , confRetrySleep :: Int
             , confAws :: Aws.Configuration
+            , confLog :: Logger
             }
 
-logError :: String -> IO ()
-logError = hPutStrLn stderr
+-- We reuse the simple logging approach from the Aws package.
+-- It is not very efficient but for this application we do not need
+-- to worry about performance
+getLogger :: Handle -> LogLevel -> Logger
+getLogger h minlevel level msg = do 
+    when (level >= minlevel) $ do 
+        time <- formatTime defaultTimeLocale "%F %X" <$> getCurrentTime
+        let m = pack time <> " - " <> pack (show level) <> ": " <> msg
+        hPutStrLn h m
 
-logNormal :: String -> IO ()
-logNormal = whenNormal . putStrLn
+logDebug :: Config -> Text -> IO ()
+logDebug conf msg = (confLog conf) Debug msg
 
-logVerbose :: String -> IO ()
-logVerbose = whenLoud . putStrLn
+logInfo :: Config -> Text -> IO ()
+logInfo conf msg = (confLog conf) Info msg
+
+logWarning :: Config -> Text -> IO ()
+logWarning conf msg = (confLog conf) Warning msg
+
+logError :: Config -> Text -> IO ()
+logError conf msg = (confLog conf) Error msg
 
 -- -------------------------------------------------------------------------- --
 -- Utils
@@ -105,7 +128,7 @@ dnsip conf = do
         case result of
             Just ips -> return . map (\(RD_A ip) -> ip) $ ips
             Nothing -> do
-                logError $ "WARNING: DNS lookup for " ++ unpack dom ++ " without result."
+                logWarning conf $ "DNS lookup for " <> dom <> " without result."
                 return []
 
     where
@@ -117,12 +140,12 @@ check :: Config -> [IPv4] -> IO ()
 
 check conf [ip] = do
     rip <- realip
-    logVerbose $ "Current public visible IP of the local machine is " ++ show rip ++ "."
+    logDebug conf $ "Current public visible IP of the local machine is " <> pack (show rip) <> "."
     
     ip' <- if ip == rip 
         then return [ip]
         else do
-            logNormal $ "INFO: real IPv4 address does not match the DNS IPv4 address."
+            logInfo conf $ "Real IPv4 address does not match the DNS IPv4 address."
             sip <- setip conf rip
             case sip of
                 Failure _ -> return [ip]
@@ -131,18 +154,18 @@ check conf [ip] = do
     check conf ip'
 
 check conf _ = do
-    logVerbose $ "No valid single IPv4 address (A record) in DNS." 
+    logDebug conf $ "No valid single IPv4 address (A record) in DNS." 
     
     rip <- realip
-    logVerbose $ "Current public visible IP of the local machine is " ++ show rip ++ "."
+    logDebug conf $ "Current public visible IP of the local machine is " <> pack (show rip) <> "."
     
     sip <- setip conf rip
     ip' <- case sip of
         Failure _ -> do
-            logError $ "WARNING: Failed to update ip address for " ++ unpack dom ++ " to " ++ show rip ++ "."
+            logWarning conf $ "Failed to update ip address for " <> dom <> " to " <> pack (show rip) <> "."
             return []
         Success _ -> do
-            logNormal $ "INFO: Successfully updated ip address for " ++ unpack dom ++ " to " ++ show rip ++ "."
+            logInfo conf $ "Successfully updated ip address for " <> dom <> " to " <> pack (show rip) <> "."
             return [rip]
     threadDelay $ (confSleep conf) * 1000000
     check conf ip'
@@ -161,23 +184,19 @@ setip conf ip = runAttemptT $ do
 -- Main
 --
 
-awsConfiguration :: DynDnsArgs -> IO Aws.Configuration
-awsConfiguration a = do
+awsConfiguration :: DynDnsArgs -> Logger -> IO Aws.Configuration
+awsConfiguration a logger = do
     maybeCreds <- awsCredentials (aws_keys_file a) (aws_key a)
     creds <- case maybeCreds of
-        Nothing -> error "Failed to load AWS Credentials."
+        Nothing -> do logger Error $ "Failed to load AWS Credentials."
+                      error "FATAL ERROR: Failed to load AWS Credentials."
         Just x  -> return x
-    verb <- getVerbosity
     return $ Aws.Configuration
            { Aws.timeInfo    = Aws.Timestamp
            , Aws.credentials = creds
-           , Aws.logger      = awsLogger verb
+           , Aws.logger      = logger
            }
     where
-    awsLogger Quiet  = Aws.defaultLog Aws.Error
-    awsLogger Normal = Aws.defaultLog Aws.Warning
-    awsLogger Loud   = Aws.defaultLog Aws.Debug
-
     awsCredentials file key | file == def && key == def = Aws.loadCredentialsDefault
                             | key == def                = Aws.loadCredentialsFromFile file Aws.credentialsDefaultKey
                             | file == def               = do f <- Aws.credentialsDefaultFile
@@ -187,24 +206,43 @@ awsConfiguration a = do
 main :: IO ()
 main = do
     a <- cmdArgs dyndnsargs
-    awsConf <- awsConfiguration a
+    
 
-    let conf = Config
-             { confHostedZone = Domain . pack . hosted_zone $ a
-             , confDomain = Domain $ (pack (subdomain a)) `append` "." `append` (pack (hosted_zone a))
-             , confTtl = ttl a
-             , confSleep = sleep a
-             , confRetry = retry a
-             , confRetrySleep = retry_sleep a
-             , confAws = awsConf
-             }
+    let execWithLogfile logfile = do
+        hSetBuffering logfile LineBuffering
 
-    let dom        = dText (confDomain conf)
-        hostedzone = dText (confHostedZone conf)
+        verb <- getVerbosity
+        let loglevel = case verb of
+                Quiet  -> Error
+                Normal -> Warning
+                Loud   -> Aws.Debug
 
-    logNormal $ "Start DynDNS client for domain " ++ unpack dom ++ " in hosted zone " ++ unpack hostedzone ++ "."
-    dip <- dnsip conf
+        let logger = getLogger logfile loglevel
+        logger Info $ "Startup DynDNS"
 
-    logNormal $ "Current IPv4 address (A record) in DNS is " ++ show dip ++ "." 
-    check conf dip
+        awsConf <- awsConfiguration a logger
+
+        let conf = Config
+                 { confHostedZone = Domain . pack . hosted_zone $ a
+                 , confDomain = Domain $ (pack (subdomain a)) `append` "." `append` (pack (hosted_zone a))
+                 , confTtl = ttl a
+                 , confSleep = sleep a
+                 , confRetry = retry a
+                 , confRetrySleep = retry_sleep a
+                 , confAws = awsConf
+                 , confLog = logger
+                 }
+
+        let dom        = dText (confDomain conf)
+            hostedzone = dText (confHostedZone conf)
+
+        logInfo conf $ "Start DynDNS client for domain " <> dom <> " in hosted zone " <> hostedzone <> "."
+        dip <- dnsip conf
+
+        logInfo conf $ "Current IPv4 address (A record) in DNS is " <> pack (show dip) <> "." 
+        check conf dip
+
+    if log_file a /= def
+       then withFile (log_file a) AppendMode execWithLogfile
+       else execWithLogfile stderr
 
