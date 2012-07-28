@@ -39,7 +39,6 @@ import AttemptT
 
 import System.Console.CmdArgs
 
-
 -- -------------------------------------------------------------------------- --
 -- Command Line Arguments and Configuration
 --
@@ -68,8 +67,8 @@ dyndnsargs = DynDnsArgs
            , subdomain = def &= argPos 1 &= typ "SubDomain"
            }
            &= verbosity
-           &= program "DynDNS"
-           &= summary "DynDNS 0.1, © 2012 AlephCloud System, Inc."
+           &= program "r53-dyndns"
+           &= summary "r53-dyndns 0.1, © 2012 AlephCloud System, Inc."
            &= help "Regulary check and set the A record of the DNS name local machine to the effective public IP address"
            &= details [ "Uses AWS Route53 as DNS server backend."
                       , "An Route53 account is need with a configured hosted zone."
@@ -218,7 +217,7 @@ main = do
                 Loud   -> Aws.Debug
 
         let logger = getLogger logfile loglevel
-        logger Info $ "Startup DynDNS"
+        logger Info $ "Startup r53-dyndns"
 
         awsConf <- awsConfiguration a logger
 
@@ -236,7 +235,7 @@ main = do
         let dom        = dText (confDomain conf)
             hostedzone = dText (confHostedZone conf)
 
-        logInfo conf $ "Start DynDNS client for domain " <> dom <> " in hosted zone " <> hostedzone <> "."
+        logInfo conf $ "Start r53-dyndns client for domain " <> dom <> " in hosted zone " <> hostedzone <> "."
         dip <- dnsip conf
 
         logInfo conf $ "Current IPv4 address (A record) in DNS is " <> pack (show dip) <> "." 
