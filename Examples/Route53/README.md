@@ -27,6 +27,6 @@ For usage information type `r53-dyndns --help`.
 RUNNING AS A SERVICE
 ====================
 
-Edit the file `contrib/r53-dyndns.conf` according to your needs and copy to
-`/etc/init/r53-dyndns.conf`.
+On recent Ubuntu distributions edit the file `contrib/r53-dyndns.conf`
+according to your needs and copy to `/etc/init/r53-dyndns.conf`.
 
