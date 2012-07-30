@@ -4,6 +4,7 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DoAndIfThenElse #-}
 
 module Main where
 
@@ -14,7 +15,7 @@ import System.Locale (defaultTimeLocale)
 
 import Network.HTTP.Conduit (simpleHttp)
 import qualified Data.ByteString.Lazy.Char8 as B8 (unpack)
-import Data.Text (Text, pack, append)
+import Data.Text (Text, pack)
 import Data.Text.IO (hPutStrLn)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Attempt
@@ -63,20 +64,16 @@ dyndnsargs = DynDnsArgs
            , aws_keys_file = def &= help "File with the AWS access keys (default: ~/.aws-keys)" &= typFile
            , aws_key = def &= help "Aws key to use (default: default)" &= typ "STRING"
            , log_file = def &= help "File with where the logs will be written to (default: stderr)" &= typFile
-           , hosted_zone = def &= argPos 0 &= typ "HostedZone"
-           , subdomain = def &= argPos 1 &= typ "SubDomain"
+           , subdomain = def &= help "If present the A record for the subdomain is updated" &= typ "RELATIVE_DOMAIN"
+           , hosted_zone = def &= argPos 0 &= typ "HOSTED_ZONE"
            }
            &= verbosity
            &= program "r53-dyndns"
            &= summary "r53-dyndns 0.1, © 2012 AlephCloud System, Inc."
            &= help "Regulary check and set the A record of the DNS name local machine to the effective public IP address"
-           &= details [ "Uses AWS Route53 as DNS server backend."
-                      , "An Route53 account is need with a configured hosted zone."
-                      , "The subdomain must be choosen for the hosted zone."
-                      , "The Haskell AWS package must be configured with the default access key in place."
+           &= details [ "This dynamic DNS client sses AWS Route53 as DNS server backend. An Route53 account is need with a configured hosted zone. If a subdomain is provided it must be choosen for the hosted zone. The Haskell AWS package must be configured with the default access key in place."
                       , ""
-                      , "You must provide the domain of the hosted zone as absolute DNS name (ends with a dot)"
-                      , "and the subdomain relative to the hosted zone domain."
+                      , "You must provide the domain of the hosted zone as absolute DNS name (ends with a dot) and the subdomain relative to the hosted zone domain."
                       ]
 
 data Config = Config
@@ -221,9 +218,13 @@ main = do
 
         awsConf <- awsConfiguration a logger
 
+        let domain = if subdomain a /= def 
+            then Domain $ pack (subdomain a) <> "." <> pack (hosted_zone a)
+            else  Domain $ pack (hosted_zone a)
+
         let conf = Config
                  { confHostedZone = Domain . pack . hosted_zone $ a
-                 , confDomain = Domain $ (pack (subdomain a)) `append` "." `append` (pack (hosted_zone a))
+                 , confDomain = domain
                  , confTtl = ttl a
                  , confSleep = sleep a
                  , confRetry = retry a
