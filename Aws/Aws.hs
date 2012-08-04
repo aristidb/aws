@@ -199,7 +199,7 @@ unsafeAwsRef cfg info manager metadataRef request = liftIO $ do
   resp <- runResourceT $ do
       HTTP.Response status _ headers body <- HTTP.http httpRequest manager
       forM_ headers $ \(hname,hvalue) -> liftIO $ do
-        logger cfg Debug $ T.decodeUtf8 $ "Response header '" <> CI.original hname <> "': '" <> hvalue <> "'"
+        logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
       responseConsumer request metadataRef status headers body
   return resp
 
