@@ -101,6 +101,8 @@ You can also find this example in the source distribution in the ~Examples/~ fol
   - Change ServiceConfiguration concept so as to indicate in the type whether this is for URI-only requests
     (i.e. awsUri)
   - Direct support for iterated transaction, i.e. such where multiple HTTP requests might be necessary due to e.g. response size limits.
+  - Bug fixes:
+    - Properly parse Last-Modified header in accordance with RFC 2616.
 
 ** 0.6 series
 
