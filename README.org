@@ -101,6 +101,9 @@ Feature ideas:
 
 ** 0.6 series
 
+- 0.6.2
+  - Properly parse Last-Modified header in accordance with RFC 2616.
+
 - 0.6.1
   - Fix for MD5 encoding issue in S3 PutObject requests.
 
