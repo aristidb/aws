@@ -87,6 +87,18 @@ Library
                        Aws.Ses.Commands,
                        Aws.Ses.Commands.SendRawEmail,
                        Aws.Ses.Core
+                       Aws.Route53,
+                       Aws.Route53.Core
+                       Aws.Route53.Commands,
+                       Aws.Route53.Commands.ListHostedZones,
+                       Aws.Route53.Commands.ListResourceRecordSets,
+                       Aws.Route53.Commands.ChangeResourceRecordSets,
+                       Aws.Route53.Commands.GetHostedZone,
+                       Aws.Route53.Commands.CreateHostedZone,
+                       Aws.Route53.Commands.DeleteHostedZone,
+                       Aws.Route53.Commands.GetChange,
+                       Aws.Route53.Commands.GetDate
+                       
 
   -- Packages needed in order to build this package.
   Build-depends:       attempt              >= 0.3.1.1 && < 0.5,
@@ -113,7 +125,8 @@ Library
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2.0 && < 0.4,
                        utf8-string          == 0.3.*,
-                       xml-conduit          >= 1.0.1 && <1.1
+                       xml-conduit          >= 1.0.1 && <1.1,
+                       xml-hamlet           >= 0.3.0
 
   GHC-Options: -Wall
 
@@ -129,7 +142,10 @@ Library
         OverloadedStrings,
         TupleSections,
         ScopedTypeVariables,
-        EmptyDataDecls
+        EmptyDataDecls,
+        GeneralizedNewtypeDeriving,
+        QuasiQuotes
+  
 
   -- Modules not exported by this package.
   -- Other-modules:
