@@ -3,10 +3,15 @@
 -- ------------------------------------------------------ --
 
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module AttemptT 
 ( AttemptT(..)
 , mapAttemptT
+, failAttempt
+, succeedAttempt
+, listToAttemptT
 ) where
 
 import Data.Typeable
@@ -68,4 +73,14 @@ instance MonadTrans AttemptT where
 
 instance (MonadIO m) => MonadIO (AttemptT m) where
     liftIO = lift . liftIO
+
+failAttempt :: (Monad m, Exception e) => e -> AttemptT m a
+failAttempt = AttemptT . return . Failure
+
+succeedAttempt :: (Monad m) => a -> AttemptT m a
+succeedAttempt = return
+
+listToAttemptT :: (Monad m) => [a] -> AttemptT m a
+listToAttemptT [] = failAttempt $ FailException "empty result list"
+listToAttemptT (h:_) = succeedAttempt h
 

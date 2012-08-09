@@ -15,7 +15,7 @@ import System.Locale (defaultTimeLocale)
 
 import Network.HTTP.Conduit (simpleHttp)
 import qualified Data.ByteString.Lazy.Char8 as B8 (unpack)
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unpack)
 import Data.Text.IO (hPutStrLn)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Attempt
@@ -27,6 +27,7 @@ import Control.Monad (when)
 import Control.Applicative ((<$>))
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class (liftIO)
+import Control.Exception (finally)
 
 import Network.DNS (lookup, makeResolvSeed, defaultResolvConf, withResolver, TYPE(A), RDATA(RD_A))
 
@@ -138,14 +139,20 @@ check conf [ip] = do
     rip <- realip
     logDebug conf $ "Current public visible IP of the local machine is " <> pack (show rip) <> "."
     
+    let dom = dText (confDomain conf)
+    
     ip' <- if ip == rip 
         then return [ip]
         else do
             logInfo conf $ "Real IPv4 address does not match the DNS IPv4 address."
-            sip <- setip conf rip
+            sip <- runAttemptT $ setip conf rip
             case sip of
-                Failure _ -> return [ip]
-                Success _ -> return [rip]
+                Failure _ -> do
+                    logWarning conf $ "Failed to update ip address for " <> dom <> " to " <> pack (show rip) <> "."
+                    return []
+                Success _ -> do
+                    logInfo conf $ "Successfully updated ip address for " <> dom <> " to " <> pack (show rip) <> "."
+                    return [rip]
     threadDelay $ (confSleep conf) * 1000000
     check conf ip'
 
@@ -155,7 +162,9 @@ check conf _ = do
     rip <- realip
     logDebug conf $ "Current public visible IP of the local machine is " <> pack (show rip) <> "."
     
-    sip <- setip conf rip
+    let dom = dText (confDomain conf)
+    
+    sip <- runAttemptT $ setip conf rip
     ip' <- case sip of
         Failure _ -> do
             logWarning conf $ "Failed to update ip address for " <> dom <> " to " <> pack (show rip) <> "."
@@ -165,16 +174,16 @@ check conf _ = do
             return [rip]
     threadDelay $ (confSleep conf) * 1000000
     check conf ip'
-    where
-    dom = dText (confDomain conf)
 
-setip :: Config -> IPv4 -> IO (Attempt [ChangeResourceRecordSetsResponse])
-setip conf ip = runAttemptT $ do
-    zid <- ret . AttemptT . liftIO $ getZoneIdByName awsconf (confHostedZone conf)
-    ret . AttemptT . liftIO $ setARecordRetry awsconf zid (confDomain conf) (confTtl conf) ip
-    where
-    ret = Utils.retry (confRetrySleep conf) (confRetry conf)
-    awsconf = confAws conf
+setip :: Config -> IPv4 -> AttemptT IO [ChangeResourceRecordSetsResponse]
+setip conf ip = do
+    let pause = confRetrySleep conf
+        rnum = confRetry conf
+        ret = Utils.retry pause rnum
+        awsconf = confAws conf
+    liftIO $ logInfo conf $ "Attempt to set ip address to " <> pack (show ip) <> "."
+    zid <- ret $ getZoneIdByName awsconf (confHostedZone conf)
+    setARecordRetry pause rnum awsconf zid (confDomain conf) (confTtl conf) ip
 
 -- -------------------------------------------------------------------------- --
 -- Main
@@ -200,27 +209,41 @@ awsConfiguration a logger = do
                             | otherwise                 = Aws.loadCredentialsFromFile file (pack key)
 
 main :: IO ()
-main = do
+main = do 
     a <- cmdArgs dyndnsargs
-    
 
     let execWithLogfile logfile = do
         hSetBuffering logfile LineBuffering
 
         verb <- getVerbosity
+
+        -- Initialize the boot logger:
+        let bootLoglevel = case verb of
+                Quiet  -> Error
+                _      -> Aws.Debug
+
+        let bootLogger = getLogger logfile bootLoglevel
+        bootLogger Info "=== Start r53-dyndns ==="
+        
+        -- Initialize the service logger:
         let loglevel = case verb of
                 Quiet  -> Error
                 Normal -> Warning
                 Loud   -> Aws.Debug
 
         let logger = getLogger logfile loglevel
-        logger Info $ "Startup r53-dyndns"
+
+        -- Configure the service
+        when (let d = (hosted_zone a) in null d || last d /= '.') $ do
+            let err = "The domain name of a AWS Route53 must end with a DOT. Please provide a valid ABSOLUTE DNS domain name as hosted zone name."
+            logger Error err
+            error $ "FATAL ERROR: " <> (unpack err)
+
+        let domain
+                | (subdomain a /= def) = Domain $ pack (subdomain a) <> "." <> pack (hosted_zone a)
+                | otherwise            = Domain $ pack (hosted_zone a)
 
         awsConf <- awsConfiguration a logger
-
-        let domain = if subdomain a /= def 
-            then Domain $ pack (subdomain a) <> "." <> pack (hosted_zone a)
-            else  Domain $ pack (hosted_zone a)
 
         let conf = Config
                  { confHostedZone = Domain . pack . hosted_zone $ a
@@ -236,13 +259,17 @@ main = do
         let dom        = dText (confDomain conf)
             hostedzone = dText (confHostedZone conf)
 
+        -- Run the daemon
         logInfo conf $ "Start r53-dyndns client for domain " <> dom <> " in hosted zone " <> hostedzone <> "."
-        dip <- dnsip conf
-
-        logInfo conf $ "Current IPv4 address (A record) in DNS is " <> pack (show dip) <> "." 
-        check conf dip
-
+        daemon conf `finally` bootLogger Info "=== Exit r53-dyndns ==="
+    
     if log_file a /= def
        then withFile (log_file a) AppendMode execWithLogfile
        else execWithLogfile stderr
+
+daemon :: Config -> IO ()
+daemon conf = do
+        dip <- dnsip conf
+        logInfo conf $ "Current IPv4 address (A record) in DNS is " <> pack (show dip) <> "." 
+        check conf dip
 

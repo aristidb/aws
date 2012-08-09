@@ -11,11 +11,11 @@ module Utils where
 
 import Data.Text                 (Text, pack)
 import Data.List                 (find)
-import Data.Maybe                (fromJust, listToMaybe)
+import Data.Maybe                (fromJust) 
 import Data.Attempt              (Attempt(..))
 
-import Control.Monad             (MonadPlus, mzero, mplus)
-import Control.Applicative       ((<$>))
+import Control.Monad             (MonadPlus, mplus)
+import Control.Applicative       (Applicative, (<$>))
 import Control.Monad.IO.Class    (MonadIO, liftIO)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.List  (runListT)
@@ -73,10 +73,11 @@ makeDefaultRequestAll cfg manager request = do
 makeSingleRequest :: ( Transaction r a
                      , Show r
                      , DefaultServiceConfiguration (ServiceConfiguration r NormalQuery)
+                     , MonadIO m
                      ) 
-                  => Configuration -> r -> IO (Attempt a)
+                  => Configuration -> r -> AttemptT m a
 makeSingleRequest cfg r = do
-    getResult <$> (withManager (\m -> makeDefaultRequest cfg m r))
+     AttemptT . liftIO $ getResult <$> withManager (\m -> makeDefaultRequest cfg m r)
 
 -- | Executes the given iterated request using the default configuration and a fresh 
 --   connection manager. Extracts the enclosed response body and returns it 
@@ -85,17 +86,18 @@ makeSingleRequest cfg r = do
 makeSingleRequestAll :: ( IteratedTransaction r a
                         , Show r
                         , DefaultServiceConfiguration (ServiceConfiguration r NormalQuery)
+                        , MonadIO m
                         ) 
-                     => Configuration -> r -> IO (Attempt a)
+                     => Configuration -> r -> AttemptT m a
 makeSingleRequestAll cfg r = do
-    getResult <$> (withManager (\m -> makeDefaultRequestAll cfg m r))
+    AttemptT . liftIO $ getResult <$> withManager (\m -> makeDefaultRequestAll cfg m r)
 
 -- | Given a Changeid returns the change info status for the corresponding 
 --   request.
 --
-getChangeStatus :: Configuration -> ChangeId -> IO (Attempt ChangeInfoStatus)
+getChangeStatus :: (MonadIO m, Applicative m) => Configuration -> ChangeId -> AttemptT m ChangeInfoStatus
 getChangeStatus cfg changeId = 
-    fmap (ciStatus . gcrChangeInfo) <$> (makeSingleRequest cfg $ getChange changeId)
+    ciStatus . gcrChangeInfo <$> (makeSingleRequest cfg $ getChange changeId)
 
 -- | Extracts the ChangeId from a response using the given function to extract
 --   the ChangeInfo from the response.
@@ -115,25 +117,25 @@ getChangeResourceRecordSetsResponseChangeId response = getChangeId crrsrChangeIn
 
 -- | Get all hosted zones of the user.
 --
-getAllZones :: Configuration -> IO (Attempt HostedZones)
-getAllZones cfg = fmap lhzrHostedZones <$> makeSingleRequestAll cfg listHostedZones
+getAllZones :: (MonadIO m, Applicative m) => Configuration -> AttemptT m HostedZones
+getAllZones cfg = lhzrHostedZones <$> makeSingleRequestAll cfg listHostedZones
 
 -- | Get a hosted zone by its 'HostedZoneId'.
 --
-getZoneById :: Configuration -> HostedZoneId -> IO (Attempt HostedZone)
-getZoneById cfg hzid = fmap ghzrHostedZone <$> makeSingleRequest cfg (getHostedZone hzid)
+getZoneById :: (MonadIO m, Applicative m) => Configuration -> HostedZoneId -> AttemptT m HostedZone
+getZoneById cfg hzid = ghzrHostedZone <$> makeSingleRequest cfg (getHostedZone hzid)
 
 -- | Get a hosted zone by its domain name.
 --   
 --   Results in an error if no hosted zone exists for the given domain name.
 --
-getZoneByName :: Configuration -> Domain -> IO (Attempt HostedZone)
-getZoneByName cfg z = fmap (fromJust . find ((z==) . hzName)) <$> getAllZones cfg
+getZoneByName :: (MonadIO m, Applicative m) => Configuration -> Domain -> AttemptT m HostedZone
+getZoneByName cfg z = fromJust . find ((z==) . hzName) <$> getAllZones cfg
 
 -- | Returns the hosted zone id of the hosted zone for the given domain.
 --
-getZoneIdByName :: Configuration -> Domain -> IO (Attempt HostedZoneId)
-getZoneIdByName cfg hzName = fmap hzId <$> getZoneByName cfg hzName
+getZoneIdByName :: (MonadIO m, Applicative m) => Configuration -> Domain -> AttemptT m HostedZoneId
+getZoneIdByName cfg hzName = hzId <$> getZoneByName cfg hzName
 
 -- -------------------------------------------------------------------------- --
 -- Resource Records Sets
@@ -149,42 +151,39 @@ simpleResourceRecordSet domain rtype ttl value =
 --
 --   Note the 'zName' is the domain name of the hosted zone itself.
 --
-getResourceRecordSetsByHostedZoneName :: Configuration -> Domain -> IO (Attempt ResourceRecordSets)
+getResourceRecordSetsByHostedZoneName :: (MonadIO m, Applicative m) => Configuration -> Domain -> AttemptT m ResourceRecordSets
 getResourceRecordSetsByHostedZoneName cfg zName = do
-    attemptHzid <- getZoneIdByName cfg zName
-    case attemptHzid of
-        Success hzid -> fmap lrrsrResourceRecordSets <$> makeSingleRequestAll cfg (listResourceRecordSets hzid)
-        Failure e -> return $ Failure e
+    hzid <- getZoneIdByName cfg zName
+    lrrsrResourceRecordSets <$> makeSingleRequestAll cfg (listResourceRecordSets hzid)
 
 -- | Lists all resource record sets in the hosted zone with the given hosted 
 --   zone id.
 --
-getResourceRecordSets :: Configuration -> HostedZoneId -> IO (Attempt ResourceRecordSets)
+getResourceRecordSets :: (MonadIO m, Applicative m) => Configuration -> HostedZoneId -> AttemptT m ResourceRecordSets
 getResourceRecordSets cfg hzid = 
-    fmap lrrsrResourceRecordSets <$> makeSingleRequestAll cfg (listResourceRecordSets hzid)
+    lrrsrResourceRecordSets <$> makeSingleRequestAll cfg (listResourceRecordSets hzid)
 
 -- | Lists all resource record sets in the given hosted zone for the given 
 --   domain.
 --
-getResourceRecordSetsByDomain :: Configuration -> HostedZoneId -> Domain -> IO (Attempt ResourceRecordSets)
+getResourceRecordSetsByDomain :: (MonadIO m, Applicative m) => Configuration -> HostedZoneId -> Domain -> AttemptT m ResourceRecordSets
 getResourceRecordSetsByDomain cfg hzid domain = do
-    let req = (listResourceRecordSets hzid) { lrrsName = Just domain }
-    fmap lrrsrResourceRecordSets <$> makeSingleRequestAll cfg req
+    filter ((== domain) . rrsName) <$> getResourceRecordSets cfg hzid
 
 -- | Returns all resource records sets in the hosted zone with the given hosted
 --   zone id for the given DNS record type.
 --
-getResourceRecordSetsByType :: Configuration -> HostedZoneId -> RecordType -> IO (Attempt ResourceRecordSets)
+getResourceRecordSetsByType :: (MonadIO m, Applicative m) => Configuration -> HostedZoneId -> RecordType -> AttemptT m ResourceRecordSets
 getResourceRecordSetsByType cfg hzid dnsRecordType = 
-    fmap (filter ((== dnsRecordType) . rrsType)) <$> getResourceRecordSets cfg hzid
+    filter ((== dnsRecordType) . rrsType) <$> getResourceRecordSets cfg hzid
 
--- | Returns the resource record set of the given type for the given domain in 
---   the given hosted zone.
+-- | Returns all resource records sets in the hosted zone with the given hosted
+--   zone id for the given domain and the given DNS record type.
 --
-getResourceRecords :: Configuration -> HostedZoneId -> Domain -> RecordType -> IO (Attempt (Maybe ResourceRecordSet))
-getResourceRecords cfg cid domain rtype = do
-    let req = ListResourceRecordSets cid (Just domain) (Just rtype) Nothing (Just 1)
-    fmap (listToMaybe . lrrsrResourceRecordSets) <$> (makeSingleRequest cfg $ req)
+getResourceRecordSetsByDomainAndType :: (MonadIO m, Applicative m) => Configuration -> HostedZoneId -> Domain -> RecordType -> AttemptT m ResourceRecordSets
+getResourceRecordSetsByDomainAndType cfg hzid domain dnsRecordType =
+    let f ResourceRecordSet{..} = (rrsType == dnsRecordType) && (rrsName == domain)
+    in  filter f <$> getResourceRecordSets cfg hzid
 
 -- | Updates the resouce records of the given type for the given domain in the 
 --   given hosted zone using the given mapping function.
@@ -193,39 +192,20 @@ getResourceRecords cfg cid domain rtype = do
 --   Aws.Route53 module. In a production environment one would reuse the same 
 --   connection manager and configuration for all involved requests.
 --
-modifyRecords :: Configuration
+modifyRecords :: (MonadIO m, Applicative m)
+              =>Configuration
               -> HostedZoneId 
               -> Domain 
               -> RecordType 
               -> ([ResourceRecord] -> [ResourceRecord]) 
-              -> IO (Attempt (ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse))
-modifyRecords cfg cid domain rtype f = runAttemptT $ do
-    -- Fixme fail more gracefully
-    Just (rrs:: ResourceRecordSet) <- AttemptT . liftIO $ getResourceRecords cfg cid domain rtype
+              -> AttemptT m (ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse)
+modifyRecords cfg cid domain rtype f = do
+    rrs <- listToAttemptT =<< getResourceRecordSetsByDomainAndType cfg cid domain rtype
     let rrs' = rrs { rrsRecords = f (rrsRecords rrs) }
-    
-    -- Handle errors gracefully. What if we fail in the middle?
-    (r1 :: ChangeResourceRecordSetsResponse) <- AttemptT . liftIO . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)] :: AttemptT IO (ChangeResourceRecordSetsResponse)
-    r2 <- AttemptT . liftIO . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rrs')]
+    -- FIXME: what if we fail in the second call? Should we try to rollback?
+    r1 <- makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)] 
+    r2 <- makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rrs')]
     return (r1, r2)
-
--- | Updates the A record for the given domain in the given zone to the given 
---   IP address (encoded as Text).
---
-setARecord :: Configuration
-           -> HostedZoneId -- ^ Zone ID
-           -> Domain       -- ^ Domain
-           -> Int          -- ^ TTL for the record
-           -> IPv4         -- ^ The new value for the A record, an IPv4 address
-           -> IO (Attempt [ChangeResourceRecordSetsResponse])
-setARecord cfg cid domain ttl ip = runAttemptT $ do
-       maybeRrs <- AttemptT . liftIO $ getResourceRecords cfg cid domain A
-       runListT $ case maybeRrs of
-           Just rrs -> lift $ AttemptT . liftIO . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)]
-           Nothing -> mzero
-        `mplus` do
-            let rr = simpleResourceRecordSet domain A ttl (pack . show $ ip)
-            lift $ AttemptT . liftIO . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rr)]
 
 retry :: (MonadIO m, MonadPlus m) => Int -> Int -> m a -> m a
 retry _ 1 req = req
@@ -238,20 +218,34 @@ retry pause num req | num < 0   = error $ "Illegal argument to retry. Expected p
 -- | Updates the A record for the given domain in the given zone to the given 
 --   IP address (encoded as Text).
 --
-setARecordRetry :: Configuration
-                -> HostedZoneId -- ^ Zone ID
-                -> Domain       -- ^ Domain
-                -> Int          -- ^ TTL for the record
-                -> IPv4         -- ^ The new value for the A record, an IPv4 address
-                -> IO (Attempt [ChangeResourceRecordSetsResponse])
-setARecordRetry cfg cid domain ttl ip = runAttemptT $ do
-       maybeRrs <- r . AttemptT . liftIO $ getResourceRecords cfg cid domain A
-       runListT $ case maybeRrs of
-           Just rrs -> lift . r . AttemptT . liftIO . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)]
-           Nothing -> mzero
-        `mplus` do
-            let rr = simpleResourceRecordSet domain A ttl (pack . show $ ip)
-            lift . r . AttemptT . liftIO . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rr)]
-
+setARecordRetry :: (MonadIO m, Applicative m)
+                => Int           -- ^ pause between retries (in seconds)
+                -> Int           -- ^ number of retried attempts
+                -> Configuration -- ^ Configuration
+                -> HostedZoneId  -- ^ Zone ID
+                -> Domain        -- ^ Domain
+                -> Int           -- ^ TTL for the record
+                -> IPv4          -- ^ The new value for the A record, an IPv4 address
+                -> AttemptT m [ChangeResourceRecordSetsResponse]
+setARecordRetry pause num cfg cid domain ttl ip = runListT $ lift del `mplus` lift ins
     where
-    r = retry 1 4
+    del = do
+        rrs <- listToAttemptT =<< (ret $ getResourceRecordSetsByDomainAndType cfg cid domain A)
+        ret . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)]
+    ins = do
+        let rr = simpleResourceRecordSet domain A ttl (pack . show $ ip)
+        ret . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rr)]
+    ret = retry pause num
+
+-- | Updates the A record for the given domain in the given zone to the given 
+--   IP address (encoded as Text).
+--
+setARecord :: (MonadIO m, Applicative m)
+           => Configuration
+           -> HostedZoneId -- ^ Zone ID
+           -> Domain       -- ^ Domain
+           -> Int          -- ^ TTL for the record
+           -> IPv4         -- ^ The new value for the A record, an IPv4 address
+           -> AttemptT m [ChangeResourceRecordSetsResponse]
+setARecord cfg cid domain ttl ip = setARecordRetry 0 1 cfg cid domain ttl ip
+
