@@ -9,16 +9,15 @@
 
 module Utils where
 
-import Data.Text                 (Text, pack)
+import Data.Text                 (Text, pack, unpack)
 import Data.List                 (find)
-import Data.Maybe                (fromJust) 
 import Data.Attempt              (Attempt(..))
 
 import Control.Monad             (MonadPlus, mplus)
 import Control.Applicative       (Applicative, (<$>))
 import Control.Monad.IO.Class    (MonadIO, liftIO)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.List  (runListT)
+import Control.Monad.Trans.List  (runListT, ListT(..))
 import Control.Concurrent        (threadDelay)
 
 import Network.HTTP.Conduit      (Manager, withManager)
@@ -130,7 +129,10 @@ getZoneById cfg hzid = ghzrHostedZone <$> makeSingleRequest cfg (getHostedZone h
 --   Results in an error if no hosted zone exists for the given domain name.
 --
 getZoneByName :: (MonadIO m, Applicative m) => Configuration -> Domain -> AttemptT m HostedZone
-getZoneByName cfg z = fromJust . find ((z==) . hzName) <$> getAllZones cfg
+getZoneByName cfg z = maybe (fail err) return =<< (find ((z==) . hzName) <$> getAllZones cfg)
+    where
+    err = "Hosted zone not found: " ++ unpack (dText z)
+
 
 -- | Returns the hosted zone id of the hosted zone for the given domain.
 --
@@ -198,13 +200,13 @@ modifyRecords :: (MonadIO m, Applicative m)
               -> Domain 
               -> RecordType 
               -> ([ResourceRecord] -> [ResourceRecord]) 
-              -> AttemptT m (ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse)
-modifyRecords cfg cid domain rtype f = do
-    rrs <- listToAttemptT =<< getResourceRecordSetsByDomainAndType cfg cid domain rtype
+              -> AttemptT m [(ChangeResourceRecordSetsResponse, ChangeResourceRecordSetsResponse)]
+modifyRecords cfg cid domain rtype f = runListT $ do
+    rrs <- ListT $ getResourceRecordSetsByDomainAndType cfg cid domain rtype
     let rrs' = rrs { rrsRecords = f (rrsRecords rrs) }
     -- FIXME: what if we fail in the second call? Should we try to rollback?
-    r1 <- makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)] 
-    r2 <- makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rrs')]
+    r1 <- lift . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)] 
+    r2 <- lift . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rrs')]
     return (r1, r2)
 
 retry :: (MonadIO m, MonadPlus m) => Int -> Int -> m a -> m a
@@ -227,14 +229,14 @@ setARecordRetry :: (MonadIO m, Applicative m)
                 -> Int           -- ^ TTL for the record
                 -> IPv4          -- ^ The new value for the A record, an IPv4 address
                 -> AttemptT m [ChangeResourceRecordSetsResponse]
-setARecordRetry pause num cfg cid domain ttl ip = runListT $ lift del `mplus` lift ins
+setARecordRetry pause num cfg cid domain ttl ip = runListT $ del `mplus` ins
     where
     del = do
-        rrs <- listToAttemptT =<< (ret $ getResourceRecordSetsByDomainAndType cfg cid domain A)
-        ret . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)]
+        rrs <- ListT . ret $ getResourceRecordSetsByDomainAndType cfg cid domain A
+        lift . ret . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(DELETE, rrs)]
     ins = do
         let rr = simpleResourceRecordSet domain A ttl (pack . show $ ip)
-        ret . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rr)]
+        lift . ret . makeSingleRequest cfg $ ChangeResourceRecordSets cid Nothing [(CREATE, rr)]
     ret = retry pause num
 
 -- | Updates the A record for the given domain in the given zone to the given 

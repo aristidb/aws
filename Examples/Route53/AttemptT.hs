@@ -5,13 +5,18 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE Rank2Types #-}
 
+-- -------------------------------------------------------------------------- --
+-- | AttemptT - a lazy monad transformer for the 'Attempt' Monad.
+--
 module AttemptT 
 ( AttemptT(..)
 , mapAttemptT
 , failAttempt
 , succeedAttempt
 , listToAttemptT
+, handleFailure
 ) where
 
 import Data.Typeable
@@ -23,9 +28,6 @@ import Control.Applicative
 import Control.Monad
 
 import Control.Exception
-
--- -------------------------------------------------------------------------- --
--- AttemptT
 
 newtype AttemptT m a = AttemptT { runAttemptT :: m (Attempt a) }
 
@@ -83,4 +85,11 @@ succeedAttempt = return
 listToAttemptT :: (Monad m) => [a] -> AttemptT m a
 listToAttemptT [] = failAttempt $ FailException "empty result list"
 listToAttemptT (h:_) = succeedAttempt h
+
+handleFailure :: (Monad m) => (forall e . Exception e => e -> m b) -> AttemptT m b -> AttemptT m b
+handleFailure f n = AttemptT $ do 
+    a <- runAttemptT n
+    case a of
+        Failure e -> f e >>= return . Success
+        Success s -> return (Success s)
 

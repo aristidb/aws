@@ -88,6 +88,29 @@ data Config = Config
             , confLog :: Logger
             }
 
+awsConfiguration :: DynDnsArgs -> Logger -> IO Aws.Configuration
+awsConfiguration a logger = do
+    maybeCreds <- awsCredentials (aws_keys_file a) (aws_key a)
+    creds <- case maybeCreds of
+        Nothing -> do logger Error $ "Failed to load AWS Credentials."
+                      error "FATAL ERROR: Failed to load AWS Credentials."
+        Just x  -> return x
+    return $ Aws.Configuration
+           { Aws.timeInfo    = Aws.Timestamp
+           , Aws.credentials = creds
+           , Aws.logger      = logger
+           }
+    where
+    awsCredentials file key | file == def && key == def = Aws.loadCredentialsDefault
+                            | key == def                = Aws.loadCredentialsFromFile file Aws.credentialsDefaultKey
+                            | file == def               = do f <- Aws.credentialsDefaultFile
+                                                             Aws.loadCredentialsFromEnvOrFile f (pack key)
+                            | otherwise                 = Aws.loadCredentialsFromFile file (pack key)
+
+-- -------------------------------------------------------------------------- --
+-- Logger
+--
+
 -- We reuse the simple logging approach from the Aws package.
 -- It is not very efficient but for this application we do not need
 -- to worry about performance
@@ -111,12 +134,23 @@ logError :: Config -> Text -> IO ()
 logError conf msg = (confLog conf) Error msg
 
 -- -------------------------------------------------------------------------- --
--- Utils
+-- The r53-dyndns main loop
 --
+
+-- | The domain process retrieves the current IPv4 address for the given domain from
+--   the domain name system and passes that IPv4 address to the 'check' function which
+--   run the main loop.
+--
+daemon :: Config -> IO ()
+daemon conf = do
+    dip <- dnsip conf
+    logInfo conf $ "Current IPv4 address (A record) in DNS is " <> pack (show dip) <> "." 
+    check conf dip
+
 realip :: IO IPv4
 realip = read . B8.unpack <$> simpleHttp  "http://api.externalip.net/ip/"
 
--- TODO Retry depneding on the error. Do not retry on startup.
+-- TODO Retry should depend on the type of the error. Do not retry on startup.
 dnsip :: Config -> IO [IPv4]
 dnsip conf = do
     rs <- makeResolvSeed defaultResolvConf
@@ -147,8 +181,8 @@ check conf [ip] = do
             logInfo conf $ "Real IPv4 address does not match the DNS IPv4 address."
             sip <- runAttemptT $ setip conf rip
             case sip of
-                Failure _ -> do
-                    logWarning conf $ "Failed to update ip address for " <> dom <> " to " <> pack (show rip) <> "."
+                Failure e -> do
+                    logWarning conf $ "Failed to update ip address for " <> dom <> " to " <> pack (show rip) <> ": " <> pack (show e)
                     return []
                 Success _ -> do
                     logInfo conf $ "Successfully updated ip address for " <> dom <> " to " <> pack (show rip) <> "."
@@ -166,8 +200,8 @@ check conf _ = do
     
     sip <- runAttemptT $ setip conf rip
     ip' <- case sip of
-        Failure _ -> do
-            logWarning conf $ "Failed to update ip address for " <> dom <> " to " <> pack (show rip) <> "."
+        Failure e -> do
+            logWarning conf $ "Failed to update ip address for " <> dom <> " to " <> pack (show rip) <> ": " <> pack (show e)
             return []
         Success _ -> do
             logInfo conf $ "Successfully updated ip address for " <> dom <> " to " <> pack (show rip) <> "."
@@ -177,37 +211,29 @@ check conf _ = do
 
 setip :: Config -> IPv4 -> AttemptT IO [ChangeResourceRecordSetsResponse]
 setip conf ip = do
+    liftIO $ logDebug conf $ "Attempt to set ip address to " <> pack (show ip) <> "."
     let pause = confRetrySleep conf
         rnum = confRetry conf
         ret = Utils.retry pause rnum
         awsconf = confAws conf
-    liftIO $ logInfo conf $ "Attempt to set ip address to " <> pack (show ip) <> "."
     zid <- ret $ getZoneIdByName awsconf (confHostedZone conf)
-    setARecordRetry pause rnum awsconf zid (confDomain conf) (confTtl conf) ip
+    liftIO $ logDebug conf $ "Route53 hosted zone: " <> pack (show zid) <> "."
+    response <- setARecordRetry pause rnum awsconf zid (confDomain conf) (confTtl conf) ip
+    return response
 
 -- -------------------------------------------------------------------------- --
 -- Main
 --
 
-awsConfiguration :: DynDnsArgs -> Logger -> IO Aws.Configuration
-awsConfiguration a logger = do
-    maybeCreds <- awsCredentials (aws_keys_file a) (aws_key a)
-    creds <- case maybeCreds of
-        Nothing -> do logger Error $ "Failed to load AWS Credentials."
-                      error "FATAL ERROR: Failed to load AWS Credentials."
-        Just x  -> return x
-    return $ Aws.Configuration
-           { Aws.timeInfo    = Aws.Timestamp
-           , Aws.credentials = creds
-           , Aws.logger      = logger
-           }
-    where
-    awsCredentials file key | file == def && key == def = Aws.loadCredentialsDefault
-                            | key == def                = Aws.loadCredentialsFromFile file Aws.credentialsDefaultKey
-                            | file == def               = do f <- Aws.credentialsDefaultFile
-                                                             Aws.loadCredentialsFromEnvOrFile f (pack key)
-                            | otherwise                 = Aws.loadCredentialsFromFile file (pack key)
-
+-- | The main function 
+--
+--   * parses command line arguments,
+--   * initializes devices for loggin and sets up the logging functions,
+--   * configures the service, and
+--   * runs the daemon.
+--   
+--   For help call the main program with '--help".
+--
 main :: IO ()
 main = do 
     a <- cmdArgs dyndnsargs
@@ -223,7 +249,7 @@ main = do
                 _      -> Aws.Debug
 
         let bootLogger = getLogger logfile bootLoglevel
-        bootLogger Info "=== Start r53-dyndns ==="
+        bootLogger Info "\n=== Start r53-dyndns ==="
         
         -- Initialize the service logger:
         let loglevel = case verb of
@@ -261,15 +287,9 @@ main = do
 
         -- Run the daemon
         logInfo conf $ "Start r53-dyndns client for domain " <> dom <> " in hosted zone " <> hostedzone <> "."
-        daemon conf `finally` bootLogger Info "=== Exit r53-dyndns ==="
+        daemon conf `finally` bootLogger Info "\n=== Exit r53-dyndns ==="
     
     if log_file a /= def
        then withFile (log_file a) AppendMode execWithLogfile
        else execWithLogfile stderr
-
-daemon :: Config -> IO ()
-daemon conf = do
-        dip <- dnsip conf
-        logInfo conf $ "Current IPv4 address (A record) in DNS is " <> pack (show dip) <> "." 
-        check conf dip
 
