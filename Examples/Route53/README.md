@@ -30,3 +30,12 @@ RUNNING AS A SERVICE
 On recent Ubuntu distributions edit the file `contrib/r53-dyndns.conf`
 according to your needs and copy to `/etc/init/r53-dyndns.conf`.
 
+TODO
+====
+
+*   Add support for setting static IP addresses
+*   More generally, support different ways to determine the IPv4 address.
+*   Better error handling: retry or abort depending on the type of the error.
+*   Make the DNS server for the initial lookup configurable.
+*   Add option looking up the A record in the hosted zone itself.
+
