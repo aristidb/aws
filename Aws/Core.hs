@@ -50,6 +50,7 @@ module Aws.Core
 , rfc822Time
 , fmtAmzTime
 , fmtTimeEpochSeconds
+, parseHttpDate
   -- * Transactions
 , Transaction
 , IteratedTransaction(..)
@@ -502,6 +503,13 @@ fmtAmzTime = fmtTime "%Y-%m-%dT%H:%M:%S"
 -- | Format time as seconds since the Unix epoch.
 fmtTimeEpochSeconds :: UTCTime -> B.ByteString
 fmtTimeEpochSeconds = fmtTime "%s"
+
+-- | Parse HTTP-date (section 3.3.1 of RFC 2616)
+parseHttpDate :: String -> Maybe UTCTime
+parseHttpDate s =     p "%a, %d %b %Y %H:%M:%S GMT" s -- rfc1123-date
+                  <|> p "%A, %d-%b-%y %H:%M:%S GMT" s -- rfc850-date
+                  <|> p "%a %b %_d %H:%M:%S %Y" s     -- asctime-date
+  where p = parseTime defaultTimeLocale
 
 -- | Parse a two-digit hex number.
 readHex2 :: [Char] -> Maybe Word8

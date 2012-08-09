@@ -36,6 +36,8 @@ import qualified Control.Exception    as E
 import qualified Data.ByteString      as B
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as T
+import qualified Data.Text.Encoding   as T
+import qualified Data.CaseInsensitive as CI
 import qualified Network.HTTP.Conduit as HTTP
 
 -- | The severity of a log message, in rising order.
@@ -196,6 +198,8 @@ unsafeAwsRef cfg info manager metadataRef request = liftIO $ do
   logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
   resp <- runResourceT $ do
       HTTP.Response status _ headers body <- HTTP.http httpRequest manager
+      forM_ headers $ \(hname,hvalue) -> liftIO $ do
+        logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
       responseConsumer request metadataRef status headers body
   return resp
 

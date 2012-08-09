@@ -373,9 +373,9 @@ parseObjectMetadata h = ObjectMetadata
                  Just x -> return x
                  Nothing -> F.failure $ HeaderException "ETag missing"
         lastModified = case B8.unpack `fmap` lookup "Last-Modified" h of
-                         Just ts -> case parseTime defaultTimeLocale rfc822Time ts of
+                         Just ts -> case parseHttpDate ts of
                                       Just t -> return t
-                                      Nothing -> F.failure $ HeaderException "Invalid Last-Modified"
+                                      Nothing -> F.failure $ HeaderException ("Invalid Last-Modified: " ++ ts)
                          Nothing -> F.failure $ HeaderException "Last-Modified missing"
         versionId = T.decodeUtf8 `fmap` lookup "x-amz-version-id" h
         -- expiration = return undefined
