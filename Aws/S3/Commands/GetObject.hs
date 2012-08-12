@@ -4,17 +4,19 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
+import           Control.Monad.Trans.Resource (ResourceT)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.Conduit          as C
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
+import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
 
-data GetObject a
+data GetObject
     = GetObject {
         goBucket :: Bucket
       , goObjectName :: Object
-      , goResponseConsumer :: HTTPResponseConsumer a
       , goVersionId :: Maybe T.Text
       , goResponseContentType :: Maybe T.Text
       , goResponseContentLanguage :: Maybe T.Text
@@ -23,17 +25,17 @@ data GetObject a
       , goResponseContentDisposition :: Maybe T.Text
       , goResponseContentEncoding :: Maybe T.Text
       }
+  deriving (Show)
 
-getObject :: Bucket -> T.Text -> HTTPResponseConsumer a -> GetObject a
-getObject b o i = GetObject b o i Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+getObject :: Bucket -> T.Text -> GetObject
+getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
-data GetObjectResponse a
-    = GetObjectResponse ObjectMetadata a
-    deriving (Show)
+data GetObjectResponse
+    = GetObjectResponse ObjectMetadata (HTTP.Response (C.ResumableSource (ResourceT IO) B8.ByteString))
 
 -- | ServiceConfiguration: 'S3Configuration'
-instance SignQuery (GetObject a) where
-    type ServiceConfiguration (GetObject a) = S3Configuration
+instance SignQuery GetObject where
+    type ServiceConfiguration GetObject = S3Configuration
     signQuery GetObject {..} = s3SignQuery S3Query {
                                    s3QMethod = Get
                                  , s3QBucket = Just $ T.encodeUtf8 goBucket
@@ -56,11 +58,11 @@ instance SignQuery (GetObject a) where
                                  , s3QRequestBody = Nothing
                                  }
 
-instance ResponseConsumer (GetObject a) (GetObjectResponse a) where
-    type ResponseMetadata (GetObjectResponse a) = S3Metadata
-    responseConsumer GetObject{..} metadata status headers source
-        = do rsp <- s3BinaryResponseConsumer goResponseConsumer metadata status headers source
-             om <- parseObjectMetadata headers
+instance ResponseConsumer GetObject GetObjectResponse where
+    type ResponseMetadata GetObjectResponse = S3Metadata
+    responseConsumer GetObject{..} metadata resp
+        = do rsp <- s3BinaryResponseConsumer return metadata resp
+             om <- parseObjectMetadata (HTTP.responseHeaders resp)
              return $ GetObjectResponse om rsp
 
-instance Transaction (GetObject a) (GetObjectResponse a)
+instance Transaction GetObject GetObjectResponse

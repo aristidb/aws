@@ -1,22 +1,23 @@
 module Aws.SimpleDb.Core where
 
 import           Aws.Core
-import           Control.Monad
-import           Data.IORef
-import           Data.List
-import           Data.Maybe
-import           Data.Monoid
-import           Data.Typeable
-import           Text.XML.Cursor                (($|), ($/), ($//), (&|))
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
 import qualified Control.Failure                as F
+import           Control.Monad
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Base64         as Base64
+import           Data.IORef
+import           Data.List
+import           Data.Maybe
+import           Data.Monoid
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
+import           Data.Typeable
+import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
+import           Text.XML.Cursor                (($|), ($/), ($//), (&|))
 import qualified Text.XML.Cursor                as Cu
 
 type ErrorCode = String
@@ -131,8 +132,8 @@ sdbSignQuery q si sd
 sdbResponseConsumer :: (Cu.Cursor -> Response SdbMetadata a)
                     -> IORef SdbMetadata
                     -> HTTPResponseConsumer a
-sdbResponseConsumer inner metadataRef status headers source
-    = xmlCursorConsumer parse metadataRef status headers source
+sdbResponseConsumer inner metadataRef resp
+    = xmlCursorConsumer parse metadataRef resp
     where parse cursor
               = do let requestId' = listToMaybe $ cursor $// elContent "RequestID"
                    let boxUsage' = listToMaybe $ cursor $// elContent "BoxUsage"
@@ -142,7 +143,7 @@ sdbResponseConsumer inner metadataRef status headers source
                      (err:_) -> fromError err
           fromError cursor = do errCode <- force "Missing Error Code" $ cursor $// elCont "Code"
                                 errMessage <- force "Missing Error Message" $ cursor $// elCont "Message"
-                                F.failure $ SdbError status errCode errMessage
+                                F.failure $ SdbError (HTTP.responseStatus resp) errCode errMessage
 
 class SdbFromResponse a where
     sdbFromResponse :: Cu.Cursor -> Response SdbMetadata a

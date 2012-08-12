@@ -33,9 +33,7 @@ instance SignQuery DeleteObject where
 
 instance ResponseConsumer DeleteObject DeleteObjectResponse where
     type ResponseMetadata DeleteObjectResponse = S3Metadata
-    responseConsumer _ = s3ResponseConsumer $ \_ _ _ ->
-                         return DeleteObjectResponse
-
+    responseConsumer _ = s3ResponseConsumer $ \_ -> return DeleteObjectResponse
 
 instance Transaction DeleteObject DeleteObjectResponse
 

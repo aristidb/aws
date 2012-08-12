@@ -2,31 +2,32 @@ module Aws.Sqs.Core where
 
 import           Aws.Core
 import           Aws.S3.Core                    (LocationConstraint, locationUsClassic, locationUsWest, locationApSouthEast, locationApNorthEast, locationEu)
+import qualified Blaze.ByteString.Builder       as Blaze
+import qualified Blaze.ByteString.Builder.Char8 as Blaze8
+import qualified Control.Exception              as C
+import qualified Control.Failure                as F
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Attempt                   (Attempt(..))
+import qualified Data.ByteString                as B
+import qualified Data.ByteString.Char8          as BC
 import           Data.Conduit                   (($$+-))
+import qualified Data.Conduit                   as C
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Ord
-import           Data.Time
-import           Data.Typeable
-import           System.Locale
-import           Text.XML.Cursor                (($/))
-import qualified Blaze.ByteString.Builder       as Blaze
-import qualified Blaze.ByteString.Builder.Char8 as Blaze8
-import qualified Control.Exception              as C
-import qualified Control.Failure                as F
-import qualified Data.ByteString                as B
-import qualified Data.ByteString.Char8          as BC
-import qualified Data.Conduit                   as C
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import qualified Data.Text.Encoding             as TE
+import           Data.Time
+import           Data.Typeable
+import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
+import           System.Locale
 import qualified Text.XML                       as XML
+import           Text.XML.Cursor                (($/))
 import qualified Text.XML.Cursor                as Cu
 
 type ErrorCode = T.Text
@@ -197,17 +198,17 @@ sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
 sqsResponseConsumer :: HTTPResponseConsumer a
                     -> IORef SqsMetadata
                     -> HTTPResponseConsumer a
-sqsResponseConsumer inner metadata status headers source = do
-      let headerString = fmap T.decodeUtf8 . flip lookup headers
+sqsResponseConsumer inner metadata resp = do
+      let headerString = fmap T.decodeUtf8 . flip lookup (HTTP.responseHeaders resp)
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
 
       let m = SqsMetadata { sqsMAmzId2 = amzId2, sqsMRequestId = requestId }
       liftIO $ tellMetadataRef metadata m
 
-      if status >= HTTP.status400
-        then sqsErrorResponseConsumer status headers source
-        else inner status headers source
+      if HTTP.responseStatus resp >= HTTP.status400
+        then sqsErrorResponseConsumer resp
+        else inner resp
 
 sqsXmlResponseConsumer :: (Cu.Cursor -> Response SqsMetadata a)
                        -> IORef SqsMetadata
@@ -215,8 +216,8 @@ sqsXmlResponseConsumer :: (Cu.Cursor -> Response SqsMetadata a)
 sqsXmlResponseConsumer parse metadataRef = sqsResponseConsumer (xmlCursorConsumer parse metadataRef) metadataRef
 
 sqsErrorResponseConsumer :: HTTPResponseConsumer a
-sqsErrorResponseConsumer status _headers source
-    = do doc <- source $$+- XML.sinkDoc XML.def
+sqsErrorResponseConsumer resp
+    = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Success err -> C.monadThrow err
@@ -230,7 +231,7 @@ sqsErrorResponseConsumer status _headers source
                            let detail = listToMaybe $ cursor $/ elContent "Detail"
 
                            return SqsError {
-                                        sqsStatusCode = status
+                                        sqsStatusCode = HTTP.responseStatus resp
                                       , sqsErrorCode = code
                                       , sqsErrorMessage = message
                                       , sqsErrorType = errorType

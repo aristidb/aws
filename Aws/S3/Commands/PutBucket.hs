@@ -61,7 +61,6 @@ instance SignQuery PutBucket where
 instance ResponseConsumer r PutBucketResponse where
     type ResponseMetadata PutBucketResponse = S3Metadata
 
-    responseConsumer _ = s3ResponseConsumer inner
-        where inner _status _headers _source = return PutBucketResponse
+    responseConsumer _ = s3ResponseConsumer $ \_ -> return PutBucketResponse
 
 instance Transaction PutBucket PutBucketResponse

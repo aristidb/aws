@@ -201,17 +201,17 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
 s3ResponseConsumer :: HTTPResponseConsumer a
                    -> IORef S3Metadata
                    -> HTTPResponseConsumer a
-s3ResponseConsumer inner metadata status headers source = do
-      let headerString = fmap T.decodeUtf8 . flip lookup headers
+s3ResponseConsumer inner metadata resp = do
+      let headerString = fmap T.decodeUtf8 . flip lookup (HTTP.responseHeaders resp)
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
 
       let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
       liftIO $ tellMetadataRef metadata m
 
-      if status >= HTTP.status400
-        then s3ErrorResponseConsumer status headers source
-        else inner status headers source
+      if HTTP.responseStatus resp >= HTTP.status400
+        then s3ErrorResponseConsumer resp
+        else inner resp
 
 s3XmlResponseConsumer :: (Cu.Cursor -> Response S3Metadata a)
                       -> IORef S3Metadata
@@ -225,8 +225,8 @@ s3BinaryResponseConsumer :: HTTPResponseConsumer a
 s3BinaryResponseConsumer inner metadataRef = s3ResponseConsumer inner metadataRef
 
 s3ErrorResponseConsumer :: HTTPResponseConsumer a
-s3ErrorResponseConsumer status _headers source
-    = do doc <- source $$+- XML.sinkDoc XML.def
+s3ErrorResponseConsumer resp
+    = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Success err      -> C.monadThrow err
@@ -242,7 +242,7 @@ s3ErrorResponseConsumer status _headers source
                                                  bytes <- mapM readHex2 $ words unprocessed
                                                  return $ B.pack bytes
                            return S3Error {
-                                        s3StatusCode = status
+                                        s3StatusCode = HTTP.responseStatus resp
                                       , s3ErrorCode = code
                                       , s3ErrorMessage = message
                                       , s3ErrorResource = resource

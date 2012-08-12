@@ -19,22 +19,23 @@ module Aws.Ses.Core
     ) where
 
 import           Aws.Core
+import qualified Blaze.ByteString.Builder       as Blaze
+import qualified Blaze.ByteString.Builder.Char8 as Blaze8
+import qualified Control.Exception              as C
+import qualified Control.Failure                as F
 import           Control.Monad                  (mplus)
+import qualified Data.ByteString                as B
+import qualified Data.ByteString.Base64         as B64
 import           Data.ByteString.Char8          ({-IsString-})
 import           Data.IORef
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                      (Text)
-import           Data.Typeable
-import           Text.XML.Cursor                (($/), ($//))
-import qualified Blaze.ByteString.Builder       as Blaze
-import qualified Blaze.ByteString.Builder.Char8 as Blaze8
-import qualified Control.Exception              as C
-import qualified Control.Failure                as F
-import qualified Data.ByteString                as B
-import qualified Data.ByteString.Base64         as B64
 import qualified Data.Text.Encoding             as TE
+import           Data.Typeable
+import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
+import           Text.XML.Cursor                (($/), ($//))
 import qualified Text.XML.Cursor                as Cu
 
 data SesError
@@ -112,7 +113,7 @@ sesSignQuery query si sd
 sesResponseConsumer :: (Cu.Cursor -> Response SesMetadata a)
                     -> IORef SesMetadata
                     -> HTTPResponseConsumer a
-sesResponseConsumer inner metadataRef status = xmlCursorConsumer parse metadataRef status
+sesResponseConsumer inner metadataRef resp = xmlCursorConsumer parse metadataRef resp
     where
       parse cursor = do
         let requestId' = listToMaybe $ cursor $// elContent "RequestID"
@@ -124,7 +125,7 @@ sesResponseConsumer inner metadataRef status = xmlCursorConsumer parse metadataR
       fromError cursor = do
         errCode    <- force "Missing Error Code"    $ cursor $// elContent "Code"
         errMessage <- force "Missing Error Message" $ cursor $// elContent "Message"
-        F.failure $ SesError status errCode errMessage
+        F.failure $ SesError (HTTP.responseStatus resp) errCode errMessage
 
 class SesAsQuery a where
     -- | Write a data type as a list of query parameters.
