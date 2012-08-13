@@ -26,6 +26,8 @@ module Aws
   -- ** Metadata in responses
 , Response(..)
 , ResponseMetadata
+  -- ** Memory responses
+, AsMemoryResponse(..)
   -- ** Exception types
 , XmlException(..)
 , HeaderException(..)

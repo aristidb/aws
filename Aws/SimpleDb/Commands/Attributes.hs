@@ -47,6 +47,10 @@ instance ResponseConsumer r GetAttributesResponse where
 
 instance Transaction GetAttributes GetAttributesResponse
 
+instance AsMemoryResponse GetAttributesResponse where
+    type MemoryResponse GetAttributesResponse = GetAttributesResponse
+    loadToMemory = return
+
 data PutAttributes
     = PutAttributes {
         paItemName :: T.Text
@@ -82,6 +86,10 @@ instance ResponseConsumer r PutAttributesResponse where
     responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType PutAttributesResponse "PutAttributesResponse"
 
 instance Transaction PutAttributes PutAttributesResponse
+
+instance AsMemoryResponse PutAttributesResponse where
+    type MemoryResponse PutAttributesResponse = PutAttributesResponse
+    loadToMemory = return
 
 data DeleteAttributes
     = DeleteAttributes {
@@ -119,6 +127,10 @@ instance ResponseConsumer r DeleteAttributesResponse where
 
 instance Transaction DeleteAttributes DeleteAttributesResponse
 
+instance AsMemoryResponse DeleteAttributesResponse where
+    type MemoryResponse DeleteAttributesResponse = DeleteAttributesResponse
+    loadToMemory = return
+
 data BatchPutAttributes
     = BatchPutAttributes {
         bpaItems :: [Item [Attribute SetAttribute]]
@@ -148,6 +160,10 @@ instance ResponseConsumer r BatchPutAttributesResponse where
 
 instance Transaction BatchPutAttributes BatchPutAttributesResponse
 
+instance AsMemoryResponse BatchPutAttributesResponse where
+    type MemoryResponse BatchPutAttributesResponse = BatchPutAttributesResponse
+    loadToMemory = return
+
 data BatchDeleteAttributes
     = BatchDeleteAttributes {
         bdaItems :: [Item [Attribute DeleteAttribute]]
@@ -176,3 +192,7 @@ instance ResponseConsumer r BatchDeleteAttributesResponse where
     responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
 
 instance Transaction BatchDeleteAttributes BatchDeleteAttributesResponse
+
+instance AsMemoryResponse BatchDeleteAttributesResponse where
+    type MemoryResponse BatchDeleteAttributesResponse = BatchDeleteAttributesResponse
+    loadToMemory = return

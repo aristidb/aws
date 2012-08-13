@@ -135,12 +135,16 @@ awsRef = unsafeAwsRef
 -- @
 --     resp <- simpleAws cfg serviceCfg request
 -- @
-{-simpleAws :: (Transaction r a, MonadIO io)
+simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
             => Configuration 
             -> ServiceConfiguration r NormalQuery
             -> r 
-            -> io (Response (ResponseMetadata a) a)-}
-simpleAws cfg scfg request = liftIO $ HTTP.withManager $ \manager -> aws cfg scfg manager request
+            -> io (Response (ResponseMetadata a) (MemoryResponse a))
+simpleAws cfg scfg request = liftIO $ HTTP.withManager $ \manager -> do
+                               Response m x <- aws cfg scfg manager request
+                               Response m <$> case x of
+                                   Failure f -> return (Failure f)
+                                   Success a -> Success <$> loadToMemory a
 
 -- | Run an AWS transaction, /without/ HTTP manager and with metadata returned in an 'IORef'.
 -- 
@@ -153,14 +157,14 @@ simpleAws cfg scfg request = liftIO $ HTTP.withManager $ \manager -> aws cfg scf
 -- @
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
-{-simpleAwsRef :: (Transaction r a, MonadIO io)
+simpleAwsRef :: (Transaction r a, AsMemoryResponse a, MonadIO io)
             => Configuration 
             -> ServiceConfiguration r NormalQuery 
             -> IORef (ResponseMetadata a) 
             -> r 
-            -> io a-}
+            -> io (MemoryResponse a)
 simpleAwsRef cfg scfg metadataRef request = liftIO $ HTTP.withManager $ 
-                                              \manager -> awsRef cfg scfg manager metadataRef request
+                                              \manager -> loadToMemory =<< awsRef cfg scfg manager metadataRef request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
 -- 

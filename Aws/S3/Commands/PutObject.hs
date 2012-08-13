@@ -71,3 +71,6 @@ instance ResponseConsumer PutObject PutObjectResponse where
 
 instance Transaction PutObject PutObjectResponse
 
+instance AsMemoryResponse PutObjectResponse where
+    type MemoryResponse PutObjectResponse = PutObjectResponse
+    loadToMemory = return

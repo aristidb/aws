@@ -41,6 +41,10 @@ instance SignQuery SendMessage  where
 
 instance Transaction SendMessage SendMessageResponse
 
+instance AsMemoryResponse SendMessageResponse where
+    type MemoryResponse SendMessageResponse = SendMessageResponse
+    loadToMemory = return
+
 data DeleteMessage = DeleteMessage{
   dmReceiptHandle :: ReceiptHandle,
   dmQueueName :: QueueName 
@@ -64,6 +68,10 @@ instance SignQuery DeleteMessage  where
                                                         ("ReceiptHandle", Just $ TE.encodeUtf8 $ printReceiptHandle dmReceiptHandle )]} 
 
 instance Transaction DeleteMessage DeleteMessageResponse
+
+instance AsMemoryResponse DeleteMessageResponse where
+    type MemoryResponse DeleteMessageResponse = DeleteMessageResponse
+    loadToMemory = return
 
 data ReceiveMessage
     = ReceiveMessage {
@@ -137,6 +145,10 @@ instance SignQuery ReceiveMessage  where
 
 instance Transaction ReceiveMessage ReceiveMessageResponse
 
+instance AsMemoryResponse ReceiveMessageResponse where
+    type MemoryResponse ReceiveMessageResponse = ReceiveMessageResponse
+    loadToMemory = return
+
 data ChangeMessageVisibility = ChangeMessageVisibility {
   cmvReceiptHandle :: ReceiptHandle,
   cmvVisibilityTimeout :: Int,
@@ -162,3 +174,7 @@ instance SignQuery ChangeMessageVisibility  where
                                                          ("VisibilityTimeout", Just $ B.pack $ show cmvVisibilityTimeout)]}
 
 instance Transaction ChangeMessageVisibility ChangeMessageVisibilityResponse
+
+instance AsMemoryResponse ChangeMessageVisibilityResponse where
+    type MemoryResponse ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse
+    loadToMemory = return

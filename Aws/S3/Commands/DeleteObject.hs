@@ -37,3 +37,6 @@ instance ResponseConsumer DeleteObject DeleteObjectResponse where
 
 instance Transaction DeleteObject DeleteObjectResponse
 
+instance AsMemoryResponse DeleteObjectResponse where
+    type MemoryResponse DeleteObjectResponse = DeleteObjectResponse
+    loadToMemory = return

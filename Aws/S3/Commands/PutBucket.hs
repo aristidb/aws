@@ -64,3 +64,7 @@ instance ResponseConsumer r PutBucketResponse where
     responseConsumer _ = s3ResponseConsumer $ \_ -> return PutBucketResponse
 
 instance Transaction PutBucket PutBucketResponse
+
+instance AsMemoryResponse PutBucketResponse where
+    type MemoryResponse PutBucketResponse = PutBucketResponse
+    loadToMemory = return

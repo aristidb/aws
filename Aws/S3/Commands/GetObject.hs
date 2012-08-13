@@ -7,6 +7,7 @@ import           Control.Applicative
 import           Control.Monad.Trans.Resource (ResourceT)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy  as L
 import qualified Data.Conduit          as C
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
@@ -32,6 +33,10 @@ getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing No
 
 data GetObjectResponse
     = GetObjectResponse ObjectMetadata (HTTP.Response (C.ResumableSource (ResourceT IO) B8.ByteString))
+
+data GetObjectMemoryResponse
+    = GetObjectMemoryResponse ObjectMetadata (HTTP.Response L.ByteString)
+    deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery GetObject where
@@ -66,3 +71,7 @@ instance ResponseConsumer GetObject GetObjectResponse where
              return $ GetObjectResponse om rsp
 
 instance Transaction GetObject GetObjectResponse
+
+instance AsMemoryResponse GetObjectResponse where
+    type MemoryResponse GetObjectResponse = GetObjectMemoryResponse
+    loadToMemory (GetObjectResponse om x) = GetObjectMemoryResponse om <$> (HTTP.lbsResponse (return x))

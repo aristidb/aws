@@ -42,6 +42,10 @@ instance SignQuery CreateQueue  where
 
 instance Transaction CreateQueue CreateQueueResponse
 
+instance AsMemoryResponse CreateQueueResponse where
+    type MemoryResponse CreateQueueResponse = CreateQueueResponse
+    loadToMemory = return
+
 data DeleteQueue = DeleteQueue {
     dqQueueName :: QueueName 
   } deriving (Show)
@@ -63,6 +67,10 @@ instance SignQuery DeleteQueue  where
                                              sqsQuery = [("Action", Just "DeleteQueue")]}
 
 instance Transaction DeleteQueue DeleteQueueResponse
+
+instance AsMemoryResponse DeleteQueueResponse where
+    type MemoryResponse DeleteQueueResponse = DeleteQueueResponse
+    loadToMemory = return
 
 data ListQueues = ListQueues {
     lqQueueNamePrefix :: Maybe T.Text
@@ -91,3 +99,7 @@ instance SignQuery ListQueues where
                                                                          Nothing -> Nothing]}
 
 instance Transaction ListQueues ListQueuesResponse
+
+instance AsMemoryResponse ListQueuesResponse where
+    type MemoryResponse ListQueuesResponse = ListQueuesResponse
+    loadToMemory = return

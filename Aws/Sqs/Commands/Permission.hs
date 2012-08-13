@@ -41,6 +41,10 @@ instance SignQuery AddPermission  where
 
 instance Transaction AddPermission AddPermissionResponse
 
+instance AsMemoryResponse AddPermissionResponse where
+    type MemoryResponse AddPermissionResponse = AddPermissionResponse
+    loadToMemory = return
+
 data RemovePermission = RemovePermission {
     rpLabel :: T.Text,
     rpQueueName :: QueueName 
@@ -65,3 +69,7 @@ instance SignQuery RemovePermission  where
                                                         ("Label", Just $ TE.encodeUtf8 rpLabel )]} 
 
 instance Transaction RemovePermission RemovePermissionResponse
+
+instance AsMemoryResponse RemovePermissionResponse where
+    type MemoryResponse RemovePermissionResponse = RemovePermissionResponse
+    loadToMemory = return

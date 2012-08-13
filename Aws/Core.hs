@@ -8,6 +8,8 @@ module Aws.Core
   -- ** Response data consumers
 , HTTPResponseConsumer
 , ResponseConsumer(..)
+  -- ** Memory response
+, AsMemoryResponse(..)
   -- ** Exception types
 , XmlException(..)
 , HeaderException(..)
@@ -107,7 +109,6 @@ import qualified Data.ByteString.Base64   as Base64
 import qualified Data.ByteString.Lazy     as L
 import qualified Data.ByteString.UTF8     as BU
 import qualified Data.Conduit             as C
-import qualified Data.Conduit.List        as CL
 import qualified Data.Serialize           as Serialize
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
@@ -164,6 +165,11 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
     responseConsumer _ _ resp = HTTP.lbsResponse (return resp)
+
+-- | Class for responses that are fully loaded into memory
+class AsMemoryResponse resp where
+    type MemoryResponse resp :: *
+    loadToMemory :: resp -> ResourceT IO (MemoryResponse resp)
 
 -- | Associates a request type and a response type in a bi-directional way.
 -- 

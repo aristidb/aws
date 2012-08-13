@@ -45,3 +45,7 @@ instance ResponseConsumer SendRawEmail SendRawEmailResponse where
 
 
 instance Transaction SendRawEmail SendRawEmailResponse where
+
+instance AsMemoryResponse SendRawEmailResponse where
+    type MemoryResponse SendRawEmailResponse = SendRawEmailResponse
+    loadToMemory = return

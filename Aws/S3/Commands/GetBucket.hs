@@ -90,3 +90,7 @@ instance ResponseConsumer r GetBucketResponse where
                                               }
 
 instance Transaction GetBucket GetBucketResponse
+
+instance AsMemoryResponse GetBucketResponse where
+    type MemoryResponse GetBucketResponse = GetBucketResponse
+    loadToMemory = return

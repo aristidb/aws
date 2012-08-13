@@ -52,3 +52,7 @@ instance SignQuery GetService where
                               }
 
 instance Transaction GetService GetServiceResponse
+
+instance AsMemoryResponse GetServiceResponse where
+  type MemoryResponse GetServiceResponse = GetServiceResponse
+  loadToMemory = return

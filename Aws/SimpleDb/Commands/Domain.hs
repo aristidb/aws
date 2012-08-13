@@ -34,6 +34,10 @@ instance ResponseConsumer r CreateDomainResponse where
 
 instance Transaction CreateDomain CreateDomainResponse
 
+instance AsMemoryResponse CreateDomainResponse where
+    type MemoryResponse CreateDomainResponse = CreateDomainResponse
+    loadToMemory = return
+
 data DeleteDomain
     = DeleteDomain {
         ddDomainName :: T.Text
@@ -57,6 +61,10 @@ instance ResponseConsumer r DeleteDomainResponse where
     responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType DeleteDomainResponse "DeleteDomainResponse"
 
 instance Transaction DeleteDomain DeleteDomainResponse
+
+instance AsMemoryResponse DeleteDomainResponse where
+    type MemoryResponse DeleteDomainResponse = DeleteDomainResponse
+    loadToMemory = return
 
 data DomainMetadata
     = DomainMetadata {
@@ -101,6 +109,10 @@ instance ResponseConsumer r DomainMetadataResponse where
 
 instance Transaction DomainMetadata DomainMetadataResponse
 
+instance AsMemoryResponse DomainMetadataResponse where
+    type MemoryResponse DomainMetadataResponse = DomainMetadataResponse
+    loadToMemory = return
+
 data ListDomains
     = ListDomains {
         ldMaxNumberOfDomains :: Maybe Int
@@ -137,6 +149,10 @@ instance ResponseConsumer r ListDomainsResponse where
                 return $ ListDomainsResponse names nextToken
 
 instance Transaction ListDomains ListDomainsResponse
+
+instance AsMemoryResponse ListDomainsResponse where
+    type MemoryResponse ListDomainsResponse = ListDomainsResponse
+    loadToMemory = return
 
 instance IteratedTransaction ListDomains ListDomainsResponse where
   nextIteratedRequest req ListDomainsResponse{ldrNextToken=nt} = req{ldNextToken=nt} <$ nt

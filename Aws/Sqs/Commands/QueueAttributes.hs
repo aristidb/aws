@@ -49,6 +49,10 @@ instance SignQuery GetQueueAttributes where
 
 instance Transaction GetQueueAttributes GetQueueAttributesResponse
 
+instance AsMemoryResponse GetQueueAttributesResponse where
+    type MemoryResponse GetQueueAttributesResponse = GetQueueAttributesResponse
+    loadToMemory = return
+
 data SetQueueAttributes = SetQueueAttributes{
   sqaAttribute :: QueueAttribute,
   sqaValue :: T.Text,
@@ -75,3 +79,7 @@ instance SignQuery SetQueueAttributes  where
                                                         ("Attribute.Value", Just $ TE.encodeUtf8 sqaValue)]} 
 
 instance Transaction SetQueueAttributes SetQueueAttributesResponse
+
+instance AsMemoryResponse SetQueueAttributesResponse where
+    type MemoryResponse SetQueueAttributesResponse = SetQueueAttributesResponse
+    loadToMemory = return
