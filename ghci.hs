@@ -1,7 +1,13 @@
-import qualified Network.HTTP.Types   as HTTP
-import qualified Network.HTTP.Conduit as HTTP
+-- GHCI convenience code
+
 import           Aws
-import qualified Aws.S3               as S3
-import qualified Aws.SimpleDb         as Sdb
-import qualified Aws.Sqs              as Sqs
-import qualified Aws.Ses              as Ses
+import qualified Aws.S3 as S3
+import qualified Aws.Ses as Ses
+import qualified Aws.SimpleDb as Sdb
+import qualified Aws.Sqs as Sqs
+import           Control.Monad.Trans.Resource
+import qualified Data.Conduit as C
+import qualified Data.Conduit.List as CL
+import           Data.Default
+import qualified Network.HTTP.Conduit as HTTP
+import qualified Network.HTTP.Types as HTTP
