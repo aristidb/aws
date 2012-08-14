@@ -19,7 +19,8 @@ module Aws
   -- ** URI runners
 , awsUri
   -- ** Iterated runners
-, awsIteratedAll
+--, awsIteratedAll
+, awsIteratedSource
   -- * Response
   -- ** Full HTTP response
 , HTTPResponseConsumer

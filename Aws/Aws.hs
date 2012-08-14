@@ -19,7 +19,8 @@ module Aws.Aws
   -- ** URI runners
 , awsUri
   -- * Iterated runners
-, awsIteratedAll
+--, awsIteratedAll
+, awsIteratedSource
 )
 where
 
@@ -29,10 +30,12 @@ import qualified Control.Exception.Lifted as E
 import           Control.Monad
 import           Control.Monad.Base
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
 import           Data.Attempt         (Attempt(Success, Failure))
 import qualified Data.ByteString      as B
 import qualified Data.CaseInsensitive as CI
+import qualified Data.Conduit         as C
 import           Data.IORef
 import           Data.Monoid
 import qualified Data.Text            as T
@@ -229,6 +232,7 @@ awsUri cfg info request = liftIO $ do
   logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   return $ queryToUri q
 
+{-
 -- | Run an iterated AWS transaction. May make multiple HTTP requests.
 awsIteratedAll :: (IteratedTransaction r a)
                   => Configuration
@@ -246,3 +250,20 @@ awsIteratedAll cfg scfg manager req_ = go req_ Nothing
                                          return (Response [meta] s)
                                        Just nextRequest -> 
                                          mapMetadata (meta:) `liftM` go nextRequest (Just resp)
+-}
+
+awsIteratedSource :: (IteratedTransaction r a)
+                     => Configuration
+                     -> ServiceConfiguration r NormalQuery
+                     -> HTTP.Manager
+                     -> r
+                     -> C.GSource (ResourceT IO) (Response (ResponseMetadata a) a)
+awsIteratedSource cfg scfg manager req_ = go req_
+  where go request = do resp <- lift $ aws cfg scfg manager request
+                        C.yield resp
+                        case responseResult resp of
+                          Failure _ -> return ()
+                          Success x ->
+                            case nextIteratedRequest request x of
+                              Nothing -> return ()
+                              Just nextRequest -> go nextRequest

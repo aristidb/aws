@@ -56,7 +56,6 @@ module Aws.Core
   -- * Transactions
 , Transaction
 , IteratedTransaction(..)
-, maybeCombineIteratedResponse
   -- * Credentials
 , Credentials(..)
 , credentialsDefaultFile
@@ -75,53 +74,54 @@ module Aws.Core
 )
 where
 
+import qualified Blaze.ByteString.Builder as Blaze
 import           Control.Applicative
 import           Control.Arrow
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           Data.Attempt             (Attempt(..))
-import           Data.ByteString          (ByteString)
-import           Data.ByteString.Char8    ({- IsString -})
-import           Data.Char
-import           Data.Conduit             (ResourceT, ($$+-))
-import           Data.IORef
-import           Data.List
-import           Data.Maybe
-import           Data.Monoid
-import           Data.Time
-import           Data.Typeable
-import           Data.Word
-import           System.Directory
-import           System.Environment
-import           System.FilePath          ((</>))
-import           System.Locale
-import           Text.XML.Cursor          hiding (force, forceM)
-import qualified Blaze.ByteString.Builder as Blaze
 import qualified Control.Exception        as E
 import qualified Control.Failure          as F
+import           Control.Monad
+import           Control.Monad.IO.Class
 import qualified Crypto.Classes           as Crypto
 import qualified Crypto.HMAC              as HMAC
 import qualified Crypto.Hash.MD5          as MD5
 import qualified Crypto.Hash.SHA1         as SHA1
 import qualified Crypto.Hash.SHA256       as SHA256
+import           Data.Attempt             (Attempt(..))
+import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
 import qualified Data.ByteString.Base64   as Base64
+import           Data.ByteString.Char8    ({- IsString -})
 import qualified Data.ByteString.Lazy     as L
 import qualified Data.ByteString.UTF8     as BU
+import           Data.Char
+import           Data.Conduit             (ResourceT, ($$+-))
 import qualified Data.Conduit             as C
+import           Data.IORef
+import           Data.List
+import           Data.Maybe
+import           Data.Monoid
 import qualified Data.Serialize           as Serialize
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
 import qualified Data.Text.IO             as T
+import           Data.Time
+import           Data.Typeable
+import           Data.Word
 import qualified Network.HTTP.Conduit     as HTTP
 import qualified Network.HTTP.Types       as HTTP
+import           System.Directory
+import           System.Environment
+import           System.FilePath          ((</>))
+import           System.Locale
 import qualified Text.XML                 as XML
 import qualified Text.XML.Cursor          as Cu
+import           Text.XML.Cursor          hiding (force, forceM)
 
 -- | A response with metadata. Can also contain an error response, or an internal error, via 'Attempt'.
 -- 
 -- Response forms a Writer-like monad.
-data Response m a = Response m (Attempt a)
+data Response m a = Response { responseMetadata :: m
+                             , responseResult :: Attempt a }
     deriving (Show, Functor)
 
 -- | An empty response with some metadata.
@@ -131,6 +131,8 @@ tellMetadata m = Response m (return ())
 -- | Apply a function to the metadata.
 mapMetadata :: (m -> n) -> Response m a -> Response n a
 mapMetadata f (Response m a) = Response (f m) a
+
+--multiResponse :: Monoid m => Response m a -> Response [m] a -> 
 
 instance Monoid m => Monad (Response m) where
     return x = Response mempty (Success x)
@@ -184,11 +186,6 @@ class (SignQuery r, ResponseConsumer r a)
 -- | A transaction that may need to be split over multiple requests, for example because of upstream response size limits.
 class Transaction r a => IteratedTransaction r a | r -> a , a -> r where
     nextIteratedRequest :: r -> a -> Maybe r
-    combineIteratedResponse :: a -> a -> a
-
-maybeCombineIteratedResponse :: IteratedTransaction r a => Maybe a -> a -> a
-maybeCombineIteratedResponse Nothing x = x
-maybeCombineIteratedResponse (Just x) y = combineIteratedResponse x y
 
 -- | AWS access credentials.
 data Credentials
