@@ -55,6 +55,9 @@ instance AsMemoryResponse SelectResponse where
     type MemoryResponse SelectResponse = SelectResponse
     loadToMemory = return
 
+instance ListResponse SelectResponse (Item [Attribute T.Text]) where
+    listResponse = srItems
+
 instance IteratedTransaction Select SelectResponse where
   nextIteratedRequest req SelectResponse{srNextToken=nt} = req{sNextToken=nt} <$ nt
 --  combineIteratedResponse (SelectResponse s1 _) (SelectResponse s2 nt2) = SelectResponse (s1 ++ s2) nt2

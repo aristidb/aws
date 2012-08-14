@@ -21,6 +21,7 @@ module Aws.Aws
   -- * Iterated runners
 --, awsIteratedAll
 , awsIteratedSource
+, awsIteratedList
 )
 where
 
@@ -32,10 +33,11 @@ import           Control.Monad.Base
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
-import           Data.Attempt         (Attempt(Success, Failure))
+import           Data.Attempt         (Attempt(Success, Failure), fromAttempt)
 import qualified Data.ByteString      as B
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Conduit         as C
+import qualified Data.Conduit.List    as CL
 import           Data.IORef
 import           Data.Monoid
 import qualified Data.Text            as T
@@ -267,3 +269,14 @@ awsIteratedSource cfg scfg manager req_ = go req_
                             case nextIteratedRequest request x of
                               Nothing -> return ()
                               Just nextRequest -> go nextRequest
+
+awsIteratedList :: (IteratedTransaction r a, ListResponse a i)
+                     => Configuration
+                     -> ServiceConfiguration r NormalQuery
+                     -> HTTP.Manager
+                     -> r
+                     -> C.GSource (ResourceT IO) i
+awsIteratedList cfg scfg manager req
+  = awsIteratedSource cfg scfg manager req
+    C.>+> CL.mapM (liftIO . fromAttempt . responseResult)
+    C.>+> CL.concatMap listResponse

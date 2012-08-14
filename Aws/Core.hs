@@ -10,6 +10,8 @@ module Aws.Core
 , ResponseConsumer(..)
   -- ** Memory response
 , AsMemoryResponse(..)
+  -- ** List response
+, ListResponse(..)
   -- ** Exception types
 , XmlException(..)
 , HeaderException(..)
@@ -172,6 +174,10 @@ instance ResponseConsumer r (HTTP.Response L.ByteString) where
 class AsMemoryResponse resp where
     type MemoryResponse resp :: *
     loadToMemory :: resp -> ResourceT IO (MemoryResponse resp)
+
+-- | Responses that have one main list in them, and perhaps some decoration.
+class ListResponse resp item | resp -> item where
+    listResponse :: resp -> [item]
 
 -- | Associates a request type and a response type in a bi-directional way.
 -- 
