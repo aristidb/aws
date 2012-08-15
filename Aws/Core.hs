@@ -55,6 +55,9 @@ module Aws.Core
 , fmtAmzTime
 , fmtTimeEpochSeconds
 , parseHttpDate
+, httpDate1
+, textHttpDate
+, iso8601UtcDate
   -- * Transactions
 , Transaction
 , IteratedTransaction(..)
@@ -515,6 +518,17 @@ parseHttpDate s =     p "%a, %d %b %Y %H:%M:%S GMT" s -- rfc1123-date
                   <|> p "%A, %d-%b-%y %H:%M:%S GMT" s -- rfc850-date
                   <|> p "%a %b %_d %H:%M:%S %Y" s     -- asctime-date
   where p = parseTime defaultTimeLocale
+
+-- | HTTP-date (section 3.3.1 of RFC 2616, first type - RFC1123-style)
+httpDate1 :: String
+httpDate1 = "%a, %d %b %Y %H:%M:%S GMT" -- rfc1123-date
+
+-- | Format (as Text) HTTP-date (section 3.3.1 of RFC 2616, first type - RFC1123-style)
+textHttpDate :: UTCTime -> T.Text
+textHttpDate = T.pack . formatTime defaultTimeLocale httpDate1
+
+iso8601UtcDate :: String
+iso8601UtcDate = "%Y-%m-%dT%H:%M:%S%QZ"
 
 -- | Parse a two-digit hex number.
 readHex2 :: [Char] -> Maybe Word8

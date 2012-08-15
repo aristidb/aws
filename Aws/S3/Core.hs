@@ -309,6 +309,14 @@ data BucketInfo
 
 type Object = T.Text
 
+data ObjectId
+    = ObjectId {
+        oidBucket :: Bucket
+      , oidObject :: Object
+      , oidVersion :: Maybe T.Text
+      }
+    deriving (Show)
+
 data ObjectInfo
     = ObjectInfo {
         objectKey          :: T.Text

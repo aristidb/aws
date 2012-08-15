@@ -7,6 +7,8 @@ import qualified Aws.SimpleDb as Sdb
 import qualified Aws.Sqs as Sqs
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
+import qualified Data.ByteString as S
+import qualified Data.ByteString.Lazy as L
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
 import           Data.Default

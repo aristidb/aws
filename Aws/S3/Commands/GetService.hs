@@ -32,7 +32,7 @@ instance ResponseConsumer r GetServiceResponse where
           parseBucket el = do
             name <- force "Missing owner Name" $ el $/ elContent "Name"
             creationDateString <- force "Missing owner CreationDate" $ el $/ elContent "CreationDate" &| T.unpack
-            creationDate <- force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" creationDateString
+            creationDate <- force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale iso8601UtcDate creationDateString
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
 
 -- | ServiceConfiguration: 'S3Configuration'
