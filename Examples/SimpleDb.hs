@@ -1,7 +1,5 @@
 import qualified Aws
 import qualified Aws.SimpleDb      as Sdb
-import           Data.Attempt
-import           Control.Exception
 import qualified Data.Text         as T
 import qualified Data.Text.IO      as T
 
@@ -15,11 +13,8 @@ main = do
 
   {- Make request -}
   let req = Sdb.listDomains { Sdb.ldMaxNumberOfDomains = Just 10 }
-  Aws.Response _metadata resp <- Aws.simpleAws cfg sdbCfg req
+  Sdb.ListDomainsResponse names _token <- Aws.simpleAws cfg sdbCfg req
   
   {- Analyze response -}
-  case resp of
-    Success (Sdb.ListDomainsResponse names _token) -> do
-      putStrLn "First 10 domains:"
-      mapM_ (T.putStrLn . T.cons '\t') names
-    Failure err -> print (toException err)
+  putStrLn "First 10 domains:"
+  mapM_ (T.putStrLn . T.cons '\t') names

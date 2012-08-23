@@ -133,8 +133,6 @@ awsRef = unsafeAwsRef
 -- 
 -- Note that this is potentially less efficient than using 'aws', because HTTP connections cannot be re-used.
 -- 
--- All errors are caught and wrapped in the 'Response' value.
--- 
 -- Usage:
 -- @
 --     resp <- simpleAws cfg serviceCfg request
@@ -143,12 +141,10 @@ simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
             => Configuration 
             -> ServiceConfiguration r NormalQuery
             -> r 
-            -> io (Response (ResponseMetadata a) (MemoryResponse a))
-simpleAws cfg scfg request = liftIO $ HTTP.withManager $ \manager -> do
-                               Response m x <- aws cfg scfg manager request
-                               Response m <$> case x of
-                                   Failure f -> return (Failure f)
-                                   Success a -> Success <$> loadToMemory a
+            -> io (MemoryResponse a)
+simpleAws cfg scfg request
+  = liftIO $ HTTP.withManager $ \manager ->
+      loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
 
 -- | Run an AWS transaction, /without/ HTTP manager and with metadata returned in an 'IORef'.
 -- 
