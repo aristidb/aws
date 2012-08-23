@@ -143,7 +143,7 @@ readResponse = fromAttempt . responseResult
 
 -- | Read a response result (if it's a success response, fail otherwise). In MonadIO.
 readResponseIO :: MonadIO io => Response m a -> io a
-readResponseIO = liftIO . readResponseIO
+readResponseIO = liftIO . readResponse
 
 -- | An empty response with some metadata.
 tellMetadata :: m -> Response m ()
