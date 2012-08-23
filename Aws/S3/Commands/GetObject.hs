@@ -74,4 +74,4 @@ instance Transaction GetObject GetObjectResponse
 
 instance AsMemoryResponse GetObjectResponse where
     type MemoryResponse GetObjectResponse = GetObjectMemoryResponse
-    loadToMemory (GetObjectResponse om x) = GetObjectMemoryResponse om <$> (HTTP.lbsResponse (return x))
+    loadToMemory (GetObjectResponse om x) = GetObjectMemoryResponse om <$> HTTP.lbsResponse x

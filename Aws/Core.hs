@@ -171,7 +171,7 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
 -- | Does not parse response. For debugging.
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
-    responseConsumer _ _ resp = HTTP.lbsResponse (return resp)
+    responseConsumer _ _ resp = HTTP.lbsResponse resp
 
 -- | Class for responses that are fully loaded into memory
 class AsMemoryResponse resp where
