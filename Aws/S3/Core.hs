@@ -117,6 +117,12 @@ instance Monoid S3Metadata where
     mempty = S3Metadata Nothing Nothing
     S3Metadata a1 r1 `mappend` S3Metadata a2 r2 = S3Metadata (a1 `mplus` a2) (r1 `mplus` r2)
 
+instance Loggable S3Metadata where
+    toLogText (S3Metadata id2 rid) = "S3: request ID=" `mappend`
+                                     fromMaybe "<none>" rid `mappend`
+                                     ", x-amz-id-2=" `mappend`
+                                     fromMaybe "<none>" id2
+
 data S3Query
     = S3Query {
         s3QMethod :: Method

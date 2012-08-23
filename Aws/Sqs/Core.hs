@@ -56,6 +56,12 @@ data SqsMetadata
       }
     deriving (Show)
 
+instance Loggable SqsMetadata where
+    toLogText (SqsMetadata id2 rid) = "SQS: request ID=" `mappend`
+                                      fromMaybe "<none>" rid `mappend`
+                                      ", x-amz-id-2=" `mappend`
+                                      fromMaybe "<none>" id2
+
 instance Monoid SqsMetadata where
     mempty = SqsMetadata Nothing Nothing
     SqsMetadata a1 r1 `mappend` SqsMetadata a2 r2 = SqsMetadata (a1 `mplus` a2) (r1 `mplus` r2)

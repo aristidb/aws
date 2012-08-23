@@ -178,6 +178,7 @@ simpleAwsRef cfg scfg metadataRef request = liftIO $ HTTP.withManager $
 unsafeAws
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
+      Loggable (ResponseMetadata a),
       SignQuery r) =>
      Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> r -> ResourceT IO (Response (ResponseMetadata a) a)
 unsafeAws cfg scfg manager request = do
@@ -192,6 +193,7 @@ unsafeAws cfg scfg manager request = do
   resp <- catchAll $
             unsafeAwsRef cfg scfg manager metadataRef request
   metadata <- liftIO $ readIORef metadataRef
+  liftIO $ logger cfg Info $ "Response metadata: " `mappend` toLogText metadata
   return $ Response metadata resp
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.

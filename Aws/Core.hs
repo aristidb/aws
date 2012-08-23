@@ -1,7 +1,9 @@
 module Aws.Core
-( -- * Response
+( -- * Logging
+  Loggable(..)
+  -- * Response
   -- ** Metadata in responses
-  Response(..)
+, Response(..)
 , tellMetadata
 , tellMetadataRef
 , mapMetadata
@@ -122,6 +124,10 @@ import qualified Text.XML                 as XML
 import qualified Text.XML.Cursor          as Cu
 import           Text.XML.Cursor          hiding (force, forceM)
 
+-- | Types that can be logged (textually).
+class Loggable a where
+    toLogText :: a -> T.Text
+
 -- | A response with metadata. Can also contain an error response, or an internal error, via 'Attempt'.
 -- 
 -- Response forms a Writer-like monad.
@@ -188,7 +194,7 @@ class ListResponse resp item | resp -> item where
 -- 
 -- Note that the actual request generation and response parsing resides in 'SignQuery' and 'ResponseConsumer'
 -- respectively.
-class (SignQuery r, ResponseConsumer r a)
+class (SignQuery r, ResponseConsumer r a, Loggable (ResponseMetadata a))
       => Transaction r a
       | r -> a, a -> r
 

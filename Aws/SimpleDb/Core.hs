@@ -39,6 +39,12 @@ data SdbMetadata
       }
     deriving (Show, Typeable)
 
+instance Loggable SdbMetadata where
+    toLogText (SdbMetadata rid bu) = "SimpleDB: request ID=" `mappend`
+                                     fromMaybe "<none>" rid `mappend`
+                                     ", box usage=" `mappend`
+                                     fromMaybe "<not available>" bu
+
 instance Monoid SdbMetadata where
     mempty = SdbMetadata Nothing Nothing
     SdbMetadata r1 b1 `mappend` SdbMetadata r2 b2 = SdbMetadata (r1 `mplus` r2) (b1 `mplus` b2)

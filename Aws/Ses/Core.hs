@@ -54,6 +54,9 @@ data SesMetadata
       }
     deriving (Show, Typeable)
 
+instance Loggable SesMetadata where
+    toLogText (SesMetadata rid) = "SES: request ID=" `mappend` fromMaybe "<none>" rid
+
 instance Monoid SesMetadata where
     mempty = SesMetadata Nothing
     SesMetadata r1 `mappend` SesMetadata r2 = SesMetadata (r1 `mplus` r2)
