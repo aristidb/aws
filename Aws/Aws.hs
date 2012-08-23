@@ -279,5 +279,4 @@ awsIteratedList :: (IteratedTransaction r a, ListResponse a i)
                      -> C.GSource (ResourceT IO) i
 awsIteratedList cfg scfg manager req
   = awsIteratedSource cfg scfg manager req
-    C.>+> CL.mapM readResponseIO
-    C.>+> CL.concatMap listResponse
+    C.>+> CL.concatMapM (fmap listResponse . readResponseIO)
