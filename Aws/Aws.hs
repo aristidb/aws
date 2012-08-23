@@ -29,7 +29,6 @@ import           Aws.Core
 import           Control.Applicative
 import qualified Control.Exception.Lifted as E
 import           Control.Monad
-import           Control.Monad.Base
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
@@ -182,7 +181,7 @@ unsafeAws
       SignQuery r) =>
      Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> r -> ResourceT IO (Response (ResponseMetadata a) a)
 unsafeAws cfg scfg manager request = do
-  metadataRef <- liftBase $ newIORef mempty
+  metadataRef <- liftIO $ newIORef mempty
 
   let catchAll :: ResourceT IO a -> ResourceT IO (Attempt a)
       catchAll = E.handle (return . failure') . fmap Success
@@ -192,7 +191,7 @@ unsafeAws cfg scfg manager request = do
 
   resp <- catchAll $
             unsafeAwsRef cfg scfg manager metadataRef request
-  metadata <- liftBase $ readIORef metadataRef
+  metadata <- liftIO $ readIORef metadataRef
   return $ Response metadata resp
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
@@ -206,14 +205,14 @@ unsafeAwsRef
       SignQuery r) =>
      Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> ResourceT IO a
 unsafeAwsRef cfg info manager metadataRef request = do
-  sd <- liftBase $ signatureData <$> timeInfo <*> credentials $ cfg
+  sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
   let q = signQuery request info sd
-  liftBase $ logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
+  liftIO $ logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   let httpRequest = queryToHttpRequest q
-  liftBase $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
+  liftIO $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
   resp <- do
       hresp <- HTTP.http httpRequest manager
-      forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftBase $ do
+      forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $ do
         logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
       responseConsumer request metadataRef hresp
   return resp
