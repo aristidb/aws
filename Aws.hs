@@ -27,6 +27,8 @@ module Aws
 , HTTPResponseConsumer
   -- ** Metadata in responses
 , Response(..)
+, readResponse
+, readResponseIO
 , ResponseMetadata
   -- ** Memory responses
 , AsMemoryResponse(..)
