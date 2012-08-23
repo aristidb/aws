@@ -11,6 +11,7 @@ module Aws.Aws
   -- ** Safe runners
 , aws
 , awsRef
+, pureAws
 , simpleAws
 , simpleAwsRef
   -- ** Unsafe runners
@@ -128,6 +129,20 @@ awsRef :: (Transaction r a)
       -> r 
       -> ResourceT IO a
 awsRef = unsafeAwsRef
+
+-- | Run an AWS transaction, with HTTP manager and without metadata.
+-- 
+-- Usage (with existing 'HTTP.Manager'):
+-- @
+--     resp <- aws cfg serviceCfg manager request
+-- @
+pureAws :: (Transaction r a)
+      => Configuration 
+      -> ServiceConfiguration r NormalQuery 
+      -> HTTP.Manager 
+      -> r 
+      -> ResourceT IO a
+pureAws cfg scfg mgr req = readResponseIO =<< aws cfg scfg mgr req
 
 -- | Run an AWS transaction, /without/ HTTP manager and with metadata wrapped in a 'Response'.
 -- 
