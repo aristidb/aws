@@ -32,7 +32,10 @@ getObject :: Bucket -> T.Text -> GetObject
 getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 data GetObjectResponse
-    = GetObjectResponse ObjectMetadata (HTTP.Response (C.ResumableSource (ResourceT IO) B8.ByteString))
+    = GetObjectResponse {
+        gorMetadata :: ObjectMetadata,
+        gorResponse :: HTTP.Response (C.ResumableSource (ResourceT IO) B8.ByteString)
+      }
 
 data GetObjectMemoryResponse
     = GetObjectMemoryResponse ObjectMetadata (HTTP.Response L.ByteString)
