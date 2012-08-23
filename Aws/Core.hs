@@ -4,6 +4,8 @@ module Aws.Core
   -- * Response
   -- ** Metadata in responses
 , Response(..)
+, readResponse
+, readResponseIO
 , tellMetadata
 , tellMetadataRef
 , mapMetadata
@@ -93,7 +95,7 @@ import qualified Crypto.HMAC              as HMAC
 import qualified Crypto.Hash.MD5          as MD5
 import qualified Crypto.Hash.SHA1         as SHA1
 import qualified Crypto.Hash.SHA256       as SHA256
-import           Data.Attempt             (Attempt(..))
+import           Data.Attempt             (Attempt(..), FromAttempt(..))
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
 import qualified Data.ByteString.Base64   as Base64
@@ -134,6 +136,14 @@ class Loggable a where
 data Response m a = Response { responseMetadata :: m
                              , responseResult :: Attempt a }
     deriving (Show, Functor)
+
+-- | Read a response result (if it's a success response, fail otherwise).
+readResponse :: FromAttempt f => Response m a -> f a
+readResponse = fromAttempt . responseResult
+
+-- | Read a response result (if it's a success response, fail otherwise). In MonadIO.
+readResponseIO :: MonadIO io => Response m a -> io a
+readResponseIO = liftIO . readResponseIO
 
 -- | An empty response with some metadata.
 tellMetadata :: m -> Response m ()

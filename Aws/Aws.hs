@@ -32,7 +32,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
-import           Data.Attempt         (Attempt(Success, Failure), fromAttempt)
+import           Data.Attempt         (Attempt(Success, Failure))
 import qualified Data.ByteString      as B
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Conduit         as C
@@ -279,5 +279,5 @@ awsIteratedList :: (IteratedTransaction r a, ListResponse a i)
                      -> C.GSource (ResourceT IO) i
 awsIteratedList cfg scfg manager req
   = awsIteratedSource cfg scfg manager req
-    C.>+> CL.mapM (liftIO . fromAttempt . responseResult)
+    C.>+> CL.mapM readResponseIO
     C.>+> CL.concatMap listResponse
