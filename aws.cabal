@@ -114,7 +114,9 @@ Library
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2.0 && < 0.4,
                        utf8-string          == 0.3.*,
-                       xml-conduit          >= 1.0.1 && <1.1
+                       xml-conduit          >= 1.0.1 && <1.1,
+                       resourcet            >= 0.3.3 && <0.4,
+                       transformers-base    >= 0.4.1 && <0.5
 
   GHC-Options: -Wall
 
