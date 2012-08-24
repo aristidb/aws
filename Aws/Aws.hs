@@ -87,7 +87,7 @@ baseConfiguration = liftIO $ do
                     }
 -- TODO: better error handling when credentials cannot be loaded
 
--- | Debug configuration, which avoids using HTTPS for some queries. DO NOT USE THIS IN PRODUCTION!
+-- | Debug configuration, which logs much more verbosely.
 dbgConfiguration :: MonadIO io => io Configuration
 dbgConfiguration = do
   c <- baseConfiguration
