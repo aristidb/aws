@@ -98,6 +98,8 @@ dbgConfiguration = do
 -- 
 -- All errors are caught and wrapped in the 'Response' value.
 -- 
+-- Metadata is logged at level 'Info'.
+-- 
 -- Usage (with existing 'HTTP.Manager'):
 -- @
 --     resp <- aws cfg serviceCfg manager request
@@ -113,6 +115,8 @@ aws = unsafeAws
 -- | Run an AWS transaction, with HTTP manager and metadata returned in an 'IORef'.
 -- 
 -- Errors are not caught, and need to be handled with exception handlers.
+-- 
+-- Metadata is not logged.
 -- 
 -- Usage (with existing 'HTTP.Manager'):
 -- @
@@ -132,6 +136,8 @@ awsRef = unsafeAwsRef
 
 -- | Run an AWS transaction, with HTTP manager and without metadata.
 -- 
+-- Metadata is logged at level 'Info'.
+-- 
 -- Usage (with existing 'HTTP.Manager'):
 -- @
 --     resp <- aws cfg serviceCfg manager request
@@ -144,7 +150,9 @@ pureAws :: (Transaction r a)
       -> ResourceT IO a
 pureAws cfg scfg mgr req = readResponseIO =<< aws cfg scfg mgr req
 
--- | Run an AWS transaction, /without/ HTTP manager and with metadata wrapped in a 'Response'.
+-- | Run an AWS transaction, /without/ HTTP manager and without metadata.
+-- 
+-- Metadata is logged at level 'Info'.
 -- 
 -- Note that this is potentially less efficient than using 'aws', because HTTP connections cannot be re-used.
 -- 
@@ -162,6 +170,8 @@ simpleAws cfg scfg request
       loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
 
 -- | Run an AWS transaction, /without/ HTTP manager and with metadata returned in an 'IORef'.
+-- 
+-- Metadata is not logged.
 -- 
 -- Errors are not caught, and need to be handled with exception handlers.
 -- 
@@ -186,6 +196,8 @@ simpleAwsRef cfg scfg metadataRef request = liftIO $ HTTP.withManager $
 -- This is especially useful for debugging and development, you should not have to use it in production.
 -- 
 -- All errors are caught and wrapped in the 'Response' value.
+-- 
+-- Metadata is wrapped in the Response, and also logged at level 'Info'.
 unsafeAws
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
@@ -212,6 +224,8 @@ unsafeAws cfg scfg manager request = do
 -- This is especially useful for debugging and development, you should not have to use it in production.
 -- 
 -- Errors are not caught, and need to be handled with exception handlers.
+-- 
+-- Metadata is put in the 'IORef', but not logged.
 unsafeAwsRef
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
