@@ -13,7 +13,6 @@ module Aws
 , awsRef
 , pureAws
 , simpleAws
-, simpleAwsRef
   -- ** Unsafe runners
 , unsafeAws
 , unsafeAwsRef

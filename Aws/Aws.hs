@@ -13,7 +13,6 @@ module Aws.Aws
 , awsRef
 , pureAws
 , simpleAws
-, simpleAwsRef
   -- ** Unsafe runners
 , unsafeAws
 , unsafeAwsRef
@@ -168,28 +167,6 @@ simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
 simpleAws cfg scfg request
   = liftIO $ HTTP.withManager $ \manager ->
       loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
-
--- | Run an AWS transaction, /without/ HTTP manager and with metadata returned in an 'IORef'.
--- 
--- Metadata is not logged.
--- 
--- Errors are not caught, and need to be handled with exception handlers.
--- 
--- Usage:
--- @
---     ref <- newIORef mempty;
---     resp <- simpleAwsRef cfg serviceCfg request
--- @
-
--- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
-simpleAwsRef :: (Transaction r a, AsMemoryResponse a, MonadIO io)
-            => Configuration 
-            -> ServiceConfiguration r NormalQuery 
-            -> IORef (ResponseMetadata a) 
-            -> r 
-            -> io (MemoryResponse a)
-simpleAwsRef cfg scfg metadataRef request = liftIO $ HTTP.withManager $ 
-                                              \manager -> loadToMemory =<< awsRef cfg scfg manager metadataRef request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
 -- 
