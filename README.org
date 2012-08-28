@@ -157,12 +157,12 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Contributors
 
-| Name               | E-Mail             | Company | Components |
-|--------------------+--------------------+---------+------------|
-| Aristid Breitkreuz | aristidb@gmail.com | -       | Maintainer |
-| Bas van Dijk       |                    |         |            |
-| David Vollbracht   |                    |         |            |
-| Felipe Lessa       |                    |         |            |
-| Nathan Howell      |                    |         |            |
-| Ozgun Ataman       |                    |         |            |
-| Steve Severance    |                    |         |            |
+| Name               | E-Mail                    | Company                             | Components    |
+|--------------------+---------------------------+-------------------------------------+---------------|
+| Aristid Breitkreuz | aristidb@gmail.com        | -                                   | Maintainer    |
+| Bas van Dijk       |                           |                                     |               |
+| David Vollbracht   |                           |                                     |               |
+| Felipe Lessa       | felipe.lessa@gmail.com    | currently secret                    | Core, S3, SES |
+| Nathan Howell      |                           |                                     |               |
+| Ozgun Ataman       | ozgun.ataman@soostone.com | Soostone Inc (http://soostone.com/) | Core, S3      |
+| Steve Severance    |                           |                                     |               |
