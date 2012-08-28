@@ -11,6 +11,7 @@
 -- 
 module Aws.Route53.Commands.GetDate where
 
+{-
 import           Aws.Core
 import           Aws.Route53.Core
 import           Data.Maybe
@@ -59,3 +60,4 @@ getDate = GetDate
 
 instance Transaction GetDate GetDateResponse
 
+-}

@@ -85,12 +85,12 @@ instance IteratedTransaction ListResourceRecordSets ListResourceRecordSetsRespon
                                         lrrsrNextRecordType 
                                         lrrsrNextRecordIdentifier 
                                         lrrsrMaxItems
-    combineIteratedResponse a b = ListResourceRecordSetsResponse
+{-    combineIteratedResponse a b = ListResourceRecordSetsResponse
            { lrrsrResourceRecordSets = lrrsrResourceRecordSets a ++ lrrsrResourceRecordSets b
            , lrrsrIsTruncated = lrrsrIsTruncated b
            , lrrsrNextRecordName = lrrsrNextRecordName b
            , lrrsrNextRecordType = lrrsrNextRecordType b
            , lrrsrNextRecordIdentifier = lrrsrNextRecordIdentifier b
            , lrrsrMaxItems = lrrsrMaxItems b
-           }
+           }-}
 

@@ -61,4 +61,3 @@ instance ResponseConsumer r CreateHostedZoneResponse where
             return $ CreateHostedZoneResponse zone changeInfo delegationSet
 
 instance Transaction CreateHostedZone CreateHostedZoneResponse
-

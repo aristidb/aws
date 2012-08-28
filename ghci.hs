@@ -1,6 +1,7 @@
 -- GHCI convenience code
 
 import           Aws
+import qualified Aws.Route53 as R53
 import qualified Aws.S3 as S3
 import qualified Aws.Ses as Ses
 import qualified Aws.SimpleDb as Sdb

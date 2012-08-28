@@ -72,7 +72,7 @@ import           Data.Typeable
 import           Control.Monad             (MonadPlus, mzero, mplus, liftM)
 import           Data.List                 (find)
 import           Data.Map                  (insert, empty)
-import           Data.Maybe                (listToMaybe, fromJust)
+import           Data.Maybe                (listToMaybe, fromJust, fromMaybe)
 import           Data.Text                 (Text, unpack)
 import           Data.Text.Encoding        (decodeUtf8)
 import           Data.Time                 (UTCTime)
@@ -155,6 +155,9 @@ instance Monoid Route53Metadata where
     mempty = Route53Metadata Nothing
     Route53Metadata r1 `mappend` Route53Metadata r2 = Route53Metadata (r1 `mplus` r2)
 
+instance Loggable Route53Metadata where
+    toLogText (Route53Metadata rid) = "Route53: " `mappend` fromMaybe "<none>" rid
+
 -- -------------------------------------------------------------------------- --
 -- Query
 
@@ -212,11 +215,11 @@ route53SignQuery method resource query body Route53Configuration{..} sd
 route53ResponseConsumer :: (Cu.Cursor -> Response Route53Metadata a)
                         -> IORef Route53Metadata
                         -> HTTPResponseConsumer a
-route53ResponseConsumer inner metadataRef status headers =
-    xmlCursorConsumer parse metadataRef status headers
+route53ResponseConsumer inner metadataRef resp =
+    xmlCursorConsumer parse metadataRef resp
     where
       parse cursor = do
-        tellMetadata . Route53Metadata . fmap decodeUtf8 $ findHeaderValue headers hRequestId
+        tellMetadata . Route53Metadata . fmap decodeUtf8 $ findHeaderValue (HTTP.responseHeaders resp) hRequestId
         case cursor $/ Cu.laxElement "Error" of
           []      -> inner cursor
           (err:_) -> fromError err
@@ -224,7 +227,7 @@ route53ResponseConsumer inner metadataRef status headers =
       fromError cursor = do
         errCode    <- force "Missing Error Code"    $ cursor $// elContent "Code"
         errMessage <- force "Missing Error Message" $ cursor $// elContent "Message"
-        F.failure $ Route53Error status errCode errMessage
+        F.failure $ Route53Error (HTTP.responseStatus resp) errCode errMessage
 
 
 route53CheckResponseType :: F.Failure XmlException m => a -> Text -> Cu.Cursor -> m a

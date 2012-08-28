@@ -58,5 +58,5 @@ instance Transaction ListHostedZones ListHostedZonesResponse
 
 instance IteratedTransaction ListHostedZones ListHostedZonesResponse where
     nextIteratedRequest req ListHostedZonesResponse{ lhzrNextToken = nt } = req { lhzNextToken = nt } <$ nt
-    combineIteratedResponse (ListHostedZonesResponse z0 _) (ListHostedZonesResponse z1 nt) = ListHostedZonesResponse (z0 ++ z1) nt
+--    combineIteratedResponse (ListHostedZonesResponse z0 _) (ListHostedZonesResponse z1 nt) = ListHostedZonesResponse (z0 ++ z1) nt
 
