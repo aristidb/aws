@@ -154,3 +154,15 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 - [[https://github.com/aristidb/aws][aws on Github]]
 - [[http://hackage.haskell.org/package/aws][aws on Hackage]] (includes reference documentation)
 - [[http://aws.amazon.com/][Official Amazon Web Services website]]
+
+* Contributors
+
+| Name               | E-Mail             | Company | Components |
+|--------------------+--------------------+---------+------------|
+| Aristid Breitkreuz | aristidb@gmail.com | -       | Maintainer |
+| Bas van Dijk       |                    |         |            |
+| David Vollbracht   |                    |         |            |
+| Felipe Lessa       |                    |         |            |
+| Nathan Howell      |                    |         |            |
+| Ozgun Ataman       |                    |         |            |
+| Steve Severance    |                    |         |            |
