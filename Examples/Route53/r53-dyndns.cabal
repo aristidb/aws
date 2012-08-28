@@ -1,0 +1,49 @@
+Name:                r53-dyndns
+Version:             0.1
+Synopsis:            A dynamic DNS Client for AWS Route53.
+
+Description:         
+    A dynamic DNS client that uses a AWS Route53 Hosted Zone as DNS Server.
+
+Homepage:            https://github.com/alephcloud/aws
+License:             BSD3
+License-file:        LICENSE
+Author:              Lars Kuhtz
+Maintainer:          lars@alephcloud.com
+Copyright:           Copyright (c) 2012 AlephCloud, Inc.
+Category:            Network
+Build-type:          Simple
+Cabal-version:       >=1.8
+
+Executable r53-dyndns
+  
+  Main-is:            r53-dyndns.hs
+  
+  Build-depends:
+    base,
+    transformers                 >= 0.2.2.0,
+    bytestring                   >= 0.9.1.10,
+    dns                          >= 0.3.3,
+    cmdargs                      >= 0.9.5,
+    text                         >= 0.11.2.0,
+    time                         >= 1.4,
+    attempt                      >= 0.4.0,
+    iproute                      >= 1.2.6,
+    http-conduit                 >= 1.5.0.3,
+    old-locale                   >= 1.0.0.4,
+    aws                          >= 0.7
+
+  Other-modules:
+    AttemptT
+    Utils
+  
+  ghc-options: -Wall -O2
+
+source-repository head
+  type:     git
+  location: https://github.com/alephcloud/aws.git 
+
+source-repository this
+  type:     git
+  location: https://github.com/alephcloud/aws.git
+  tag:      tip
