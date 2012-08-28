@@ -91,7 +91,7 @@ Library
   -- Packages needed in order to build this package.
   Build-depends:       attempt              >= 0.3.1.1 && < 0.5,
                        base                 == 4.*,
-                       base64-bytestring    == 0.1.*,
+                       base64-bytestring    >= 0.1 && < 1.1,
                        blaze-builder        >= 0.2.1.4 && < 0.4,
                        bytestring           == 0.9.*,
                        case-insensitive     >= 0.2     && < 0.5,
@@ -103,7 +103,7 @@ Library
                        directory            >= 1.0     && < 1.2,
                        failure              >= 0.1.0.1 && < 0.3,
                        filepath             >= 1.1     && < 1.4,
-                       http-conduit         >= 1.5     && < 1.6,
+                       http-conduit         >= 1.5     && < 1.7,
                        http-types           >= 0.7     && < 0.8,
                        lifted-base          == 0.1.*,
                        mtl                  == 2.*,
