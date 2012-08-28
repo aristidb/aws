@@ -66,7 +66,7 @@ Library
   Build-depends:
                        attempt              >= 0.3.1.1 && < 0.5,
                        base                 == 4.*,
-                       base64-bytestring    == 0.1.*,
+                       base64-bytestring    == 1.0.*,
                        blaze-builder        >= 0.2.1.4 && < 0.4,
                        bytestring           == 0.9.*,
                        case-insensitive     >= 0.2     && < 0.5,
