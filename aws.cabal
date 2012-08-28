@@ -5,9 +5,9 @@ Description:         Bindings for Amazon Web Services (AWS), with the aim of sup
 Homepage:            http://github.com/aristidb/aws
 License:             BSD3
 License-file:        LICENSE
-Author:              Aristid Breitkreuz, Felipe Lessa
+Author:              Aristid Breitkreuz, contributors see README
 Maintainer:          aristidb@googlemail.com
-Copyright:           Copyright (C) 2010 Aristid Breitkreuz
+Copyright:           See contributors list in README and LICENSE file
 Category:            Network, Web
 Build-type:          Simple
 
