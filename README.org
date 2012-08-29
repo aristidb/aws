@@ -152,12 +152,12 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Contributors
 
-| Name               | Github   | E-Mail                    | Company                                             | Components    |
-|--------------------+----------+---------------------------+-----------------------------------------------------+---------------|
-| Aristid Breitkreuz | [[https://github.com/aristidb][aristidb]] | aristidb@gmail.com        | -                                                   | Maintainer    |
-| Bas van Dijk       |          |                           |                                                     |               |
-| David Vollbracht   |          |                           |                                                     |               |
-| Felipe Lessa       |          | felipe.lessa@gmail.com    | currently secret                                    | Core, S3, SES |
-| Nathan Howell      |          | nhowell@alphaheavy.com    | Alpha Heavy Industries (http://www.alphaheavy.com/) | S3            |
-| Ozgun Ataman       |          | ozgun.ataman@soostone.com | Soostone Inc (http://soostone.com/)                 | Core, S3      |
-| Steve Severance    |          | sseverance@alphaheavy.com | Alpha Heavy Industries                              | S3, SQS       |
+| Name               | Github       | E-Mail                    | Company                                             | Components    |
+|--------------------+--------------+---------------------------+-----------------------------------------------------+---------------|
+| Aristid Breitkreuz | [[https://github.com/aristidb][aristidb]]     | aristidb@gmail.com        | -                                                   | Maintainer    |
+| Bas van Dijk       | [[https://github.com/basvandijk][basvandijk]]   |                           |                                                     |               |
+| David Vollbracht   | [[https://github.com/qxjit][qxjit]]        |                           |                                                     |               |
+| Felipe Lessa       | [[https://github.com/meteficha][meteficha]]    | felipe.lessa@gmail.com    | currently secret                                    | Core, S3, SES |
+| Nathan Howell      | [[https://github.com/NathanHowell][NathanHowell]] | nhowell@alphaheavy.com    | Alpha Heavy Industries (http://www.alphaheavy.com/) | S3            |
+| Ozgun Ataman       | [[https://github.com/ozataman][ozataman]]     | ozgun.ataman@soostone.com | Soostone Inc (http://soostone.com/)                 | Core, S3      |
+| Steve Severance    | [[https://github.com/sseveran][sseveran]]     | sseverance@alphaheavy.com | Alpha Heavy Industries                              | S3, SQS       |
