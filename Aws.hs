@@ -40,6 +40,8 @@ module Aws
   -- ** Service configuration
 , ServiceConfiguration
 , DefaultServiceConfiguration(..)
+, NormalQuery
+, UriOnlyQuery
   -- ** Expiration
 , TimeInfo(..)
   -- * Transactions
