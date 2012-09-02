@@ -99,6 +99,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
   - EXPERIMENTAL: Direct support for iterated transaction, i.e. such where multiple HTTP requests might be necessary due to e.g. response size limits.
   - Put aws functions in ResourceT to be able to safely return Sources and streams.
     - simpleAws* does not require ResourceT and converts streams into memory values (like ByteStrings) first.
+  - Log response metadata (level Info), and do not let all aws runners return it.
   - S3:
     - GetObject: No longer require a response consumer in the request, return the HTTP response (with the body as a stream) instead.
     - Add CopyObject (PUT Object Copy) request type.
