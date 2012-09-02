@@ -103,6 +103,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
   - S3:
     - GetObject: No longer require a response consumer in the request, return the HTTP response (with the body as a stream) instead.
     - Add CopyObject (PUT Object Copy) request type.
+  - Add Examples cabal flag for building code examples.
   - Many more, small improvements.
 
 ** 0.6 series
