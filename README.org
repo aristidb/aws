@@ -91,7 +91,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
-** 0.7 series (upcoming)
+** 0.7 series
 
 - 0.7.0
   - Change ServiceConfiguration concept so as to indicate in the type whether this is for URI-only requests
