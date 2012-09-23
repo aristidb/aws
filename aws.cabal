@@ -135,6 +135,6 @@ Executable SimpleDb
     Build-depends:
                        base == 4.*,
                        aws,
-                       text >=0.11.2
+                       text >=0.11
 
   Default-Language: Haskell2010
