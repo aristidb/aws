@@ -11,3 +11,4 @@
 :set -XOverloadedStrings
 :set -XTupleSections
 :set -XScopedTypeVariables
+:set -XRank2Types
