@@ -1,14 +1,14 @@
 Name:                aws
-Version:             0.7.0
+Version:             0.7.2
 Synopsis:            Amazon Web Services (AWS) for Haskell
 Description:         Bindings for Amazon Web Services (AWS), with the aim of supporting all AWS services. To see a high level overview of the library, see the README at <https://github.com/aristidb/aws/blob/master/README.org>.
 Homepage:            http://github.com/aristidb/aws
 License:             BSD3
 License-file:        LICENSE
 Author:              Aristid Breitkreuz, contributors see README
-Maintainer:          aristidb@googlemail.com
+Maintainer:          aristidb@gmail.com
 Copyright:           See contributors list in README and LICENSE file
-Category:            Network, Web
+Category:            Network, Web, AWS, Cloud, Distributed Computing
 Build-type:          Simple
 
 Extra-source-files:  README.org
@@ -20,7 +20,7 @@ Cabal-version:       >=1.10
 Source-repository this
   type: git
   location: https://github.com/aristidb/aws.git
-  tag: 0.5.0
+  tag: 0.7.2
 
 Source-repository head
   type: git
@@ -80,7 +80,7 @@ Library
                        filepath             >= 1.1     && < 1.4,
                        http-conduit         >= 1.6     && < 1.7,
                        http-types           >= 0.7     && < 0.8,
-                       lifted-base          == 0.1.*,
+                       lifted-base          >= 0.1     && < 0.3,
                        monad-control        >= 0.3,
                        mtl                  == 2.*,
                        old-locale           == 1.*,
@@ -106,7 +106,8 @@ Library
         OverloadedStrings,
         TupleSections,
         ScopedTypeVariables,
-        EmptyDataDecls
+        EmptyDataDecls,
+        Rank2Types
 
 Executable GetObject
   Main-is: GetObject.hs
