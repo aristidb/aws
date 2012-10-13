@@ -80,7 +80,7 @@ Library
                        filepath             >= 1.1     && < 1.4,
                        http-conduit         >= 1.6     && < 1.7,
                        http-types           >= 0.7     && < 0.8,
-                       lifted-base          == 0.1.*,
+                       lifted-base          >= 0.1     && < 0.3,
                        monad-control        >= 0.3,
                        mtl                  == 2.*,
                        old-locale           == 1.*,
