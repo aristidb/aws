@@ -120,8 +120,8 @@ Executable GetObject
     Build-depends:
                        base == 4.*,
                        aws,
-                       http-conduit >= 1.6 && < 1.7,
-                       conduit >= 0.5 && < 0.6
+                       http-conduit,
+                       conduit
 
   Default-Language: Haskell2010
 
