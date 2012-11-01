@@ -93,6 +93,9 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.7 series
 
+- 0.7.5
+  - Support for http-conduit 1.7 and 1.8
+
 - 0.7.1-0.7.4
   - Support for GHC 7.6
   - Wider constraints to support newer versions of various dependencies
