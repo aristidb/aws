@@ -26,14 +26,15 @@ data PutObject = PutObject {
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
+  poWebsiteRedirectLocation :: Maybe T.Text,
   poRequestBody  :: HTTP.RequestBody (C.ResourceT IO),
   poMetadata :: [(T.Text,T.Text)]
 }
 
 putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
-putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
 
-data PutObjectResponse 
+data PutObjectResponse
   = PutObjectResponse {
       porVersionId :: Maybe T.Text
     }
@@ -52,6 +53,7 @@ instance SignQuery PutObject where
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
                                             , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
+                                            , ("x-amz-website-redirect-location",) <$> poWebsiteRedirectLocation
                                             ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
                                , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires
