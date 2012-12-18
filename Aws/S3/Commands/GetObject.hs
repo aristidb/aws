@@ -25,11 +25,12 @@ data GetObject
       , goResponseCacheControl :: Maybe T.Text
       , goResponseContentDisposition :: Maybe T.Text
       , goResponseContentEncoding :: Maybe T.Text
+      , goResponseContentRange :: Maybe (Int,Int)
       }
   deriving (Show)
 
 getObject :: Bucket -> T.Text -> GetObject
-getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 data GetObjectResponse
     = GetObjectResponse {
@@ -62,9 +63,12 @@ instance SignQuery GetObject where
                                  , s3QContentType = Nothing
                                  , s3QContentMd5 = Nothing
                                  , s3QAmzHeaders = []
-                                 , s3QOtherHeaders = []
+                                 , s3QOtherHeaders = catMaybes [
+                                                       decodeRange <$> goResponseContentRange
+                                                     ]
                                  , s3QRequestBody = Nothing
                                  }
+      where decodeRange (pos,len) = ("range",B8.concat $ ["bytes=", B8.pack (show pos), "-", B8.pack (show len)])
 
 instance ResponseConsumer GetObject GetObjectResponse where
     type ResponseMetadata GetObjectResponse = S3Metadata
