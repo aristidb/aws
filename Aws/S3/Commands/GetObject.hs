@@ -9,6 +9,7 @@ import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as L
 import qualified Data.Conduit          as C
+import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import qualified Network.HTTP.Conduit  as HTTP
