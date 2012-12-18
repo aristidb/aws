@@ -172,3 +172,4 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 | Nathan Howell      | [[https://github.com/NathanHowell][NathanHowell]] | nhowell@alphaheavy.com    | [[http://www.alphaheavy.com][Alpha Heavy Industries]] | S3            |
 | Ozgun Ataman       | [[https://github.com/ozataman][ozataman]]     | ozgun.ataman@soostone.com | [[http://soostone.com][Soostone Inc]]           | Core, S3      |
 | Steve Severance    | [[https://github.com/sseveran][sseveran]]     | sseverance@alphaheavy.com | [[http://www.alphaheavy.com][Alpha Heavy Industries]] | S3, SQS       |
+| John Wiegley       | [[https://github.com/jwiegley][jwiegley]]     | johnw@fpcomplete.com      | [[http://fpcomplete.com][FP Complete]]            | S3            |
