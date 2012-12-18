@@ -6,6 +6,7 @@ module Aws.S3.Commands
 , module Aws.S3.Commands.GetBucket
 , module Aws.S3.Commands.GetObject
 , module Aws.S3.Commands.GetService
+, module Aws.S3.Commands.HeadObject
 , module Aws.S3.Commands.PutBucket
 , module Aws.S3.Commands.PutObject
 )
@@ -17,5 +18,6 @@ import Aws.S3.Commands.DeleteObjects
 import Aws.S3.Commands.GetBucket
 import Aws.S3.Commands.GetObject
 import Aws.S3.Commands.GetService
+import Aws.S3.Commands.HeadObject
 import Aws.S3.Commands.PutBucket
 import Aws.S3.Commands.PutObject
