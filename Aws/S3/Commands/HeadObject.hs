@@ -35,7 +35,7 @@ data HeadObjectMemoryResponse
 instance SignQuery HeadObject where
     type ServiceConfiguration HeadObject = S3Configuration
     signQuery HeadObject {..} = s3SignQuery S3Query {
-                                   s3QMethod = Get
+                                   s3QMethod = Head
                                  , s3QBucket = Just $ T.encodeUtf8 hoBucket
                                  , s3QObject = Just $ T.encodeUtf8 hoObjectName
                                  , s3QSubresources = HTTP.toQuery [

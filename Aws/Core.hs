@@ -295,7 +295,8 @@ defaultPort HTTPS = 443
 
 -- | Request method. Not all request methods are supported by all services.
 data Method
-    = Get       -- ^ GET method. Put all request parameters in a query string and HTTP headers.
+    = Head      -- ^ HEAD method. Put all request parameters in a query string and HTTP headers.
+    | Get       -- ^ GET method. Put all request parameters in a query string and HTTP headers.
     | PostQuery -- ^ POST method. Put all request parameters in a query string and HTTP headers, but send the query string
                 --   as a POST payload
     | Post      -- ^ POST method. Sends a service- and request-specific request body.
@@ -305,6 +306,7 @@ data Method
 
 -- | HTTP method associated with a request method.
 httpMethod :: Method -> HTTP.Method
+httpMethod Head      = "HEAD"
 httpMethod Get       = "GET"
 httpMethod PostQuery = "POST"
 httpMethod Post      = "POST"
