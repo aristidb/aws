@@ -144,7 +144,7 @@ sdbResponseConsumer inner metadataRef resp
               = do let requestId' = listToMaybe $ cursor $// elContent "RequestID"
                    let boxUsage' = listToMaybe $ cursor $// elContent "BoxUsage"
                    tellMetadata $ SdbMetadata requestId' boxUsage'
-                   case cursor $/ Cu.laxElement "Error" of
+                   case cursor $// Cu.laxElement "Error" of
                      []      -> inner cursor
                      (err:_) -> fromError err
           fromError cursor = do errCode <- force "Missing Error Code" $ cursor $// elCont "Code"
