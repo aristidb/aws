@@ -23,13 +23,13 @@ data DeleteObjects
       }
     deriving (Show)
 
--- simple use case: neither mfa, nor version specification
-deleteObjects :: Bucket -> [T.Text] -> Bool -> DeleteObjects
-deleteObjects bucket objs quiet =
+-- simple use case: neither mfa, nor version specified, quiet
+deleteObjects :: Bucket -> [T.Text] -> DeleteObjects
+deleteObjects bucket objs =
     DeleteObjects {
             dosBucket  = bucket
           , dosObjects = zip objs $ repeat Nothing
-          , dosQuiet   = quiet
+          , dosQuiet   = True
           , dosMultiFactorAuthentication = Nothing
           }
 
