@@ -9,6 +9,8 @@ import qualified Data.Text.Encoding   as T
 import qualified Network.HTTP.Conduit as HTTP
 import qualified Network.HTTP.Types   as HTTP
 import qualified Text.XML             as XML
+import qualified Text.XML.Cursor      as Cu
+import           Text.XML.Cursor      (($/), (&|))
 import qualified Crypto.Classes       as C (hash)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 ({- IsString -})
@@ -23,18 +25,38 @@ data DeleteObjects
       }
     deriving (Show)
 
--- simple use case: neither mfa, nor version specification
-deleteObjects :: Bucket -> [T.Text] -> Bool -> DeleteObjects
-deleteObjects bucket objs quiet =
+-- simple use case: neither mfa, nor version specified, quiet
+deleteObjects :: Bucket -> [T.Text] -> DeleteObjects
+deleteObjects bucket objs =
     DeleteObjects {
             dosBucket  = bucket
           , dosObjects = zip objs $ repeat Nothing
-          , dosQuiet   = quiet
+          , dosQuiet   = True
           , dosMultiFactorAuthentication = Nothing
           }
 
 data DeleteObjectsResponse
-    = DeleteObjectsResponse
+    = DeleteObjectsResponse {
+        dorDeleted :: [DORDeleted]
+      , dorErrors  :: [DORErrors]
+      }
+    deriving (Show)
+
+--omitting DeleteMarker because it appears superfluous
+data DORDeleted
+    = DORDeleted {
+        ddKey                   :: T.Text
+      , ddVersionId             :: Maybe T.Text
+      , ddDeleteMarkerVersionId :: Maybe T.Text
+      }
+    deriving (Show)
+
+data DORErrors
+    = DORErrors {
+        deKey     :: T.Text
+      , deCode    :: T.Text
+      , deMessage :: T.Text
+      }
     deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
@@ -81,7 +103,21 @@ instance SignQuery DeleteObjects where
 instance ResponseConsumer DeleteObjects DeleteObjectsResponse where
     type ResponseMetadata DeleteObjectsResponse = S3Metadata
 
-    responseConsumer _ = s3ResponseConsumer $ \_ -> return DeleteObjectsResponse
+    responseConsumer _ = s3XmlResponseConsumer parse
+        where parse cursor = do
+                  dorDeleted <- sequence $ cursor $/ Cu.laxElement "Deleted" &| parseDeleted
+                  dorErrors  <- sequence $ cursor $/ Cu.laxElement "Error" &| parseErrors
+                  return DeleteObjectsResponse {..}
+              parseDeleted c = do
+                  ddKey <- force "Missing Key" $ c $/ elContent "Key"
+                  let ddVersionId = listToMaybe $ c $/ elContent "VersionId"
+                      ddDeleteMarkerVersionId = listToMaybe $ c $/ elContent "DeleteMarkerVersionId"
+                  return DORDeleted {..}
+              parseErrors c = do
+                  deKey     <- force "Missing Key" $ c $/ elContent "Key"
+                  deCode    <- force "Missing Code" $ c $/ elContent "Code"
+                  deMessage <- force "Missing Message" $ c $/ elContent "Message"
+                  return DORErrors {..}
 
 instance Transaction DeleteObjects DeleteObjectsResponse
 
