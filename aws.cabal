@@ -1,5 +1,5 @@
 Name:                aws
-Version:             0.7.5
+Version:             0.7.6
 Synopsis:            Amazon Web Services (AWS) for Haskell
 Description:         Bindings for Amazon Web Services (AWS), with the aim of supporting all AWS services. To see a high level overview of the library, see the README at <https://github.com/aristidb/aws/blob/master/README.org>.
 Homepage:            http://github.com/aristidb/aws
@@ -20,7 +20,7 @@ Cabal-version:       >=1.10
 Source-repository this
   type: git
   location: https://github.com/aristidb/aws.git
-  tag: 0.7.5
+  tag: 0.7.6
 
 Source-repository head
   type: git
@@ -72,7 +72,7 @@ Library
                        base64-bytestring    == 1.0.*,
                        blaze-builder        >= 0.2.1.4 && < 0.4,
                        bytestring           >= 0.9     && < 0.11,
-                       case-insensitive     >= 0.2     && < 0.5,
+                       case-insensitive     >= 0.2     && < 1.1,
                        cereal               == 0.3.*,
                        conduit              >= 0.5     && < 0.6,
                        containers           >= 0.4,
@@ -82,7 +82,7 @@ Library
                        failure              >= 0.2.0.1 && < 0.3,
                        filepath             >= 1.1     && < 1.4,
                        http-conduit         >= 1.6     && < 1.9,
-                       http-types           >= 0.7     && < 0.8,
+                       http-types           >= 0.7     && < 0.9,
                        lifted-base          >= 0.1     && < 0.3,
                        monad-control        >= 0.3,
                        mtl                  == 2.*,
