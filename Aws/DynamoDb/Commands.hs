@@ -1,6 +1,18 @@
 module Aws.DynamoDb.Commands
-    ( GetItem (..)
+    (
+     -- * GetItem
+      GetItem (..)
     , GetItemResponse (..)
+
+     -- * PutItem
+    , PutItem (..)
+    , putItem
+    , PutItemResponse (..)
+    , PutExpect (..)
+    , PutReturn (..)
     ) where
 
-import           Aws.DynamoDb.Commands.Item
+-------------------------------------------------------------------------------
+import           Aws.DynamoDb.Commands.GetItem
+import           Aws.DynamoDb.Commands.PutItem
+-------------------------------------------------------------------------------

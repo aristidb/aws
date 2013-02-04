@@ -1,4 +1,4 @@
-module Aws.DynamoDb.Commands.Item where
+module Aws.DynamoDb.Commands.GetItem where
 
 -------------------------------------------------------------------------------
 import           Control.Applicative

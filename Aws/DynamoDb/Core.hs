@@ -77,6 +77,50 @@ class IsDVal a where
     fromDVal :: DValue -> Maybe a
 
 
+instance IsDVal Int where
+    toDVal i = DInt (fromIntegral i)
+    fromDVal (DInt i) = Just $ fromIntegral i
+    fromDVal _ = Nothing
+
+
+instance IsDVal Integer where
+    toDVal i = DInt i
+    fromDVal (DInt i) = Just i
+    fromDVal _ = Nothing
+
+
+instance IsDVal Double where
+    toDVal i = DDouble i
+    fromDVal (DDouble i) = Just i
+    fromDVal _ = Nothing
+
+
+instance IsDVal T.Text where
+    toDVal i = DString i
+    fromDVal (DString x) = Just x
+    fromDVal _ = Nothing
+
+
+-- | Type wrapper for binary data to be written to DynamoDB. Wrap any
+-- 'Serialize' instance in there and 'IsDVal' will know how to
+-- automatically handle conversions in binary form.
+newtype Bin a = Bin a deriving (Eq,Show,Read,Ord)
+
+
+instance Ser.Serialize a => IsDVal (Bin a) where
+    toDVal (Bin a) = DBinary (Base64.encode (Ser.encode a))
+    fromDVal (DBinary x) = either (const Nothing) (Just . Bin) $
+                           Ser.decode =<< Base64.decode x
+    fromDVal _ = Nothing
+
+
+
+-- | Convenience to construct DynamoDB values from Haskell types. Just
+-- a synonym for 'toDVal'.
+mkVal :: IsDVal a => a -> DValue
+mkVal = toDVal
+
+
 -- | A value as defined/recognized by DynamoDB. We split into more
 -- types to have this work more natively with Haskell.
 data DValue
@@ -101,17 +145,50 @@ data PrimaryKey
     deriving (Eq,Show,Read,Ord)
 
 
+-- | Make a primary key from a single value
+hpk :: IsDVal a => a -> PrimaryKey
+hpk a = HPK $ mkVal a
+
+
+-- | Make a composite primary key from a hash attribute and a range
+-- attribute.
+hrpk :: (IsDVal a, IsDVal b) => a -> b -> PrimaryKey
+hrpk a b = HRPK (mkVal a) (mkVal b)
+
+
+-- | A key-value pair
+type Attribute = (T.Text, DValue)
+
+
+-- | Convenience function for constructing key-value pairs
+attr :: IsDVal a => t -> a -> (t, DValue)
+attr k v = (k, mkVal v)
+
+
+-- | Convenience function for constructing 'Item's from manually
+-- entered key-value pairs.
+item :: [Attribute] -> Item
+item atts = Item $ M.fromList atts
+
+
 -- | Haskell data structure representing a single fetched item from
 -- DynamoDB.
 newtype Item = Item { itemAttrs :: M.Map T.Text DValue }
     deriving (Eq,Show,Read,Ord)
 
 
+-- | Empty item
+defItem :: Item
+defItem = Item M.empty
+
 
 instance FromJSON Item where
     parseJSON v = Item <$> parseJSON v
     parseJSON _ = fail "aws: failed while parsing Item"
 
+
+instance ToJSON Item where
+    toJSON (Item v) = toJSON v
 
 
 showT :: Show a => a -> T.Text
@@ -324,7 +401,6 @@ ddbSignQuery msg target conf sd@SignatureData{..} = SignedQuery {
 
       -- | Everybody needs date in a different format!
       rqDateTime = B.pack $ formatTime defaultTimeLocale "%Y%m%dT%H%M%SZ" signatureTime
-      -- rqDateTime = B.pack $ formatTime defaultTimeLocale "%a, %d %b %Y %H:%M:%S GMT" signatureTime
       credDate = B.pack $ formatTime defaultTimeLocale "%Y%m%d" signatureTime
 
       credScope = B.intercalate "/" [credDate, rName, "dynamodb", "aws4_request"]

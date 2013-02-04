@@ -67,7 +67,8 @@ Library
                        Aws.Ses.Core
                        Aws.DynamoDb.Core
                        Aws.DynamoDb.Commands
-                       Aws.DynamoDb.Commands.Item
+                       Aws.DynamoDb.Commands.GetItem
+                       Aws.DynamoDb.Commands.PutItem
 
   Build-depends:
                        attempt              >= 0.3.1.1 && < 0.5,
