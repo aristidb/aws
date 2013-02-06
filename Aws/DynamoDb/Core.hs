@@ -7,20 +7,60 @@
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 
-
 -----------------------------------------------------------------------------
 -- |
--- Module      :
--- Copyright   :  Ozgun Ataman
--- License     :  All Rights Reserved
+-- Module      :  Aws.DynaboDb.Core
+-- Copyright   :  Ozgun Ataman, Soostone Inc.
+-- License     :  BSD3
 --
 -- Maintainer  :  Ozgun Ataman <oz@soostone.com>
 -- Stability   :  experimental
 --
 ----------------------------------------------------------------------------
 
+module Aws.DynamoDb.Core
+    (
+    -- * Configuration & Regions
+      Region (..)
+    , ddbUsEast1
+    , ddbUsWest1
+    , ddbUsWest2
+    , ddbEuWest1
+    , ddbApNe1
+    , ddbApSe1
+    , ddbApSe2
+    , ddbSaEast1
+    , DdbConfiguration (..)
 
-module Aws.DynamoDb.Core where
+    -- * DynamoDB Types
+    , DValue (..)
+    , IsDVal (..)
+    , PrimaryKey (..)
+    , Attribute
+    , Bin (..)
+    , Item (..)
+    , defItem
+    , mkVal
+    , hpk
+    , hrpk
+    , attr
+    , attrAs
+    , text, int, double
+    , item
+
+    -- * Responses & Errors
+    , DdbResponse (..)
+    , DdbErrCode (..)
+    , DdbError (..)
+
+    -- * Internal Helpers
+    , ddbSignQuery
+    , AmazonError (..)
+    , ddbResponseConsumer
+    , ddbHttp
+    , ddbHttps
+
+    ) where
 
 
 -------------------------------------------------------------------------------
@@ -72,6 +112,9 @@ import           Aws.Core
 -------------------------------------------------------------------------------
 
 
+-- | Class of native Haskell types that can be converted to DynamoDB
+-- types using this common interface. DynamoDB is typed and this class
+-- helps us work with that through a more convenient interface.
 class IsDVal a where
     toDVal :: a -> DValue
     fromDVal :: DValue -> Maybe a
@@ -98,6 +141,48 @@ instance IsDVal Double where
 instance IsDVal T.Text where
     toDVal i = DString i
     fromDVal (DString x) = Just x
+    fromDVal _ = Nothing
+
+
+instance IsDVal [T.Text] where
+    toDVal i = DStringSet $ S.fromList i
+    fromDVal (DStringSet x) = Just $ S.toList x
+    fromDVal _ = Nothing
+
+
+instance IsDVal (S.Set T.Text) where
+    toDVal i = DStringSet i
+    fromDVal (DStringSet x) = Just x
+    fromDVal _ = Nothing
+
+
+instance IsDVal [Double] where
+    toDVal i = DDoubleSet $ S.fromList i
+    fromDVal (DDoubleSet x) = Just $ S.toList x
+    fromDVal _ = Nothing
+
+
+instance IsDVal (S.Set Double) where
+    toDVal i = DDoubleSet i
+    fromDVal (DDoubleSet x) = Just x
+    fromDVal _ = Nothing
+
+
+instance IsDVal [Int] where
+    toDVal i = DIntSet $ S.fromList $ map fromIntegral i
+    fromDVal (DIntSet x) = Just $ map fromIntegral $ S.toList x
+    fromDVal _ = Nothing
+
+
+instance IsDVal (S.Set Int) where
+    toDVal i = DIntSet $ S.map fromIntegral i
+    fromDVal (DIntSet x) = Just $ S.map fromIntegral x
+    fromDVal _ = Nothing
+
+
+instance IsDVal (S.Set Integer) where
+    toDVal i = DIntSet i
+    fromDVal (DIntSet x) = Just x
     fromDVal _ = Nothing
 
 
@@ -130,7 +215,7 @@ data DValue
     | DBinary B.ByteString
     | DIntSet (S.Set Integer)
     | DDoubleSet (S.Set Double)
-    | DStringSet (S.Set Double)
+    | DStringSet (S.Set T.Text)
     | DBinSet (S.Set B.ByteString)
     deriving (Eq,Show,Read,Ord)
 
@@ -146,6 +231,9 @@ data PrimaryKey
 
 
 -- | Make a primary key from a single value
+--
+-- Assuming @name@ is a primary hash key attribute:
+-- >> hpk "john"
 hpk :: IsDVal a => a -> PrimaryKey
 hpk a = HPK $ mkVal a
 
@@ -161,12 +249,37 @@ type Attribute = (T.Text, DValue)
 
 
 -- | Convenience function for constructing key-value pairs
-attr :: IsDVal a => t -> a -> (t, DValue)
+attr :: IsDVal a => T.Text -> a -> (T.Text, DValue)
 attr k v = (k, mkVal v)
+
+
+-- | 'attr' with type witness to help with cases where you're manually
+-- supplying values in code.
+--
+-- >> item [ attrAs text "name" "john"
+attrAs :: IsDVal a => a -> T.Text -> a -> (T.Text, DValue)
+attrAs _ k v = attr k v
+
+
+-- | Type witness for 'Text'. See 'attrAs'.
+text :: T.Text
+text = undefined
+
+
+-- | Type witness for 'Integer'. See 'attrAs'.
+int :: Integer
+int = undefined
+
+
+-- | Type witness for 'Double'. See 'attrAs'.
+double :: Double
+double = undefined
 
 
 -- | Convenience function for constructing 'Item's from manually
 -- entered key-value pairs.
+--
+-- >> item [ attr "name" name, attr "age" age]
 item :: [Attribute] -> Item
 item atts = Item $ M.fromList atts
 
@@ -177,7 +290,7 @@ newtype Item = Item { itemAttrs :: M.Map T.Text DValue }
     deriving (Eq,Show,Read,Ord)
 
 
--- | Empty item
+-- | Empty item.
 defItem :: Item
 defItem = Item M.empty
 
@@ -407,10 +520,10 @@ ddbSignQuery msg target conf sd@SignatureData{..} = SignedQuery {
       strToSign = B.intercalate "\n" [algo, rqDateTime, credScope, hCanReq]
 
       hmac'' :: B.ByteString -> B.ByteString -> B.ByteString
-      hmac'' k v = Ser.encode $ hmac' mk v
+      hmac'' k v = Ser.encode $ hmac' f v
           where
-            mk :: MacKey SHA256.Ctx SHA256.SHA256
-            mk = MacKey k
+            f :: MacKey SHA256.Ctx SHA256.SHA256
+            f = MacKey k
 
       Credentials{..} = signatureCredentials
       kSecret = secretAccessKey

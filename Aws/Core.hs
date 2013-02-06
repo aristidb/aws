@@ -375,11 +375,11 @@ queryToHttpRequest SignedQuery{..}
                               ++ sqOtherHeaders
       , HTTP.requestBody = 
 
-        -- | An explicityly defined body parameter should overwrite everything else.
+        -- An explicityly defined body parameter should overwrite everything else.
         case sqBody of
           Just x -> x
           Nothing -> 
-            -- | a POST query should convert its query string into the body
+            -- a POST query should convert its query string into the body
             case sqMethod of
               PostQuery -> HTTP.RequestBodyLBS . Blaze.toLazyByteString $ 
                            HTTP.renderQueryBuilder False sqQuery
@@ -393,7 +393,7 @@ queryToHttpRequest SignedQuery{..}
 #endif
       }
     where 
-      -- | An explicitly defined content-type should override everything else.
+      -- An explicitly defined content-type should override everything else.
       contentType = sqContentType `mplus` defContentType
       defContentType = case sqMethod of
                          PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"

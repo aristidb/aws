@@ -27,10 +27,17 @@ data PutItem = PutItem {
     } deriving (Eq,Show,Read,Ord)
 
 
-putItem = PutItem { piTable = ""
-                  , piItem = defItem
-                  , piExpect = Nothing
-                  , piReturn = RNone }
+
+-- | A simple starting point for a 'PutItem' request.
+--
+-- It sets 'piExpect' to 'Nothing' and 'piReturn' to 'RNone'.
+putItem :: T.Text 
+        -- ^ A Dynamo table name
+        -> Item 
+        -- ^ Item to be saved
+        -> PutItem
+putItem tn it = PutItem tn it Nothing RNone
+
 
 instance ToJSON PutItem where
     toJSON PutItem{..} = object $

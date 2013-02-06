@@ -20,13 +20,15 @@ main = do
 
   putStrLn "Putting an item..."
 
-  let req1 = putItem {
-               piTable = "devel-1"
-             , piItem = item [ attr "name" ("josh" :: T.Text)
-                             , attr "class" ("not-so-awesome" :: T.Text) ]
-             }
+  let x = item [ attrAs text "name" "josh"
+               , attrAs text "class" "not-so-awesome"]
+
+  let req1 = putItem "devel-1" x
+             
 
   (resp1 :: PutItemResponse) <- Aws.simpleAws cfg debugServiceConfig req1
+  putStrLn "Response: "
+  print resp1
 
   putStrLn "Getting the item back..."
 

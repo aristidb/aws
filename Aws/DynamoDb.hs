@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Aws.DynaboDb.Commands
+-- Module      :  Aws.DynaboDb
 -- Copyright   :  Ozgun Ataman, Soostone Inc.
 -- License     :  BSD3
 --
@@ -9,21 +9,12 @@
 --
 ----------------------------------------------------------------------------
 
-module Aws.DynamoDb.Commands
-    (
-     -- * GetItem
-      GetItem (..)
-    , GetItemResponse (..)
-
-     -- * PutItem
-    , PutItem (..)
-    , putItem
-    , PutItemResponse (..)
-    , PutExpect (..)
-    , PutReturn (..)
+module Aws.DynamoDb
+    ( module Aws.DynamoDb.Core
+    , module Aws.DynamoDb.Commands
     ) where
 
 -------------------------------------------------------------------------------
-import           Aws.DynamoDb.Commands.GetItem
-import           Aws.DynamoDb.Commands.PutItem
+import           Aws.DynamoDb.Commands
+import           Aws.DynamoDb.Core
 -------------------------------------------------------------------------------
