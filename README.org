@@ -93,6 +93,12 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.7 series
 
+- 0.7.6.2
+  - Support for http-conduit 1.9
+
+- 0.7.6.1
+  - Support for case-insensitive 1.0 and http-types 0.8
+
 - 0.7.6
   - Parsing of SimpleDB error responses was too strict, fixed
   - Support for cryptohash 0.8
