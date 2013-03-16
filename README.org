@@ -93,6 +93,9 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.7 series
 
+- 0.7.6.3
+  - In addition to supporting http-conduit 1.9, it would seem nice to support conduit 1.0. Previously slipped through the radar.
+
 - 0.7.6.2
   - Support for http-conduit 1.9
 
