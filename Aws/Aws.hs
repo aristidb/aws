@@ -28,7 +28,6 @@ where
 
 import           Aws.Core
 import           Control.Applicative
-import           Control.Concurrent
 import qualified Control.Exception.Lifted as E
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -133,7 +132,7 @@ awsRef :: (Transaction r a)
       -> IORef (ResponseMetadata a) 
       -> r 
       -> ResourceT IO a
-awsRef = unsafeAwsRef 3
+awsRef = unsafeAwsRef
 
 -- | Run an AWS transaction, with HTTP manager and without metadata.
 -- 
@@ -193,52 +192,38 @@ unsafeAws cfg scfg manager request = do
       failure' = Failure
 
   resp <- catchAll $
-            unsafeAwsRef 3 cfg scfg manager metadataRef request
+            unsafeAwsRef cfg scfg manager metadataRef request
   metadata <- liftIO $ readIORef metadataRef
   liftIO $ logger cfg Info $ "Response metadata: " `mappend` toLogText metadata
   return $ Response metadata resp
 
--- | Run an AWS transaction, without enforcing that response and request type
--- form a valid transaction pair.
---
--- This is especially useful for debugging and development, you should not have
--- to use it in production.
---
+-- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
+-- 
+-- This is especially useful for debugging and development, you should not have to use it in production.
+-- 
 -- Errors are not caught, and need to be handled with exception handlers.
---
+-- 
 -- Metadata is put in the 'IORef', but not logged.
 unsafeAwsRef
-  :: (ResponseConsumer r a, Monoid (ResponseMetadata a), SignQuery r)
-  => Int
-  -> Configuration
-  -> ServiceConfiguration r NormalQuery
-  -> HTTP.Manager
-  -> IORef (ResponseMetadata a)
-  -> r
-  -> ResourceT IO a
-unsafeAwsRef retries cfg info manager metadataRef request = do
+  :: (ResponseConsumer r a,
+      Monoid (ResponseMetadata a),
+      SignQuery r) =>
+     Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> ResourceT IO a
+unsafeAwsRef cfg info manager metadataRef request = do
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
   let q = signQuery request info sd
-  liftIO $ logger cfg Debug $
-      T.pack $ "String to sign: " ++ show (sqStringToSign q)
+  liftIO $ logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   let httpRequest = queryToHttpRequest q
   liftIO $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
-  E.catch
-    (do hresp <- HTTP.http httpRequest manager
-        forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $ do
-            logger cfg Debug $ T.decodeUtf8 $
-                "Response header '" <> CI.original hname <> "': '"
-                <> hvalue <> "'"
-        responseConsumer request metadataRef hresp)
-    (\e -> if retries <= 0
-           then E.throwIO (e :: E.SomeException)
-           else do
-             liftIO $ threadDelay 1000000
-             unsafeAwsRef (retries - 1) cfg info manager metadataRef request)
+  resp <- do
+      hresp <- HTTP.http httpRequest manager
+      forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $ do
+        logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
+      responseConsumer request metadataRef hresp
+  return resp
 
--- | Run a URI-only AWS transaction. Returns a URI that can be sent
--- anywhere. Does not work with all requests.
---
+-- | Run a URI-only AWS transaction. Returns a URI that can be sent anywhere. Does not work with all requests.
+-- 
 -- Usage:
 -- @
 --     uri <- awsUri cfg request
