@@ -34,7 +34,7 @@ module Aws.DynamoDb.Core
 
     -- * DynamoDB Types
     , DValue (..)
-    , IsDVal (..)
+    , DVal (..)
     , PrimaryKey (..)
     , Attribute
     , Bin (..)
@@ -59,6 +59,8 @@ module Aws.DynamoDb.Core
     , ddbResponseConsumer
     , ddbHttp
     , ddbHttps
+
+    , Expect (..)
 
     ) where
 
@@ -114,84 +116,84 @@ import           Aws.Core
 -- | Class of native Haskell types that can be converted to DynamoDB
 -- types using this common interface. DynamoDB is typed and this class
 -- helps us work with that through a more convenient interface.
-class IsDVal a where
+class DVal a where
     toDVal :: a -> DValue
     fromDVal :: DValue -> Maybe a
 
 
-instance IsDVal Int where
+instance DVal Int where
     toDVal i = DInt (fromIntegral i)
     fromDVal (DInt i) = Just $ fromIntegral i
     fromDVal _ = Nothing
 
 
-instance IsDVal Integer where
+instance DVal Integer where
     toDVal i = DInt i
     fromDVal (DInt i) = Just i
     fromDVal _ = Nothing
 
 
-instance IsDVal Double where
+instance DVal Double where
     toDVal i = DDouble i
     fromDVal (DDouble i) = Just i
     fromDVal _ = Nothing
 
 
-instance IsDVal T.Text where
+instance DVal T.Text where
     toDVal i = DString i
     fromDVal (DString x) = Just x
     fromDVal _ = Nothing
 
 
-instance IsDVal [T.Text] where
+instance DVal [T.Text] where
     toDVal i = DStringSet $ S.fromList i
     fromDVal (DStringSet x) = Just $ S.toList x
     fromDVal _ = Nothing
 
 
-instance IsDVal (S.Set T.Text) where
+instance DVal (S.Set T.Text) where
     toDVal i = DStringSet i
     fromDVal (DStringSet x) = Just x
     fromDVal _ = Nothing
 
 
-instance IsDVal [Double] where
+instance DVal [Double] where
     toDVal i = DDoubleSet $ S.fromList i
     fromDVal (DDoubleSet x) = Just $ S.toList x
     fromDVal _ = Nothing
 
 
-instance IsDVal (S.Set Double) where
+instance DVal (S.Set Double) where
     toDVal i = DDoubleSet i
     fromDVal (DDoubleSet x) = Just x
     fromDVal _ = Nothing
 
 
-instance IsDVal [Int] where
+instance DVal [Int] where
     toDVal i = DIntSet $ S.fromList $ map fromIntegral i
     fromDVal (DIntSet x) = Just $ map fromIntegral $ S.toList x
     fromDVal _ = Nothing
 
 
-instance IsDVal (S.Set Int) where
+instance DVal (S.Set Int) where
     toDVal i = DIntSet $ S.map fromIntegral i
     fromDVal (DIntSet x) = Just $ S.map fromIntegral x
     fromDVal _ = Nothing
 
 
-instance IsDVal (S.Set Integer) where
+instance DVal (S.Set Integer) where
     toDVal i = DIntSet i
     fromDVal (DIntSet x) = Just x
     fromDVal _ = Nothing
 
 
 -- | Type wrapper for binary data to be written to DynamoDB. Wrap any
--- 'Serialize' instance in there and 'IsDVal' will know how to
+-- 'Serialize' instance in there and 'DVal' will know how to
 -- automatically handle conversions in binary form.
 newtype Bin a = Bin a deriving (Eq,Show,Read,Ord)
 
 
-instance Ser.Serialize a => IsDVal (Bin a) where
+instance Ser.Serialize a => DVal (Bin a) where
     toDVal (Bin a) = DBinary (Base64.encode (Ser.encode a))
     fromDVal (DBinary x) = either (const Nothing) (Just . Bin) $
                            Ser.decode =<< Base64.decode x
@@ -201,7 +203,7 @@ instance Ser.Serialize a => IsDVal (Bin a) where
 
 -- | Convenience to construct DynamoDB values from Haskell types. Just
 -- a synonym for 'toDVal'.
-mkVal :: IsDVal a => a -> DValue
+mkVal :: DVal a => a -> DValue
 mkVal = toDVal
 
 
@@ -233,13 +235,13 @@ data PrimaryKey
 --
 -- Assuming @name@ is a primary hash key attribute:
 -- >> hpk "john"
-hpk :: IsDVal a => a -> PrimaryKey
+hpk :: DVal a => a -> PrimaryKey
 hpk a = HPK $ mkVal a
 
 
 -- | Make a composite primary key from a hash attribute and a range
 -- attribute.
-hrpk :: (IsDVal a, IsDVal b) => a -> b -> PrimaryKey
+hrpk :: (DVal a, DVal b) => a -> b -> PrimaryKey
 hrpk a b = HRPK (mkVal a) (mkVal b)
 
 
@@ -248,7 +250,7 @@ type Attribute = (T.Text, DValue)
 
 
 -- | Convenience function for constructing key-value pairs
-attr :: IsDVal a => T.Text -> a -> (T.Text, DValue)
+attr :: DVal a => T.Text -> a -> (T.Text, DValue)
 attr k v = (k, mkVal v)
 
 
@@ -256,7 +258,7 @@ attr k v = (k, mkVal v)
 -- supplying values in code.
 --
 -- >> item [ attrAs text "name" "john" ]
-attrAs :: IsDVal a => a -> T.Text -> a -> (T.Text, DValue)
+attrAs :: DVal a => a -> T.Text -> a -> (T.Text, DValue)
 attrAs _ k v = attr k v
 
 
@@ -283,8 +285,8 @@ item :: [Attribute] -> Item
 item atts = Item $ M.fromList atts
 
 
--- | Haskell data structure representing a single fetched item from
--- DynamoDB.
+-- | Haskell data structure representing a single fetched item/object
+-- from DynamoDB.
 newtype Item = Item { itemAttrs :: M.Map T.Text DValue }
     deriving (Eq,Show,Read,Ord)
 
@@ -606,3 +608,29 @@ ddbResponseConsumer ref resp = do
 
       HTTP.Status{..} = responseStatus resp
 
+
+
+type Expects = [Expect]
+
+
+-- | Perform 'PutItem' only if 'peExists' matches the reality for the
+-- other parameters here.
+data Expect = Expect {
+      expectAttr   :: T.Text
+    -- ^ Attribute for the existence check
+    , expectVal    :: Maybe DValue
+    -- ^ Further constrain this check and make it apply only if
+    -- attribute has this value
+    , expectExists :: Bool
+    -- ^ If 'True', will only match if attribute exists. If 'False'
+    -- will only match if the attribute is missing.
+    } deriving (Eq,Show,Read,Ord)
+
+
+instance ToJSON Expects where
+    toJSON  = object . map mk
+        where
+          mk Expect{..} = expectAttr .= object sub
+              where
+                sub = maybe [] (return . ("Value" .= )) expectVal ++
+                      ["Exists" .= expectExists]

@@ -70,6 +70,7 @@ Library
                        Aws.DynamoDb.Commands
                        Aws.DynamoDb.Commands.GetItem
                        Aws.DynamoDb.Commands.PutItem
+                       Aws.DynamoDb.Commands.UpdateItem
 
   Build-depends:
                        attempt              >= 0.3.1.1 && < 0.5,
@@ -101,7 +102,8 @@ Library
                        xml-conduit          >= 1.0.1 && <1.2,
                        safe                 >= 0.3 && < 0.4,
                        attoparsec-conduit   >= 0.5 && < 1.1,
-                       aeson                >= 0.6 && < 0.7
+                       aeson                >= 0.6 && < 0.7,
+                       data-default
 
   GHC-Options: -Wall
 
@@ -164,6 +166,7 @@ Executable DynamoDb
     Build-depends:
                        base == 4.*,
                        aws,
-                       text >=0.11
+                       text >=0.11,
+                       data-default
 
   Default-Language: Haskell2010

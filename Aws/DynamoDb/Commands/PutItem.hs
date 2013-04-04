@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TypeFamilies              #-}
 
 module Aws.DynamoDb.Commands.PutItem where
 
@@ -21,9 +22,13 @@ import           Aws.DynamoDb.Core
 
 data PutItem = PutItem {
       piTable  :: T.Text
+    -- ^ Target table
     , piItem   :: Item
-    , piExpect :: Maybe PutExpect
+    -- ^ An item to Put
+    , piExpect :: [Expect]
+    -- ^ (Possible) set of expections for a conditional Put
     , piReturn :: PutReturn
+    -- ^ What to return from this query.
     } deriving (Eq,Show,Read,Ord)
 
 
@@ -31,21 +36,24 @@ data PutItem = PutItem {
 -- | A simple starting point for a 'PutItem' request.
 --
 -- It sets 'piExpect' to 'Nothing' and 'piReturn' to 'RNone'.
-putItem :: T.Text 
+putItem :: T.Text
         -- ^ A Dynamo table name
-        -> Item 
+        -> Item
         -- ^ Item to be saved
         -> PutItem
-putItem tn it = PutItem tn it Nothing RNone
+putItem tn it = PutItem tn it [] RNone
 
 
 instance ToJSON PutItem where
-    toJSON PutItem{..} = object $
-        maybe [] (return . ("Expected" .=)) piExpect ++
-        [ "TableName" .= piTable
-        , "Item" .= piItem
-        , "ReturnValues" .= piReturn
-        ]
+    toJSON PutItem{..} =
+        let exp = if (piExpect == [])
+                    then []
+                    else ["Expected" .= piExpect]
+        in object $ exp ++
+          [ "TableName" .= piTable
+          , "Item" .= piItem
+          , "ReturnValues" .= piReturn
+          ]
 
 
 
@@ -57,26 +65,6 @@ instance ToJSON PutReturn where
     toJSON RNone = toJSON ("NONE" :: T.Text)
     toJSON RAll = toJSON ("ALL_OLD" :: T.Text)
 
-
--- | Perform 'PutItem' only if 'peExists' matches the reality for the
--- other parameters here.
-data PutExpect = PutExpect {
-      peAttr   :: T.Text
-    -- ^ Attribute for the existence check
-    , peVal    :: Maybe DValue
-    -- ^ Further constrain this check and make it apply only if
-    -- attribute has this value
-    , peExists :: Bool
-    -- ^ If 'True', will only match if attribute exists. If 'False'
-    -- will only match if the attribute is missing.
-    } deriving (Eq,Show,Read,Ord)
-
-
-instance ToJSON PutExpect where
-    toJSON PutExpect{..} = object [ peAttr .= object sub ]
-        where
-          sub = maybe [] (return . ("Value" .= )) peVal ++
-                ["Exists" .= peExists]
 
 
 data PutItemResponse = PutItemResponse {
