@@ -71,7 +71,6 @@ import           Control.Arrow
 import qualified Control.Exception              as C
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Crypto.Classes                 (Hash (..))
 import           Crypto.Hash                    (Digest, SHA256,
                                                  digestToHexByteString, hash)
 import qualified Crypto.Hash.SHA256             as SHA256
@@ -256,7 +255,7 @@ attr k v = (k, mkVal v)
 -- | 'attr' with type witness to help with cases where you're manually
 -- supplying values in code.
 --
--- >> item [ attrAs text "name" "john"
+-- >> item [ attrAs text "name" "john" ]
 attrAs :: IsDVal a => a -> T.Text -> a -> (T.Text, DValue)
 attrAs _ k v = attr k v
 
@@ -377,7 +376,7 @@ instance C.Exception DdbError
 
 -- | Response metadata that is present in every DynamoDB response.
 data DdbResponse = DdbResponse {
-      ddbrCrc :: Maybe T.Text
+      ddbrCrc   :: Maybe T.Text
     , ddbrMsgId :: Maybe T.Text
     }
 
@@ -391,19 +390,17 @@ instance Loggable DdbResponse where
 
 instance Monoid DdbResponse where
     mempty = DdbResponse Nothing Nothing
-    mappend a b = DdbResponse
-                   (ddbrCrc a `mplus` ddbrCrc b)
-                   (ddbrMsgId a `mplus` ddbrMsgId b)
+    mappend a b = DdbResponse (ddbrCrc a `mplus` ddbrCrc b) (ddbrMsgId a `mplus` ddbrMsgId b)
 
 
 data Region = Region {
-      rUri :: B.ByteString
+      rUri  :: B.ByteString
     , rName :: B.ByteString
     } deriving (Eq,Show)
 
 
 data DdbConfiguration qt = DdbConfiguration {
-      ddbcRegion :: Region
+      ddbcRegion   :: Region
     -- ^ The regional endpoint. Ex: 'ddbUsEast'
     , ddbcProtocol :: Protocol
     -- ^ 'HTTP' o  r 'HTTPS'
@@ -549,7 +546,7 @@ ddbSignQuery msg target conf sd@SignatureData{..} = SignedQuery {
 
 
 data AmazonError = AmazonError {
-      aeType :: T.Text
+      aeType    :: T.Text
     , aeMessage :: T.Text
     }
 
@@ -565,25 +562,25 @@ ddbResponseConsumer :: (MonadIO m, MonadThrow m, FromJSON b)
                     => IORef DdbResponse
                     -> HTTP.Response (ResumableSource m B.ByteString)
                     -> m b
-ddbResponseConsumer ref HTTP.Response{..} = do
+ddbResponseConsumer ref resp = do
     case statusCode of
       200 -> rSuccess
       400 -> rError
       404 -> do
-        body <- responseBody $$+- consume
+        body <- responseBody resp $$+- consume
         error (B.unpack $ B.concat body)
       413 -> rError
       500 -> rError
       x -> error $ "aws: unknown return code: " ++ show x
 
     where
-      header = fmap T.decodeUtf8 . flip lookup responseHeaders
+      header = fmap T.decodeUtf8 . flip lookup (responseHeaders resp)
       amzId = header "x-amzn-RequestId"
       amzCrc = header "x-amz-crc32"
       meta = DdbResponse amzCrc amzId
 
       rSuccess = do
-        res <- responseBody $$+- sinkParser json'
+        res <- responseBody resp $$+- sinkParser json'
         let res' = parseEither parseJSON res
         case res' of
           Left e -> error $ "aws: Could not parse successful result from DynamoDB: " ++ e
@@ -592,7 +589,7 @@ ddbResponseConsumer ref HTTP.Response{..} = do
             return res''
 
       rError = do
-        err <- responseBody $$+- sinkParser json'
+        err <- responseBody resp $$+- sinkParser json'
         let err' = parseEither parseJSON err
         case err' of
           Left e -> error "aws: Could not parse error message from DynamoDB"
@@ -607,5 +604,5 @@ ddbResponseConsumer ref HTTP.Response{..} = do
                Just e -> e
                Nothing -> error txt'
 
-      HTTP.Status{..} = responseStatus
+      HTTP.Status{..} = responseStatus resp
 

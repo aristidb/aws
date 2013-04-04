@@ -3,6 +3,7 @@
 
 module Main where
 
+-------------------------------------------------------------------------------
 import qualified Data.Text             as T
 -------------------------------------------------------------------------------
 import           Aws
@@ -24,7 +25,7 @@ main = do
                , attrAs text "class" "not-so-awesome"]
 
   let req1 = putItem "devel-1" x
-             
+
 
   (resp1 :: PutItemResponse) <- Aws.simpleAws cfg debugServiceConfig req1
   putStrLn "Response: "
