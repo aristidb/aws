@@ -64,6 +64,7 @@ Library
                        Aws.Ses,
                        Aws.Ses.Commands,
                        Aws.Ses.Commands.SendRawEmail,
+                       Aws.Ses.Commands.ListIdentities,
                        Aws.Ses.Core
 
   Build-depends:
