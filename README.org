@@ -179,11 +179,11 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 | Name               | Github       | E-Mail                    | Company                | Components    |
 |--------------------+--------------+---------------------------+------------------------+---------------|
-| Aristid Breitkreuz | [[https://github.com/aristidb][aristidb]]     | aristidb@gmail.com        | -                      | Maintainer    |
+| Aristid Breitkreuz | [[https://github.com/aristidb][aristidb]]     | aristidb@gmail.com        | -                      | Co-Maintainer    |
 | Bas van Dijk       | [[https://github.com/basvandijk][basvandijk]]   | v.dijk.bas@gmail.com      | [[http://erudify.ch][Erudify AG]]             | S3            |
 | David Vollbracht   | [[https://github.com/qxjit][qxjit]]        |                           |                        |               |
 | Felipe Lessa       | [[https://github.com/meteficha][meteficha]]    | felipe.lessa@gmail.com    | currently secret       | Core, S3, SES |
 | Nathan Howell      | [[https://github.com/NathanHowell][NathanHowell]] | nhowell@alphaheavy.com    | [[http://www.alphaheavy.com][Alpha Heavy Industries]] | S3            |
 | Ozgun Ataman       | [[https://github.com/ozataman][ozataman]]     | ozgun.ataman@soostone.com | [[http://soostone.com][Soostone Inc]]           | Core, S3      |
 | Steve Severance    | [[https://github.com/sseveran][sseveran]]     | sseverance@alphaheavy.com | [[http://www.alphaheavy.com][Alpha Heavy Industries]] | S3, SQS       |
-| John Wiegley       | [[https://github.com/jwiegley][jwiegley]]     | johnw@fpcomplete.com      | [[http://fpcomplete.com][FP Complete]]            | S3            |
+| John Wiegley       | [[https://github.com/jwiegley][jwiegley]]     | johnw@fpcomplete.com      | [[http://fpcomplete.com][FP Complete]]            | Co-Maintainer, S3            |
