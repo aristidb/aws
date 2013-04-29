@@ -93,9 +93,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import qualified Crypto.Classes           as Crypto
 import qualified Crypto.HMAC              as HMAC
-import qualified Crypto.Hash.MD5          as MD5
-import qualified Crypto.Hash.SHA1         as SHA1
-import qualified Crypto.Hash.SHA256       as SHA256
+import           Crypto.Hash.CryptoAPI    (MD5, SHA1, SHA256)
 import           Data.Attempt             (Attempt(..), FromAttempt(..))
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
@@ -336,7 +334,7 @@ data SignedQuery
         -- | Request body content type.
       , sqContentType :: Maybe B.ByteString
         -- | Request body content MD5.
-      , sqContentMd5 :: Maybe MD5.MD5
+      , sqContentMd5 :: Maybe MD5
         -- | Additional Amazon "amz" headers.
       , sqAmzHeaders :: HTTP.RequestHeaders
         -- | Additional non-"amz" headers.
@@ -472,8 +470,8 @@ signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
 signature cr ah input = Base64.encode sig
     where
       sig = case ah of
-              HmacSHA1 -> computeSig (undefined :: SHA1.SHA1)
-              HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
+              HmacSHA1 -> computeSig (undefined :: SHA1)
+              HmacSHA256 -> computeSig (undefined :: SHA256)
       computeSig :: Crypto.Hash c d => d -> B.ByteString
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key :: HMAC.MacKey c d
