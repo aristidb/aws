@@ -4,7 +4,7 @@ import           Control.Applicative
 import           Control.Exception
 import           Control.Failure
 import           Control.Monad.Trans.Resource
-import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.ByteString.Lazy.UTF8 as BU
 import           Data.Typeable
@@ -16,19 +16,19 @@ data InstanceMetadataException
 
 instance Exception InstanceMetadataException
 
-getInstanceMetadata :: HTTP.Manager -> String -> String -> ResIO ByteString
+getInstanceMetadata :: HTTP.Manager -> String -> String -> ResIO L.ByteString
 getInstanceMetadata mgr p x = do req <- HTTP.parseUrl ("http://169.254.169.254/" ++ p ++ '/' : x)
                                  HTTP.responseBody <$> HTTP.httpLbs req mgr
 
 getInstanceMetadataListing :: HTTP.Manager -> String -> ResIO [String]
 getInstanceMetadataListing mgr p = map BU.toString . B8.split '\n' <$> getInstanceMetadata mgr p ""
 
-getInstanceMetadataFirst :: HTTP.Manager -> String -> ResIO ByteString
+getInstanceMetadataFirst :: HTTP.Manager -> String -> ResIO L.ByteString
 getInstanceMetadataFirst mgr p = do listing <- getInstanceMetadataListing mgr p
                                     case listing of
                                       [] -> failure (MetadataNotFound p)
                                       (x:_) -> getInstanceMetadata mgr p x
 
-getInstanceMetadataOrFirst :: HTTP.Manager -> String -> Maybe String -> ResIO ByteString
+getInstanceMetadataOrFirst :: HTTP.Manager -> String -> Maybe String -> ResIO L.ByteString
 getInstanceMetadataOrFirst mgr p (Just x) = getInstanceMetadata mgr p x
 getInstanceMetadataOrFirst mgr p Nothing = getInstanceMetadataFirst mgr p
