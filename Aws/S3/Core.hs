@@ -4,6 +4,7 @@ import           Aws.Core
 import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Crypto.Hash.CryptoAPI (MD5)
 import           Data.Attempt                   (Attempt(..))
 import           Data.Conduit                   (($$+-))
 import           Data.Function
@@ -19,7 +20,6 @@ import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
 import qualified Control.Failure                as F
-import qualified Crypto.Hash.MD5                as MD5
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.ByteString.Base64         as Base64
@@ -131,7 +131,7 @@ data S3Query
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QContentType :: Maybe B.ByteString
-      , s3QContentMd5 :: Maybe MD5.MD5
+      , s3QContentMd5 :: Maybe MD5
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
       , s3QRequestBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
