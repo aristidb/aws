@@ -33,8 +33,8 @@ import qualified Network.HTTP.Types             as HTTP
 import qualified Text.XML                       as XML
 import qualified Text.XML.Cursor                as Cu
 
-data S3Authorization 
-    = S3AuthorizationHeader 
+data S3Authorization
+    = S3AuthorizationHeader
     | S3AuthorizationQuery
     deriving (Show)
 
@@ -57,7 +57,7 @@ data S3Configuration qt
 
 instance DefaultServiceConfiguration (S3Configuration NormalQuery) where
   defServiceConfig = s3 HTTPS s3EndpointUsClassic False
-  
+
   debugServiceConfig = s3 HTTP s3EndpointUsClassic False
 
 instance DefaultServiceConfiguration (S3Configuration UriOnlyQuery) where
@@ -83,8 +83,8 @@ s3EndpointApNorthEast :: B.ByteString
 s3EndpointApNorthEast = "s3-ap-northeast-1.amazonaws.com"
 
 s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration qt
-s3 protocol endpoint uri 
-    = S3Configuration { 
+s3 protocol endpoint uri
+    = S3Configuration {
          s3Protocol = protocol
        , s3Endpoint = endpoint
        , s3RequestStyle = BucketStyle

@@ -130,7 +130,7 @@ class Loggable a where
     toLogText :: a -> T.Text
 
 -- | A response with metadata. Can also contain an error response, or an internal error, via 'Attempt'.
--- 
+--
 -- Response forms a Writer-like monad.
 data Response m a = Response { responseMetadata :: m
                              , responseResult :: Attempt a }
@@ -152,7 +152,7 @@ tellMetadata m = Response m (return ())
 mapMetadata :: (m -> n) -> Response m a -> Response n a
 mapMetadata f (Response m a) = Response (f m) a
 
---multiResponse :: Monoid m => Response m a -> Response [m] a -> 
+--multiResponse :: Monoid m => Response m a -> Response [m] a ->
 
 instance Monoid m => Monad (Response m) where
     return x = Response mempty (Success x)
@@ -172,9 +172,9 @@ type HTTPResponseConsumer a = HTTP.Response (C.ResumableSource (ResourceT IO) By
                               -> ResourceT IO a
 
 -- | Class for types that AWS HTTP responses can be parsed into.
--- 
+--
 -- The request is also passed for possibly required additional metadata.
--- 
+--
 -- Note that for debugging, there is an instance for 'L.ByteString'.
 class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
     -- | Metadata associated with a response. Typically there is one metadata type for each AWS service.
@@ -198,9 +198,9 @@ class ListResponse resp item | resp -> item where
     listResponse :: resp -> [item]
 
 -- | Associates a request type and a response type in a bi-directional way.
--- 
+--
 -- This allows the type-checker to infer the response type when given the request type and vice versa.
--- 
+--
 -- Note that the actual request generation and response parsing resides in 'SignQuery' and 'ResponseConsumer'
 -- respectively.
 class (SignQuery r, ResponseConsumer r a, Loggable (ResponseMetadata a))
@@ -222,33 +222,33 @@ data Credentials
     deriving (Show)
 
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
--- 
+--
 -- Value: /<user directory>/@/.aws-keys@
 credentialsDefaultFile :: MonadIO io => io FilePath
 credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
 
 -- | The key to be used in the access credential file that is loaded, when using 'loadCredentialsDefault'.
--- 
+--
 -- Value: @default@
 credentialsDefaultKey :: T.Text
 credentialsDefaultKey = "default"
 
 -- | Load credentials from a (text) file given a key name.
--- 
+--
 -- The file consists of a sequence of lines, each in the following format:
--- 
+--
 -- @keyName awsKeyID awsKeySecret@
 loadCredentialsFromFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromFile file key = liftIO $ do
   contents <- map T.words . T.lines <$> T.readFile file
-  return $ do 
+  return $ do
     [_key, keyID, secret] <- find (hasKey key) contents
     return Credentials { accessKeyID = T.encodeUtf8 keyID, secretAccessKey = T.encodeUtf8 secret }
       where
         hasKey _ [] = False
         hasKey k (k2 : _) = k == k2
 
--- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@ 
+-- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@
 --   (or @AWS_SECRET_ACCESS_KEY@), if possible.
 loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromEnv = liftIO $ do
@@ -259,10 +259,10 @@ loadCredentialsFromEnv = liftIO $ do
   return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) <*> (T.encodeUtf8 . T.pack <$> secret))
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
--- 
+--
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
 loadCredentialsFromEnvOrFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
-loadCredentialsFromEnvOrFile file key = 
+loadCredentialsFromEnvOrFile file key =
   do
     envcr <- loadCredentialsFromEnv
     case envcr of
@@ -271,10 +271,10 @@ loadCredentialsFromEnvOrFile file key =
 
 -- | Load credentials from environment variables if possible, or alternative from the default file with the default
 -- key name.
--- 
+--
 -- Default file: /<user directory>/@/.aws-keys@
 -- Default key name: @default@
--- 
+--
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
 loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
 loadCredentialsDefault = do
@@ -380,8 +380,8 @@ queryToHttpRequest SignedQuery{..}
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
                            _ -> sqContentType
 
--- | Create a URI fro a 'SignedQuery' object. 
--- 
+-- | Create a URI fro a 'SignedQuery' object.
+--
 -- Unused / incompatible fields will be silently ignored.
 queryToUri :: SignedQuery -> B.ByteString
 queryToUri SignedQuery{..}
@@ -448,7 +448,7 @@ data UriOnlyQuery
 class SignQuery request where
     -- | Additional information, like API endpoints and service-specific preferences.
     type ServiceConfiguration request :: * {- Query Type -} -> *
-    
+
     -- | Create a 'SignedQuery' from a request, additional 'Info', and 'SignatureData'.
     signQuery :: request -> ServiceConfiguration request queryType -> SignatureData -> SignedQuery
 
@@ -464,7 +464,7 @@ amzHash HmacSHA1 = "HmacSHA1"
 amzHash HmacSHA256 = "HmacSHA256"
 
 -- | Create a signature. Usually, AWS wants a specifically constructed string to be signed.
--- 
+--
 -- The signature is a HMAC-based hash of the string and the secret access key.
 signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
 signature cr ah input = Base64.encode sig
@@ -488,11 +488,11 @@ class DefaultServiceConfiguration config where
 
 -- | @queryList f prefix xs@ constructs a query list from a list of elements @xs@, using a common prefix @prefix@,
 -- and a transformer function @f@.
--- 
+--
 -- A dot (@.@) is interspersed between prefix and generated key.
--- 
+--
 -- Example:
--- 
+--
 -- @queryList swap \"pfx\" [(\"a\", \"b\"), (\"c\", \"d\")]@ evaluates to @[(\"pfx.b\", \"a\"), (\"pfx.d\", \"c\")]@
 -- (except with ByteString instead of String, of course).
 queryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> [(B.ByteString, B.ByteString)]
@@ -614,7 +614,7 @@ readInt s = case reads s of
 
 -- | Create a complete 'HTTPResponseConsumer' from a simple function that takes a 'Cu.Cursor' to XML in the response
 -- body.
--- 
+--
 -- This function is highly recommended for any services that parse relatively short XML responses. (If status and response
 -- headers are required, simply take them as function parameters, and pass them through to this function.)
 xmlCursorConsumer ::
