@@ -5,9 +5,9 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow         (second)
+import           Crypto.Hash.CryptoAPI (MD5)
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
-import qualified Crypto.Hash.MD5       as MD5
 import qualified Data.ByteString.Char8 as B
 import qualified Data.CaseInsensitive  as CI
 import qualified Data.Conduit          as C
@@ -22,7 +22,7 @@ data PutObject = PutObject {
   poCacheControl :: Maybe T.Text,
   poContentDisposition :: Maybe T.Text,
   poContentEncoding :: Maybe T.Text,
-  poContentMD5 :: Maybe MD5.MD5,
+  poContentMD5 :: Maybe MD5,
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
