@@ -1,5 +1,5 @@
 Name:                aws
-Version:             0.7.6.3
+Version:             0.7.6.4
 Synopsis:            Amazon Web Services (AWS) for Haskell
 Description:         Bindings for Amazon Web Services (AWS), with the aim of supporting all AWS services. To see a high level overview of the library, see the README at <https://github.com/aristidb/aws/blob/master/README.org>.
 Homepage:            http://github.com/aristidb/aws
@@ -74,7 +74,8 @@ Library
                        conduit              >= 0.5     && < 1.1,
                        containers           >= 0.4,
                        crypto-api           >= 0.9,
-                       cryptohash           >= 0.6     && < 0.9,
+                       cryptohash           >= 0.6     && < 0.10,
+                       cryptohash-cryptoapi == 0.1.*,
                        directory            >= 1.0     && < 1.3,
                        failure              >= 0.2.0.1 && < 0.3,
                        filepath             >= 1.1     && < 1.4,
