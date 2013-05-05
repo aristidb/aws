@@ -67,6 +67,7 @@ Library
                        Aws.Ses.Commands.ListIdentities,
                        Aws.Ses.Commands.VerifyEmailIdentity,
                        Aws.Ses.Commands.DeleteIdentity,
+                       Aws.Ses.Commands.GetIdentityVerificationAttributes,
                        Aws.Ses.Core
 
   Build-depends:
