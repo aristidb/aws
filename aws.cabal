@@ -66,6 +66,7 @@ Library
                        Aws.Ses.Commands.SendRawEmail,
                        Aws.Ses.Commands.ListIdentities,
                        Aws.Ses.Commands.VerifyEmailIdentity,
+                       Aws.Ses.Commands.DeleteIdentity,
                        Aws.Ses.Core
 
   Build-depends:
