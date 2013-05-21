@@ -20,7 +20,7 @@ Cabal-version:       >=1.10
 Source-repository this
   type: git
   location: https://github.com/aristidb/aws.git
-  tag: 0.7.6.3
+  tag: 0.7.6.4
 
 Source-repository head
   type: git
