@@ -66,8 +66,12 @@ Library
                        Aws.Ses.Commands.SendRawEmail,
                        Aws.Ses.Commands.ListIdentities,
                        Aws.Ses.Commands.VerifyEmailIdentity,
+                       Aws.Ses.Commands.VerifyDomainIdentity,
                        Aws.Ses.Commands.DeleteIdentity,
+                       Aws.Ses.Commands.GetIdentityNotificationAttributes,
                        Aws.Ses.Commands.GetIdentityVerificationAttributes,
+                       Aws.Ses.Commands.SetIdentityNotificationTopic,
+                       Aws.Ses.Commands.SetIdentityFeedbackForwardingEnabled,
                        Aws.Ses.Core
 
   Build-depends:
