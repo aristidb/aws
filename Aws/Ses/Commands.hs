@@ -5,6 +5,7 @@ module Aws.Ses.Commands
     , module Aws.Ses.Commands.VerifyDomainIdentity
     , module Aws.Ses.Commands.DeleteIdentity
     , module Aws.Ses.Commands.GetIdentityVerificationAttributes
+    , module Aws.Ses.Commands.SetIdentityNotificationTopic
     ) where
 
 import Aws.Ses.Commands.SendRawEmail
@@ -13,3 +14,4 @@ import Aws.Ses.Commands.VerifyEmailIdentity
 import Aws.Ses.Commands.VerifyDomainIdentity
 import Aws.Ses.Commands.DeleteIdentity
 import Aws.Ses.Commands.GetIdentityVerificationAttributes
+import Aws.Ses.Commands.SetIdentityNotificationTopic
