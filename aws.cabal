@@ -68,6 +68,7 @@ Library
                        Aws.Ses.Commands.VerifyEmailIdentity,
                        Aws.Ses.Commands.VerifyDomainIdentity,
                        Aws.Ses.Commands.DeleteIdentity,
+                       Aws.Ses.Commands.GetIdentityNotificationAttributes,
                        Aws.Ses.Commands.GetIdentityVerificationAttributes,
                        Aws.Ses.Commands.SetIdentityNotificationTopic,
                        Aws.Ses.Commands.SetIdentityFeedbackForwardingEnabled,
