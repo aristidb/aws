@@ -67,6 +67,7 @@ Library
                        Aws.Ses.Commands.ListIdentities,
                        Aws.Ses.Commands.VerifyEmailIdentity,
                        Aws.Ses.Commands.VerifyDomainIdentity,
+                       Aws.Ses.Commands.VerifyDomainDkim,
                        Aws.Ses.Commands.DeleteIdentity,
                        Aws.Ses.Commands.GetIdentityDkimAttributes,
                        Aws.Ses.Commands.GetIdentityNotificationAttributes,
