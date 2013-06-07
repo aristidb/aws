@@ -5,7 +5,10 @@ module Aws.Ses.Commands.SendRawEmail
 
 import Data.Text (Text)
 import Data.Typeable
+import Control.Applicative ((<$>))
+import qualified Data.ByteString.Char8 as BS
 import Text.XML.Cursor (($//))
+import qualified Data.Text.Encoding as T
 
 import Aws.Core
 import Aws.Ses.Core
@@ -13,7 +16,7 @@ import Aws.Ses.Core
 -- | Send a raw e-mail message.
 data SendRawEmail =
     SendRawEmail
-      { srmDestinations :: Maybe Destination
+      { srmDestinations :: [EmailAddress]
       , srmRawMessage   :: RawMessage
       , srmSource       :: Maybe Sender
       }
@@ -24,10 +27,14 @@ instance SignQuery SendRawEmail where
     type ServiceConfiguration SendRawEmail = SesConfiguration
     signQuery SendRawEmail {..} =
         sesSignQuery $ ("Action", "SendRawEmail") :
-                       concat [ sesAsQuery srmDestinations
+                       concat [ destinations
                               , sesAsQuery srmRawMessage
                               , sesAsQuery srmSource
                               ]
+      where
+        destinations = zip (enumMember   <$> ([1..] :: [Int]))
+                           (T.encodeUtf8 <$>  srmDestinations)
+        enumMember   = BS.append "Destinations.member." . BS.pack . show
 
 -- | The response sent back by Amazon SES after a
 -- 'SendRawEmail' command.
