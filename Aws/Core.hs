@@ -356,7 +356,7 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.port = sqPort
       , HTTP.path = sqPath
       , HTTP.queryString = HTTP.renderQuery False sqQuery
-      , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) sqDate
+      , HTTP.requestHeaders = catMaybes [ checkDate (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
                                         , fmap (\md5 -> ("Content-MD5", Base64.encode $ Serialize.encode md5)) sqContentMd5
                                         , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
@@ -377,6 +377,7 @@ queryToHttpRequest SignedQuery{..}
     where contentType = case sqMethod of
                            PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
                            _ -> sqContentType
+          checkDate f mb = maybe (f <$> mb) (const Nothing) $ lookup "date" sqOtherHeaders
 
 -- | Create a URI fro a 'SignedQuery' object.
 --
