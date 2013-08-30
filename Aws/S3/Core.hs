@@ -4,6 +4,7 @@ import           Aws.Core
 import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Crypto.Hash.CryptoAPI (MD5)
 import           Data.Attempt                   (Attempt(..))
 import           Data.Conduit                   (($$+-))
 import           Data.Function
@@ -19,7 +20,6 @@ import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
 import qualified Control.Failure                as F
-import qualified Crypto.Hash.MD5                as MD5
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.ByteString.Base64         as Base64
@@ -33,8 +33,8 @@ import qualified Network.HTTP.Types             as HTTP
 import qualified Text.XML                       as XML
 import qualified Text.XML.Cursor                as Cu
 
-data S3Authorization 
-    = S3AuthorizationHeader 
+data S3Authorization
+    = S3AuthorizationHeader
     | S3AuthorizationQuery
     deriving (Show)
 
@@ -57,7 +57,7 @@ data S3Configuration qt
 
 instance DefaultServiceConfiguration (S3Configuration NormalQuery) where
   defServiceConfig = s3 HTTPS s3EndpointUsClassic False
-  
+
   debugServiceConfig = s3 HTTP s3EndpointUsClassic False
 
 instance DefaultServiceConfiguration (S3Configuration UriOnlyQuery) where
@@ -83,8 +83,8 @@ s3EndpointApNorthEast :: B.ByteString
 s3EndpointApNorthEast = "s3-ap-northeast-1.amazonaws.com"
 
 s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration qt
-s3 protocol endpoint uri 
-    = S3Configuration { 
+s3 protocol endpoint uri
+    = S3Configuration {
          s3Protocol = protocol
        , s3Endpoint = endpoint
        , s3RequestStyle = BucketStyle
@@ -134,7 +134,7 @@ data S3Query
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QContentType :: Maybe B.ByteString
-      , s3QContentMd5 :: Maybe MD5.MD5
+      , s3QContentMd5 :: Maybe MD5
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
       , s3QRequestBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
