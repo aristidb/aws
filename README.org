@@ -91,8 +91,24 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
+** 0.8 series
+
+- 0.8.0
+  - S3, SQS: support for US-West2 (#58)
+  - S3: GetObject now has support for Content-Range (#22, #50)
+  - S3: GetBucket now supports the "IsTruncated" flag (#39)
+  - S3: PutObject now supports web page redirects (#46)
+  - S3: support for (multi-object) DeleteObjects (#47, #56)
+  - S3: HeadObject now uses an actual HEAD request (#53)
+  - SES: support for many more operations (#65, #66, #70, #71, #72, #74)
+  - SES: SendRawEmail now correctly encodes destinations and allows multiple destinations (#73)
+  - EC2: support fo Instance metadata (#37)
+  - Core: queryToHttpRequest allows overriding "Date" for the benefit of Chris Dornan's Elastic Transcoder bindings (#77)
+
 ** 0.7 series
 
+- 0.7.6.4
+  - CryptoHash update
 - 0.7.6.3
   - In addition to supporting http-conduit 1.9, it would seem nice to support conduit 1.0. Previously slipped through the radar.
 
