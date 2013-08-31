@@ -85,7 +85,7 @@ Library
                        bytestring           >= 0.9     && < 0.11,
                        case-insensitive     >= 0.2     && < 1.1,
                        cereal               == 0.3.*,
-                       conduit              >= 0.5     && < 1.1,
+                       conduit              >= 1.0     && < 1.1,
                        containers           >= 0.4,
                        crypto-api           >= 0.9,
                        cryptohash           >= 0.6     && < 0.10,
@@ -93,7 +93,7 @@ Library
                        directory            >= 1.0     && < 1.3,
                        failure              >= 0.2.0.1 && < 0.3,
                        filepath             >= 1.1     && < 1.4,
-                       http-conduit         >= 1.6     && < 1.10,
+                       http-conduit         >= 1.9     && < 1.10,
                        http-types           >= 0.7     && < 0.9,
                        lifted-base          >= 0.1     && < 0.3,
                        monad-control        >= 0.3,
@@ -104,7 +104,7 @@ Library
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2.0 && < 0.4,
                        utf8-string          == 0.3.*,
-                       xml-conduit          >= 1.0.1 && <1.2
+                       xml-conduit          >= 1.1 && <1.2
 
   GHC-Options: -Wall
 

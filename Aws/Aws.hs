@@ -263,11 +263,7 @@ awsIteratedSource :: (IteratedTransaction r a)
                      -> ServiceConfiguration r NormalQuery
                      -> HTTP.Manager
                      -> r
-#if MIN_VERSION_conduit(1, 0, 0)
                      -> C.Producer (ResourceT IO) (Response (ResponseMetadata a) a)
-#else
-                     -> C.GSource (ResourceT IO) (Response (ResponseMetadata a) a)
-#endif
 awsIteratedSource cfg scfg manager req_ = go req_
   where go request = do resp <- lift $ aws cfg scfg manager request
                         C.yield resp
@@ -283,16 +279,8 @@ awsIteratedList :: (IteratedTransaction r a, ListResponse a i)
                      -> ServiceConfiguration r NormalQuery
                      -> HTTP.Manager
                      -> r
-#if MIN_VERSION_conduit(1, 0, 0)
                      -> C.Producer (ResourceT IO) i
-#else
-                     -> C.GSource (ResourceT IO) i
-#endif
 awsIteratedList cfg scfg manager req
   = awsIteratedSource cfg scfg manager req
-#if MIN_VERSION_conduit(1, 0, 0)
     C.=$=
-#else
-    C.>+>
-#endif
     CL.concatMapM (fmap listResponse . readResponseIO)
