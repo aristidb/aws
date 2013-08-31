@@ -88,7 +88,7 @@ Library
                        conduit              >= 1.0     && < 1.1,
                        containers           >= 0.4,
                        crypto-api           >= 0.9,
-                       cryptohash           >= 0.6     && < 0.10,
+                       cryptohash           >= 0.8     && < 0.11,
                        cryptohash-cryptoapi == 0.1.*,
                        directory            >= 1.0     && < 1.3,
                        failure              >= 0.2.0.1 && < 0.3,
