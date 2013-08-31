@@ -1,0 +1,4 @@
+install:
+        - cabal update && cabal install --only-dependencies -fexamples
+script:
+        - cabal configure -fexamples && cabal build
