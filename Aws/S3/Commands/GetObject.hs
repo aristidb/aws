@@ -52,15 +52,14 @@ instance SignQuery GetObject where
                                  , s3QObject = Just $ T.encodeUtf8 goObjectName
                                  , s3QSubresources = HTTP.toQuery [
                                                        ("versionId" :: B8.ByteString,) <$> goVersionId
+                                                     , ("response-content-type" :: B8.ByteString,) <$> goResponseContentType
+                                                     , ("response-content-language",) <$> goResponseContentLanguage
+                                                     , ("response-expires",) <$> goResponseExpires
+                                                     , ("response-cache-control",) <$> goResponseCacheControl
+                                                     , ("response-content-disposition",) <$> goResponseContentDisposition
+                                                     , ("response-content-encoding",) <$> goResponseContentEncoding
                                                      ]
-                                 , s3QQuery = HTTP.toQuery [
-                                                ("response-content-type" :: B8.ByteString,) <$> goResponseContentType
-                                              , ("response-content-language",) <$> goResponseContentLanguage
-                                              , ("response-expires",) <$> goResponseExpires
-                                              , ("response-cache-control",) <$> goResponseCacheControl
-                                              , ("response-content-disposition",) <$> goResponseContentDisposition
-                                              , ("response-content-encoding",) <$> goResponseContentEncoding
-                                              ]
+                                 , s3QQuery = []
                                  , s3QContentType = Nothing
                                  , s3QContentMd5 = Nothing
                                  , s3QAmzHeaders = []
