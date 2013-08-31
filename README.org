@@ -100,6 +100,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
   - S3: PutObject now supports web page redirects (#46)
   - S3: support for (multi-object) DeleteObjects (#47, #56)
   - S3: HeadObject now uses an actual HEAD request (#53)
+  - S3: fixed signing issues for GetObject call (#54)
   - SES: support for many more operations (#65, #66, #70, #71, #72, #74)
   - SES: SendRawEmail now correctly encodes destinations and allows multiple destinations (#73)
   - EC2: support fo Instance metadata (#37)
