@@ -90,6 +90,9 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.8 series
 
+- 0.8.1
+  - compatibility with case-insensitive 1.1
+
 - 0.8.0
   - S3, SQS: support for US-West2 (#58)
   - S3: GetObject now has support for Content-Range (#22, #50)
