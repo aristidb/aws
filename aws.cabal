@@ -156,7 +156,7 @@ Executable SimpleDb
   Default-Language: Haskell2010
 
 Executable Sqs
-  Main-is: SQS.hs
+  Main-is: Sqs.hs
   Hs-source-dirs: Examples
 
   if !flag(Examples)
