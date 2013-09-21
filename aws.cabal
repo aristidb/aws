@@ -154,3 +154,18 @@ Executable SimpleDb
                        text >=0.11
 
   Default-Language: Haskell2010
+
+Executable Sqs
+  Main-is: Sqs.hs
+  Hs-source-dirs: Examples
+
+  if !flag(Examples)
+    Buildable: False
+  else
+    Buildable: True
+    Build-depends:
+                       base == 4.*,
+                       aws,
+                       text >=0.11
+
+  Default-Language: Haskell2010
