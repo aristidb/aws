@@ -90,6 +90,9 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.8 series
 
+- 0.8.2
+  - compatibility with cereal 0.4.x
+
 - 0.8.1
   - compatibility with case-insensitive 1.1
 
