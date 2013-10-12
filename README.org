@@ -199,6 +199,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 | Name               | Github       | E-Mail                    | Company                | Components    |
 |--------------------+--------------+---------------------------+------------------------+---------------|
+| Abhinav Gupta      | [[https://github.com/abhinav][abhinav]]  | mail@abhinavg.net | -  | IAM, SES      |
 | Aristid Breitkreuz | [[https://github.com/aristidb][aristidb]]     | aristidb@gmail.com        | -                      | Co-Maintainer    |
 | Bas van Dijk       | [[https://github.com/basvandijk][basvandijk]]   | v.dijk.bas@gmail.com      | [[http://erudify.ch][Erudify AG]]             | S3            |
 | David Vollbracht   | [[https://github.com/qxjit][qxjit]]        |                           |                        |               |
