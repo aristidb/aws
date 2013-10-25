@@ -1,4 +1,6 @@
 language: haskell
+env:
+        - GHCVER=7.6.3
 before_install:
         - |
           sudo apt-add-repository -y ppa:hvr/ghc
@@ -10,4 +12,4 @@ before_install:
 install:
         - $CABAL install --only-dependencies -fexamples
 script:
-        - $CABAL configure -fexamples && cabal build
+        - echo $CABAL && $CABAL configure -fexamples && cabal build
