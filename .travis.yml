@@ -1,5 +1,13 @@
 language: haskell
+before_install:
+        - |
+          sudo apt-add-repository -y ppa:hvr/ghc
+          sudo apt-get update
+          sudo apt-get install cabal-install-1.18 ghc-7.6.3
+          export CABAL=cabal-1.18
+          export PATH=/opt/ghc/7.6.3/bin:$PATH
+        - $CABAL update
 install:
-        - cabal install --only-dependencies -fexamples
+        - $CABAL install --only-dependencies -fexamples
 script:
-        - cabal configure -fexamples && cabal build
+        - $CABAL configure -fexamples && cabal build
