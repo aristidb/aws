@@ -9,6 +9,7 @@ import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as L
 import qualified Data.Conduit          as C
+import qualified Data.Conduit.List     as CL
 import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
@@ -81,4 +82,8 @@ instance Transaction GetObject GetObjectResponse
 
 instance AsMemoryResponse GetObjectResponse where
     type MemoryResponse GetObjectResponse = GetObjectMemoryResponse
-    loadToMemory (GetObjectResponse om x) = GetObjectMemoryResponse om <$> HTTP.lbsResponse x
+    loadToMemory (GetObjectResponse om x) = do
+        bss <- HTTP.responseBody x C.$$+- CL.consume
+        return $ GetObjectMemoryResponse om x
+            { HTTP.responseBody = L.fromChunks bss
+            }

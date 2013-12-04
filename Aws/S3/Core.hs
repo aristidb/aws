@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Aws.S3.Core where
 
 import           Aws.Core
@@ -137,7 +138,11 @@ data S3Query
       , s3QContentMd5 :: Maybe MD5
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
+#if MIN_VERSION_http_conduit(2, 0, 0)
+      , s3QRequestBody :: Maybe HTTP.RequestBody
+#else
       , s3QRequestBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
+#endif
       }
 
 instance Show S3Query where
