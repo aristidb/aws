@@ -104,6 +104,8 @@ import qualified Data.ByteString.UTF8     as BU
 import           Data.Char
 import           Data.Conduit             (ResourceT, ($$+-))
 import qualified Data.Conduit             as C
+import qualified Data.Conduit.List        as CL
+import           Data.Default             (def)
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -186,7 +188,11 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
 -- | Does not parse response. For debugging.
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
-    responseConsumer _ _ resp = HTTP.lbsResponse resp
+    responseConsumer _ _ resp = do
+        bss <- HTTP.responseBody resp $$+- CL.consume
+        return resp
+            { HTTP.responseBody = L.fromChunks bss
+            }
 
 -- | Class for responses that are fully loaded into memory
 class AsMemoryResponse resp where
@@ -340,16 +346,24 @@ data SignedQuery
         -- | Additional non-"amz" headers.
       , sqOtherHeaders :: HTTP.RequestHeaders
         -- | Request body (used with 'Post' and 'Put').
+#if MIN_VERSION_http_conduit(2, 0, 0)
+      , sqBody :: Maybe HTTP.RequestBody
+#else
       , sqBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
+#endif
         -- | String to sign. Note that the string is already signed, this is passed mostly for debugging purposes.
       , sqStringToSign :: B.ByteString
       }
     --deriving (Show)
 
 -- | Create a HTTP request from a 'SignedQuery' object.
+#if MIN_VERSION_http_conduit(2, 0, 0)
+queryToHttpRequest :: SignedQuery -> HTTP.Request
+#else
 queryToHttpRequest :: SignedQuery -> HTTP.Request (C.ResourceT IO)
+#endif
 queryToHttpRequest SignedQuery{..}
-    = HTTP.def {
+    = def {
         HTTP.method = httpMethod sqMethod
       , HTTP.secure = case sqProtocol of
                         HTTP -> False
