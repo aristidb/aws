@@ -90,6 +90,9 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.8 series
 
+- 0.8.4
+  - compatibility with http-conduit 2.0
+
 - 0.8.3
   - compatibility with cryptohash 0.11
   - experimental IAM support
