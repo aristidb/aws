@@ -258,7 +258,7 @@ instance A.FromJSON TableDescription where
         t <- case (M.lookup "Table" o, M.lookup "TableDescription" o) of
                 (Just (A.Object t), _) -> return t
                 (_, Just (A.Object t)) -> return t
-                _ -> fail $ "Table description must have key 'Table' or 'TableDescription'" ++ show o
+                _ -> fail "Table description must have key 'Table' or 'TableDescription'"
         TableDescription <$> t .: "TableName"
                          <*> t .: "TableSizeBytes"
                          <*> t .: "TableStatus"
@@ -323,8 +323,8 @@ instance ResponseConsumer r CreateTableResult where
     type ResponseMetadata CreateTableResult = DyMetadata
     responseConsumer _ _ = dyResponseConsumer
 instance AsMemoryResponse CreateTableResult where
-    type MemoryResponse CreateTableResult = CreateTableResult
-    loadToMemory = return
+    type MemoryResponse CreateTableResult = TableDescription
+    loadToMemory = return . ctStatus
 
 instance Transaction CreateTable CreateTableResult
 
@@ -348,8 +348,8 @@ instance ResponseConsumer r DescribeTableResult where
     type ResponseMetadata DescribeTableResult = DyMetadata
     responseConsumer _ _ = dyResponseConsumer
 instance AsMemoryResponse DescribeTableResult where
-    type MemoryResponse DescribeTableResult = DescribeTableResult
-    loadToMemory = return
+    type MemoryResponse DescribeTableResult = TableDescription
+    loadToMemory = return . dtStatus
 
 instance Transaction DescribeTable DescribeTableResult
 
@@ -375,8 +375,8 @@ instance ResponseConsumer r UpdateTableResult where
     type ResponseMetadata UpdateTableResult = DyMetadata
     responseConsumer _ _ = dyResponseConsumer
 instance AsMemoryResponse UpdateTableResult where
-    type MemoryResponse UpdateTableResult = UpdateTableResult
-    loadToMemory = return
+    type MemoryResponse UpdateTableResult = TableDescription
+    loadToMemory = return . uStatus
 
 instance Transaction UpdateTable UpdateTableResult
 
@@ -400,8 +400,8 @@ instance ResponseConsumer r DeleteTableResult where
     type ResponseMetadata DeleteTableResult = DyMetadata
     responseConsumer _ _ = dyResponseConsumer
 instance AsMemoryResponse DeleteTableResult where
-    type MemoryResponse DeleteTableResult = DeleteTableResult
-    loadToMemory = return
+    type MemoryResponse DeleteTableResult = TableDescription
+    loadToMemory = return . dStatus
 
 instance Transaction DeleteTable DeleteTableResult
 
@@ -426,7 +426,7 @@ instance ResponseConsumer r ListTablesResult where
     type ResponseMetadata ListTablesResult = DyMetadata
     responseConsumer _ _ = dyResponseConsumer
 instance AsMemoryResponse ListTablesResult where
-    type MemoryResponse ListTablesResult = ListTablesResult
-    loadToMemory = return
+    type MemoryResponse ListTablesResult = [T.Text] 
+    loadToMemory = return . tableNames
 
 instance Transaction ListTables ListTablesResult
