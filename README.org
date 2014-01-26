@@ -215,3 +215,5 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 | Ozgun Ataman       | [[https://github.com/ozataman][ozataman]]     | ozgun.ataman@soostone.com | [[http://soostone.com][Soostone Inc]]           | Core, S3      |
 | Steve Severance    | [[https://github.com/sseveran][sseveran]]     | sseverance@alphaheavy.com | [[http://www.alphaheavy.com][Alpha Heavy Industries]] | S3, SQS       |
 | John Wiegley       | [[https://github.com/jwiegley][jwiegley]]     | johnw@fpcomplete.com      | [[http://fpcomplete.com][FP Complete]]            | Co-Maintainer, S3            |
+| Chris Dornan | [[https://github.com/cdornan][cdornan]] | chris.dornan@irisconnect.co.uk | [[http://irisconnect.co.uk][Iris Connect]] | Core |
+| John Lenz | [[https://github/com/wuzzeb][wuzzeb]] | | | DynamoDB, Core |
