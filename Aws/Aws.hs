@@ -213,7 +213,7 @@ unsafeAwsRef cfg info manager metadataRef request = do
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
   let q = signQuery request info sd
   liftIO $ logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
-  let httpRequest = queryToHttpRequest q
+  httpRequest <- liftIO $ queryToHttpRequest q
   liftIO $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
   resp <- do
       hresp <- HTTP.http httpRequest manager

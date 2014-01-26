@@ -204,7 +204,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
                        ]
           where amzHeader (k, v) = Blaze.copyByteString (CI.foldedCase k) `mappend` Blaze8.fromChar ':' `mappend` Blaze.copyByteString v
       (authorization, authQuery) = case ti of
-                                 AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
+                                 AbsoluteTimestamp _ -> (Just $ return $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
                                  AbsoluteExpires time -> (Nothing, HTTP.toQuery $ makeAuthQuery time)
       makeAuthQuery time
           = [("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)

@@ -92,11 +92,17 @@ Library
                        Aws.Ses.Commands.SetIdentityNotificationTopic,
                        Aws.Ses.Commands.SetIdentityDkimEnabled,
                        Aws.Ses.Commands.SetIdentityFeedbackForwardingEnabled,
-                       Aws.Ses.Core
+                       Aws.Ses.Core,
+                       Aws.DynamoDb.Commands,
+                       Aws.DynamoDb.Commands.Table,
+                       Aws.DynamoDb.Core
 
   Build-depends:
                        attempt              >= 0.3.1.1 && < 0.5,
+                       attoparsec-conduit   >= 1.0     && < 1.1,
+                       aeson                >= 0.6     && < 0.8,
                        base                 == 4.*,
+                       base16-bytestring    == 0.1.*,
                        base64-bytestring    == 1.0.*,
                        blaze-builder        >= 0.2.1.4 && < 0.4,
                        bytestring           >= 0.9     && < 0.11,
@@ -121,7 +127,9 @@ Library
                        text                 >= 0.11,
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2.0 && < 0.4,
+                       unordered-containers >= 0.2,
                        utf8-string          == 0.3.*,
+                       vector               >= 0.10,
                        xml-conduit          >= 1.1 && <1.2
 
   GHC-Options: -Wall

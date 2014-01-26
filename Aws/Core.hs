@@ -49,6 +49,7 @@ module Aws.Core
 , AuthorizationHash(..)
 , amzHash
 , signature
+, authorizationV4
   -- ** Query construction helpers
 , queryList
 , awsBool
@@ -93,10 +94,11 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import qualified Crypto.Classes           as Crypto
 import qualified Crypto.HMAC              as HMAC
-import           Crypto.Hash.CryptoAPI    (MD5, SHA1, SHA256)
+import           Crypto.Hash.CryptoAPI    (MD5, SHA1, SHA256, hash')
 import           Data.Attempt             (Attempt(..), FromAttempt(..))
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
+import qualified Data.ByteString.Base16   as Base16
 import qualified Data.ByteString.Base64   as Base64
 import           Data.ByteString.Char8    ({- IsString -})
 import qualified Data.ByteString.Lazy     as L
@@ -217,6 +219,9 @@ class (SignQuery r, ResponseConsumer r a, Loggable (ResponseMetadata a))
 class Transaction r a => IteratedTransaction r a | r -> a , a -> r where
     nextIteratedRequest :: r -> a -> Maybe r
 
+-- | Signature version 4: ((region, service),(date,key))
+type V4Key = ((B.ByteString,B.ByteString),(B.ByteString,B.ByteString))
+
 -- | AWS access credentials.
 data Credentials
     = Credentials {
@@ -224,8 +229,11 @@ data Credentials
         accessKeyID :: B.ByteString
         -- | AWS Secret Access Key.
       , secretAccessKey :: B.ByteString
+        -- | Signing keys for signature version 4
+      , v4SigningKeys :: IORef [V4Key]
       }
-    deriving (Show)
+instance Show Credentials where
+    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ "}"
 
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
 --
@@ -247,9 +255,13 @@ credentialsDefaultKey = "default"
 loadCredentialsFromFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromFile file key = liftIO $ do
   contents <- map T.words . T.lines <$> T.readFile file
+  ref <- newIORef []
   return $ do
     [_key, keyID, secret] <- find (hasKey key) contents
-    return Credentials { accessKeyID = T.encodeUtf8 keyID, secretAccessKey = T.encodeUtf8 secret }
+    return Credentials { accessKeyID = T.encodeUtf8 keyID
+                       , secretAccessKey = T.encodeUtf8 secret
+                       , v4SigningKeys = ref
+                       }
       where
         hasKey _ [] = False
         hasKey k (k2 : _) = k == k2
@@ -259,10 +271,13 @@ loadCredentialsFromFile file key = liftIO $ do
 loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromEnv = liftIO $ do
   env <- getEnvironment
+  ref <- newIORef []
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
-  return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) <*> (T.encodeUtf8 . T.pack <$> secret))
+  return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) 
+                      <*> (T.encodeUtf8 . T.pack <$> secret)
+                      <*> return ref)
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
 --
@@ -335,8 +350,8 @@ data SignedQuery
       , sqQuery :: HTTP.Query
         -- | Request date/time.
       , sqDate :: Maybe UTCTime
-        -- | Authorization string (if applicable), for @Authorization@ header..
-      , sqAuthorization :: Maybe B.ByteString
+        -- | Authorization string (if applicable), for @Authorization@ header.  See 'authorizationV4'
+      , sqAuthorization :: Maybe (IO B.ByteString)
         -- | Request body content type.
       , sqContentType :: Maybe B.ByteString
         -- | Request body content MD5.
@@ -358,12 +373,13 @@ data SignedQuery
 
 -- | Create a HTTP request from a 'SignedQuery' object.
 #if MIN_VERSION_http_conduit(2, 0, 0)
-queryToHttpRequest :: SignedQuery -> HTTP.Request
+queryToHttpRequest :: SignedQuery -> IO HTTP.Request
 #else
-queryToHttpRequest :: SignedQuery -> HTTP.Request (C.ResourceT IO)
+queryToHttpRequest :: SignedQuery -> IO (HTTP.Request (C.ResourceT IO))
 #endif
-queryToHttpRequest SignedQuery{..}
-    = def {
+queryToHttpRequest SignedQuery{..} =  do
+    mauth <- maybe (return Nothing) (Just<$>) sqAuthorization
+    return $ def {
         HTTP.method = httpMethod sqMethod
       , HTTP.secure = case sqProtocol of
                         HTTP -> False
@@ -375,7 +391,7 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.requestHeaders = catMaybes [ checkDate (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
                                         , fmap (\md5 -> ("Content-MD5", Base64.encode $ Serialize.encode md5)) sqContentMd5
-                                        , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
+                                        , fmap (\auth -> ("Authorization", auth)) mauth]
                               ++ sqAmzHeaders
                               ++ sqOtherHeaders
       , HTTP.requestBody = case sqMethod of
@@ -487,6 +503,82 @@ signature cr ah input = Base64.encode sig
       computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
       key :: HMAC.MacKey c d
       key = HMAC.MacKey (secretAccessKey cr)
+
+-- | Use this to create the Authorization header to set into 'sqAuthorization'.
+-- See <http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html>: you must create the
+-- canonical request as explained by Step 1 and this function takes care of Steps 2 and 3.
+authorizationV4 :: SignatureData
+                -> AuthorizationHash 
+                -> B.ByteString -- ^ region, e.g. us-east-1
+                -> B.ByteString -- ^ service, e.g. dynamodb
+                -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
+                -> B.ByteString -- ^ canonicalRequest (before hashing)
+                -> IO B.ByteString
+authorizationV4 sd ah region service headers canonicalRequest = do
+    let ref = v4SigningKeys $ signatureCredentials sd
+        date = fmtTime "%Y%m%d" $ signatureTime sd
+        hmac k i = case ah of
+                        HmacSHA1 -> Serialize.encode (HMAC.hmac' (HMAC.MacKey k) i :: SHA1)
+                        HmacSHA256 -> Serialize.encode (HMAC.hmac' (HMAC.MacKey k) i :: SHA256)
+        hash i = case ah of
+                        HmacSHA1 -> Serialize.encode (hash' i :: SHA1)
+                        HmacSHA256 -> Serialize.encode (hash' i :: SHA256)
+        alg = case ah of
+                    HmacSHA1 -> "AWS4-HMAC-SHA1"
+                    HmacSHA256 -> "AWS4-HMAC-SHA256"
+
+    -- Lookup existing signing key
+    allkeys <- readIORef ref
+    let mkey = case lookup (region,service) allkeys of
+                Just (d,k) | d /= date -> Nothing
+                           | otherwise -> Just k
+                Nothing -> Nothing
+
+    -- possibly create a new signing key
+    key <- case mkey of
+            Just k -> return k
+            Nothing -> atomicModifyIORef ref $ \keylist ->
+                            let secretKey = secretAccessKey $ signatureCredentials sd
+                                kDate = hmac ("AWS4" <> secretKey) date
+                                kRegion = hmac kDate region
+                                kService = hmac kRegion service
+                                kSigning = hmac kService "aws4_request"
+                                lstK = (region,service)
+                                keylist' = (lstK,(date,kSigning)) : filter ((lstK/=).fst) keylist
+                             in (keylist', kSigning)
+
+    -- now do the signature
+    let canonicalRequestHash = Base16.encode $ hash canonicalRequest
+        stringToSign = B.concat [ alg
+                                , "\n"
+                                , fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
+                                , "\n"
+                                , date
+                                , "/"
+                                , region
+                                , "/"
+                                , service
+                                , "/aws4_request\n"
+                                , canonicalRequestHash
+                                ]
+        sig = Base16.encode $ hmac key stringToSign
+
+    -- finally, return the header
+    return $ B.concat [ alg
+                      , " Credential="
+                      , accessKeyID (signatureCredentials sd)
+                      , "/"
+                      , date
+                      , "/"
+                      , region
+                      , "/"
+                      , service
+                      , "/aws4_request,"
+                      , "SignedHeaders="
+                      , headers
+                      , ",Signature="
+                      , sig
+                      ]
 
 -- | Default configuration for a specific service.
 class DefaultServiceConfiguration config where
