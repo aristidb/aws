@@ -51,7 +51,7 @@ data S3Configuration qt
       , s3Endpoint :: B.ByteString
       , s3RequestStyle :: RequestStyle
       , s3Port :: Int
-      , s3ServerSideEncryption :: Maybe B.ByteString
+      , s3ServerSideEncryption :: Maybe ServerSideEncryption
       , s3UseUri :: Bool
       , s3DefaultExpiry :: NominalDiffTime
       }
@@ -317,6 +317,19 @@ writeStorageClass :: StorageClass -> T.Text
 writeStorageClass Standard          = "STANDARD"
 writeStorageClass ReducedRedundancy = "REDUCED_REDUNDANCY"
 
+data ServerSideEncryption
+    = AES256
+    | EncryptionOther T.Text
+    deriving (Show)
+
+parseServerSideEncryption :: F.Failure XmlException m => T.Text -> m ServerSideEncryption
+parseServerSideEncryption "AES256" = return AES256
+parseServerSideEncryption s = return $ EncryptionOther s
+
+writeServerSideEncryption :: ServerSideEncryption -> T.Text
+writeServerSideEncryption AES256 = "AES256"
+writeServerSideEncryption (EncryptionOther s) = s
+
 type Bucket = T.Text
 
 data BucketInfo
@@ -377,7 +390,7 @@ data ObjectMetadata
 --      , omExpiration           :: Maybe (UTCTime, T.Text)
       , omUserMetadata         :: [(T.Text, T.Text)]
       , omMissingUserMetadata  :: Maybe T.Text
-      , omServerSideEncryption :: Maybe T.Text
+      , omServerSideEncryption :: Maybe ServerSideEncryption
       }
     deriving (Show)
 
@@ -390,7 +403,7 @@ parseObjectMetadata h = ObjectMetadata
 --                        `ap` expiration
                         `ap` return userMetadata
                         `ap` return missingUserMetadata
-                        `ap` return serverSideEncryption
+                        `ap` serverSideEncryption
   where deleteMarker = case B8.unpack `fmap` lookup "x-amz-delete-marker" h of
                          Nothing -> return False
                          Just "true" -> return True
@@ -410,7 +423,9 @@ parseObjectMetadata h = ObjectMetadata
                        \(k, v) -> do i <- T.stripPrefix "x-amz-meta-" k
                                      return (i, v)
         missingUserMetadata = T.decodeUtf8 `fmap` lookup "x-amz-missing-meta" h
-        serverSideEncryption = T.decodeUtf8 `fmap` lookup "x-amz-server-side-encryption" h
+        serverSideEncryption = case T.decodeUtf8 `fmap` lookup "x-amz-server-side-encryption" h of
+                                 Just x -> return $ parseServerSideEncryption x
+                                 Nothing -> return Nothing
 
         ht = map ((T.decodeUtf8 . CI.foldedCase) *** T.decodeUtf8) h
 
