@@ -28,7 +28,7 @@ data PutObject = PutObject {
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
   poWebsiteRedirectLocation :: Maybe T.Text,
-  poServerSideEncryption :: Maybe T.Text,
+  poServerSideEncryption :: Maybe ServerSideEncryption,
 #if MIN_VERSION_http_conduit(2, 0, 0)
   poRequestBody  :: HTTP.RequestBody,
 #else
@@ -64,7 +64,7 @@ instance SignQuery PutObject where
                                               ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
                                             , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
                                             , ("x-amz-website-redirect-location",) <$> poWebsiteRedirectLocation
-                                            , ("x-amz-server-side-encryption",) <$> poServerSideEncryption
+                                            , ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> poServerSideEncryption
                                             ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
                                , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires
