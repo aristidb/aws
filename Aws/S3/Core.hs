@@ -51,6 +51,7 @@ data S3Configuration qt
       , s3Endpoint :: B.ByteString
       , s3RequestStyle :: RequestStyle
       , s3Port :: Int
+      , s3ServerSideEncryption :: Maybe B.ByteString
       , s3UseUri :: Bool
       , s3DefaultExpiry :: NominalDiffTime
       }
@@ -93,6 +94,7 @@ s3 protocol endpoint uri
        , s3Endpoint = endpoint
        , s3RequestStyle = BucketStyle
        , s3Port = defaultPort protocol
+       , s3ServerSideEncryption = Nothing
        , s3UseUri = uri
        , s3DefaultExpiry = 15*60
        }
