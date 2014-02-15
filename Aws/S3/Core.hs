@@ -319,16 +319,14 @@ writeStorageClass ReducedRedundancy = "REDUCED_REDUNDANCY"
 
 data ServerSideEncryption
     = AES256
-    | EncryptionOther T.Text
     deriving (Show)
 
 parseServerSideEncryption :: F.Failure XmlException m => T.Text -> m ServerSideEncryption
 parseServerSideEncryption "AES256" = return AES256
-parseServerSideEncryption s = return $ EncryptionOther s
+parseServerSideEncryption s = F.failure . XmlException $ "Invalid Server Side Encryption: " ++ T.unpack s
 
 writeServerSideEncryption :: ServerSideEncryption -> T.Text
 writeServerSideEncryption AES256 = "AES256"
-writeServerSideEncryption (EncryptionOther s) = s
 
 type Bucket = T.Text
 
