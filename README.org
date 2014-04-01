@@ -90,6 +90,11 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.8 series
 
+- 0.8.5
+  - compatibility with case-insensitive 1.2
+  - support for V4 signatures
+  - experimental support for DynamoDB
+
 - 0.8.4
   - compatibility with http-conduit 2.0
 
