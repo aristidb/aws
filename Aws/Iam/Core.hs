@@ -19,8 +19,8 @@ import           Aws.Core
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import           Control.Exception              (Exception)
-import qualified Control.Failure                as F
 import           Control.Monad
+import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import           Data.ByteString                (ByteString)
 import           Data.IORef
 import           Data.List                      (intersperse, sort)
@@ -152,13 +152,13 @@ iamResponseConsumer inner md resp = xmlCursorConsumer parse md resp
     fromError cursor = do
       errCode <- force "Missing Error Code"    $ cursor $// elContent "Code"
       errMsg  <- force "Missing Error Message" $ cursor $// elContent "Message"
-      F.failure $ IamError (HTTP.responseStatus resp) errCode errMsg
+      throwM $ IamError (HTTP.responseStatus resp) errCode errMsg
 
 -- | Parses IAM @DateTime@ data type.
-parseDateTime :: (F.Failure XmlException m) => String -> m UTCTime
+parseDateTime :: MonadThrow m => String -> m UTCTime
 parseDateTime x
     = case parseTime defaultTimeLocale iso8601UtcDate x of
-        Nothing -> F.failure $ XmlException $ "Invalid DateTime: " ++ x
+        Nothing -> throwM $ XmlException $ "Invalid DateTime: " ++ x
         Just dt -> return dt
 
 -- | The IAM @User@ data type.
@@ -180,7 +180,7 @@ data User
     deriving (Eq, Ord, Show, Typeable)
 
 -- | Parses the IAM @User@ data type.
-parseUser :: (F.Failure XmlException m) => Cu.Cursor -> m User
+parseUser :: MonadThrow m => Cu.Cursor -> m User
 parseUser cursor = do
     userArn        <- attr "Arn"
     userCreateDate <- attr "CreateDate" >>= parseDateTime . Text.unpack

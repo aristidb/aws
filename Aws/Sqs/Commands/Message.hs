@@ -4,9 +4,9 @@ module Aws.Sqs.Commands.Message where
 import           Aws.Core
 import           Aws.Sqs.Core
 import           Control.Applicative
+import           Control.Monad.Trans.Resource (MonadThrow)
 import           Data.Maybe
 import           Text.XML.Cursor       (($/), ($//), (&/), (&|))
-import qualified Control.Failure       as F
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as TE
@@ -98,7 +98,7 @@ data ReceiveMessageResponse
       }
     deriving (Show)
 
-readMessageAttribute :: F.Failure XmlException m => Cu.Cursor -> m (MessageAttribute,T.Text)
+readMessageAttribute :: MonadThrow m => Cu.Cursor -> m (MessageAttribute,T.Text)
 readMessageAttribute cursor = do
   name <- force "Missing Name" $ cursor $/ Cu.laxElement "Name" &/ Cu.content
   value <- force "Missing Value" $ cursor $/ Cu.laxElement "Value" &/ Cu.content

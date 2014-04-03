@@ -5,8 +5,8 @@ import           Aws.Core
 import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import           Crypto.Hash.CryptoAPI (MD5)
-import           Data.Attempt                   (Attempt(..))
 import           Data.Conduit                   (($$+-))
 import           Data.Function
 import           Data.IORef
@@ -20,12 +20,10 @@ import           Text.XML.Cursor                (($/), (&|))
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
-import qualified Control.Failure                as F
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.ByteString.Base64         as Base64
 import qualified Data.CaseInsensitive           as CI
-import qualified Data.Conduit                   as C
 import qualified Data.Serialize                 as Serialize
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
@@ -248,10 +246,10 @@ s3ErrorResponseConsumer resp
     = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
-           Success err      -> C.monadThrow err
-           Failure otherErr -> C.monadThrow otherErr
+           Right err      -> throwM err
+           Left otherErr  -> throwM otherErr
     where
-      parseError :: Cu.Cursor -> Attempt S3Error
+      parseError :: Cu.Cursor -> Either C.SomeException S3Error
       parseError root = do code <- force "Missing error Code" $ root $/ elContent "Code"
                            message <- force "Missing error Message" $ root $/ elContent "Message"
                            let resource = listToMaybe $ root $/ elContent "Resource"
@@ -279,7 +277,7 @@ data UserInfo
       }
     deriving (Show)
 
-parseUserInfo :: F.Failure XmlException m => Cu.Cursor -> m UserInfo
+parseUserInfo :: MonadThrow m => Cu.Cursor -> m UserInfo
 parseUserInfo el = do id_ <- force "Missing user ID" $ el $/ elContent "ID"
                       displayName <- force "Missing user DisplayName" $ el $/ elContent "DisplayName"
                       return UserInfo { userId = id_, userDisplayName = displayName }
@@ -308,10 +306,10 @@ data StorageClass
     | ReducedRedundancy
     deriving (Show)
 
-parseStorageClass :: F.Failure XmlException m => T.Text -> m StorageClass
+parseStorageClass :: MonadThrow m => T.Text -> m StorageClass
 parseStorageClass "STANDARD"           = return Standard
 parseStorageClass "REDUCED_REDUNDANCY" = return ReducedRedundancy
-parseStorageClass s = F.failure . XmlException $ "Invalid Storage Class: " ++ T.unpack s
+parseStorageClass s = throwM . XmlException $ "Invalid Storage Class: " ++ T.unpack s
 
 writeStorageClass :: StorageClass -> T.Text
 writeStorageClass Standard          = "STANDARD"
@@ -321,9 +319,9 @@ data ServerSideEncryption
     = AES256
     deriving (Show)
 
-parseServerSideEncryption :: F.Failure XmlException m => T.Text -> m ServerSideEncryption
+parseServerSideEncryption :: MonadThrow m => T.Text -> m ServerSideEncryption
 parseServerSideEncryption "AES256" = return AES256
-parseServerSideEncryption s = F.failure . XmlException $ "Invalid Server Side Encryption: " ++ T.unpack s
+parseServerSideEncryption s = throwM . XmlException $ "Invalid Server Side Encryption: " ++ T.unpack s
 
 writeServerSideEncryption :: ServerSideEncryption -> T.Text
 writeServerSideEncryption AES256 = "AES256"
@@ -358,11 +356,11 @@ data ObjectInfo
       }
     deriving (Show)
 
-parseObjectInfo :: F.Failure XmlException m => Cu.Cursor -> m ObjectInfo
+parseObjectInfo :: MonadThrow m => Cu.Cursor -> m ObjectInfo
 parseObjectInfo el
     = do key <- force "Missing object Key" $ el $/ elContent "Key"
          let time s = case parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s of
-                        Nothing -> F.failure $ XmlException "Invalid time"
+                        Nothing -> throwM $ XmlException "Invalid time"
                         Just v -> return v
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time
          eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
@@ -392,7 +390,7 @@ data ObjectMetadata
       }
     deriving (Show)
 
-parseObjectMetadata :: F.Failure HeaderException m => HTTP.ResponseHeaders -> m ObjectMetadata
+parseObjectMetadata :: MonadThrow m => HTTP.ResponseHeaders -> m ObjectMetadata
 parseObjectMetadata h = ObjectMetadata
                         `liftM` deleteMarker
                         `ap` etag
@@ -406,15 +404,15 @@ parseObjectMetadata h = ObjectMetadata
                          Nothing -> return False
                          Just "true" -> return True
                          Just "false" -> return False
-                         Just x -> F.failure $ HeaderException ("Invalid x-amz-delete-marker " ++ x)
+                         Just x -> throwM $ HeaderException ("Invalid x-amz-delete-marker " ++ x)
         etag = case T.decodeUtf8 `fmap` lookup "ETag" h of
                  Just x -> return x
-                 Nothing -> F.failure $ HeaderException "ETag missing"
+                 Nothing -> throwM $ HeaderException "ETag missing"
         lastModified = case B8.unpack `fmap` lookup "Last-Modified" h of
                          Just ts -> case parseHttpDate ts of
                                       Just t -> return t
-                                      Nothing -> F.failure $ HeaderException ("Invalid Last-Modified: " ++ ts)
-                         Nothing -> F.failure $ HeaderException "Last-Modified missing"
+                                      Nothing -> throwM $ HeaderException ("Invalid Last-Modified: " ++ ts)
+                         Nothing -> throwM $ HeaderException "Last-Modified missing"
         versionId = T.decodeUtf8 `fmap` lookup "x-amz-version-id" h
         -- expiration = return undefined
         userMetadata = flip mapMaybe ht $

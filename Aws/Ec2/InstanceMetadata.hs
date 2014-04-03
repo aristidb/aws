@@ -2,7 +2,7 @@ module Aws.Ec2.InstanceMetadata where
 
 import           Control.Applicative
 import           Control.Exception
-import           Control.Failure
+import           Control.Monad.Trans.Resource (throwM)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.ByteString.Lazy.UTF8 as BU
@@ -25,7 +25,7 @@ getInstanceMetadataListing mgr p = map BU.toString . B8.split '\n' <$> getInstan
 getInstanceMetadataFirst :: HTTP.Manager -> String -> IO L.ByteString
 getInstanceMetadataFirst mgr p = do listing <- getInstanceMetadataListing mgr p
                                     case listing of
-                                      [] -> failure (MetadataNotFound p)
+                                      [] -> throwM (MetadataNotFound p)
                                       (x:_) -> getInstanceMetadata mgr p x
 
 getInstanceMetadataOrFirst :: HTTP.Manager -> String -> Maybe String -> IO L.ByteString

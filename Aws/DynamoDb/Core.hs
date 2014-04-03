@@ -2,6 +2,7 @@ module Aws.DynamoDb.Core where
 
 import           Aws.Core
 import qualified Control.Exception              as C
+import           Control.Monad.Trans.Resource   (throwM)
 import           Crypto.Hash.CryptoAPI (SHA256, hash)
 import qualified Data.Aeson                     as A
 import qualified Data.ByteString                as B
@@ -125,5 +126,5 @@ dyResponseConsumer resp = do
         (HTTP.Status{HTTP.statusCode=200}) -> do
             case A.fromJSON val of
                 A.Success a -> return a
-                A.Error err -> monadThrow $ DyError (HTTP.responseStatus resp) "" err
-        _ -> monadThrow $ DyError (HTTP.responseStatus resp) "" (show val)
+                A.Error err -> throwM $ DyError (HTTP.responseStatus resp) "" err
+        _ -> throwM $ DyError (HTTP.responseStatus resp) "" (show val)

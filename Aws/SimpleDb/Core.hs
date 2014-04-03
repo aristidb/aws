@@ -4,8 +4,8 @@ import           Aws.Core
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
-import qualified Control.Failure                as F
 import           Control.Monad
+import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Base64         as Base64
 import           Data.IORef
@@ -149,16 +149,16 @@ sdbResponseConsumer inner metadataRef resp
                      (err:_) -> fromError err
           fromError cursor = do errCode <- force "Missing Error Code" $ cursor $// elCont "Code"
                                 errMessage <- force "Missing Error Message" $ cursor $// elCont "Message"
-                                F.failure $ SdbError (HTTP.responseStatus resp) errCode errMessage
+                                throwM $ SdbError (HTTP.responseStatus resp) errCode errMessage
 
 class SdbFromResponse a where
     sdbFromResponse :: Cu.Cursor -> Response SdbMetadata a
 
-sdbCheckResponseType :: F.Failure XmlException m => a -> T.Text -> Cu.Cursor -> m a
+sdbCheckResponseType :: MonadThrow m => a -> T.Text -> Cu.Cursor -> m a
 sdbCheckResponseType a n c = do _ <- force ("Expected response type " ++ T.unpack n) (Cu.laxElement n c)
                                 return a
 
-decodeBase64 :: F.Failure XmlException m => Cu.Cursor -> m T.Text
+decodeBase64 :: MonadThrow m => Cu.Cursor -> m T.Text
 decodeBase64 cursor =
   let encoded = T.concat $ cursor $/ Cu.content
       encoding = listToMaybe $ cursor $| Cu.laxAttribute "encoding" &| T.toCaseFold
@@ -166,15 +166,15 @@ decodeBase64 cursor =
     case encoding of
       Nothing -> return encoded
       Just "base64" -> case Base64.decode . T.encodeUtf8 $ encoded of
-                         Left msg -> F.failure $ XmlException ("Invalid Base64 data: " ++ msg)
+                         Left msg -> throwM $ XmlException ("Invalid Base64 data: " ++ msg)
                          Right x -> return $ T.decodeUtf8 x
-      Just actual -> F.failure $ XmlException ("Unrecognized encoding " ++ T.unpack actual)
+      Just actual -> throwM $ XmlException ("Unrecognized encoding " ++ T.unpack actual)
 
 data Attribute a
     = ForAttribute { attributeName :: T.Text, attributeData :: a }
     deriving (Show)
 
-readAttribute :: F.Failure XmlException m => Cu.Cursor -> m (Attribute T.Text)
+readAttribute :: MonadThrow m => Cu.Cursor -> m (Attribute T.Text)
 readAttribute cursor = do
   name <- forceM "Missing Name" $ cursor $/ Cu.laxElement "Name" &| decodeBase64
   value <- forceM "Missing Value" $ cursor $/ Cu.laxElement "Value" &| decodeBase64
@@ -225,7 +225,7 @@ data Item a
     = Item { itemName :: T.Text, itemData :: a }
     deriving (Show)
 
-readItem :: F.Failure XmlException m => Cu.Cursor -> m (Item [Attribute T.Text])
+readItem :: MonadThrow m => Cu.Cursor -> m (Item [Attribute T.Text])
 readItem cursor = do
   name <- force "Missing Name" <=< sequence $ cursor $/ Cu.laxElement "Name" &| decodeBase64
   attributes <- sequence $ cursor $/ Cu.laxElement "Attribute" &| readAttribute
