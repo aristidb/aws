@@ -89,13 +89,12 @@ import qualified Blaze.ByteString.Builder as Blaze
 import           Control.Applicative
 import           Control.Arrow
 import qualified Control.Exception        as E
-import qualified Control.Failure          as F
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Resource (ResourceT, MonadThrow (throwM))
 import qualified Crypto.Classes           as Crypto
 import qualified Crypto.HMAC              as HMAC
 import           Crypto.Hash.CryptoAPI    (MD5, SHA1, SHA256, hash')
-import           Data.Attempt             (Attempt(..), FromAttempt(..))
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
 import qualified Data.ByteString.Base16   as Base16
@@ -104,7 +103,7 @@ import           Data.ByteString.Char8    ({- IsString -})
 import qualified Data.ByteString.Lazy     as L
 import qualified Data.ByteString.UTF8     as BU
 import           Data.Char
-import           Data.Conduit             (ResourceT, ($$+-))
+import           Data.Conduit             (($$+-))
 import qualified Data.Conduit             as C
 import qualified Data.Conduit.List        as CL
 import           Data.Default             (def)
@@ -137,12 +136,12 @@ class Loggable a where
 --
 -- Response forms a Writer-like monad.
 data Response m a = Response { responseMetadata :: m
-                             , responseResult :: Attempt a }
+                             , responseResult :: Either E.SomeException a }
     deriving (Show, Functor)
 
 -- | Read a response result (if it's a success response, fail otherwise).
-readResponse :: FromAttempt f => Response m a -> f a
-readResponse = fromAttempt . responseResult
+readResponse :: MonadThrow n => Response m a -> n a
+readResponse = either throwM return . responseResult
 
 -- | Read a response result (if it's a success response, fail otherwise). In MonadIO.
 readResponseIO :: MonadIO io => Response m a -> io a
@@ -159,13 +158,13 @@ mapMetadata f (Response m a) = Response (f m) a
 --multiResponse :: Monoid m => Response m a -> Response [m] a ->
 
 instance Monoid m => Monad (Response m) where
-    return x = Response mempty (Success x)
-    Response m1 (Failure e) >>= _ = Response m1 (Failure e)
-    Response m1 (Success x) >>= f = let Response m2 y = f x
+    return x = Response mempty (Right x)
+    Response m1 (Left e) >>= _ = Response m1 (Left e)
+    Response m1 (Right x) >>= f = let Response m2 y = f x
                                     in Response (m1 `mappend` m2) y -- currently using First-semantics, Last SHOULD work too
 
-instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
-    failure e = Response mempty (F.failure e)
+instance Monoid m => MonadThrow (Response m) where
+    throwM e = Response mempty (throwM e)
 
 -- | Add metadata to an 'IORef' (using 'mappend').
 tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
@@ -696,24 +695,24 @@ elCont :: T.Text -> Cursor -> [String]
 elCont name = laxElement name &/ content &| T.unpack
 
 -- | Extract the first element from a parser result list, and throw an 'XmlException' if the list is empty.
-force :: F.Failure XmlException m => String -> [a] -> m a
+force :: MonadThrow m => String -> [a] -> m a
 force = Cu.force . XmlException
 
 -- | Extract the first element from a monadic parser result list, and throw an 'XmlException' if the list is empty.
-forceM :: F.Failure XmlException m => String -> [m a] -> m a
+forceM :: MonadThrow m => String -> [m a] -> m a
 forceM = Cu.forceM . XmlException
 
 -- | Read an integer from a 'T.Text', throwing an 'XmlException' on failure.
-textReadInt :: (F.Failure XmlException m, Num a) => T.Text -> m a
+textReadInt :: (MonadThrow m, Num a) => T.Text -> m a
 textReadInt s = case reads $ T.unpack s of
                   [(n,"")] -> return $ fromInteger n
-                  _        -> F.failure $ XmlException "Invalid Integer"
+                  _        -> throwM $ XmlException "Invalid Integer"
 
 -- | Read an integer from a 'String', throwing an 'XmlException' on failure.
-readInt :: (F.Failure XmlException m, Num a) => String -> m a
+readInt :: (MonadThrow m, Num a) => String -> m a
 readInt s = case reads s of
               [(n,"")] -> return $ fromInteger n
-              _        -> F.failure $ XmlException "Invalid Integer"
+              _        -> throwM $ XmlException "Invalid Integer"
 
 -- | Create a complete 'HTTPResponseConsumer' from a simple function that takes a 'Cu.Cursor' to XML in the response
 -- body.
@@ -731,5 +730,5 @@ xmlCursorConsumer parse metadataRef res
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata
          case x of
-           Failure err -> liftIO $ C.monadThrow err
-           Success v   -> return v
+           Left err -> liftIO $ throwM err
+           Right v  -> return v

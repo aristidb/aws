@@ -15,8 +15,8 @@ import           Aws.Core
 import           Aws.Iam.Core
 import           Control.Applicative
 import           Control.Arrow       (second)
-import qualified Control.Failure     as F
 import           Control.Monad
+import           Control.Monad.Trans.Resource (MonadThrow)
 import           Data.ByteString     (ByteString)
 import           Data.Maybe
 import           Data.Monoid         ((<>))
@@ -62,7 +62,7 @@ markedIter marker maxItems
 -- | Reads and returns the @IsTruncated@ and @Marker@ attributes present in
 -- all IAM data pagination responses.
 markedIterResponse
-    :: F.Failure XmlException m
+    :: MonadThrow m
     => Cu.Cursor
     -> m (Bool, Maybe Text)
 markedIterResponse cursor = do

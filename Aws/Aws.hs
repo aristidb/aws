@@ -33,7 +33,6 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
-import           Data.Attempt         (Attempt(Success, Failure))
 import qualified Data.ByteString      as B
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Conduit         as C
@@ -185,11 +184,8 @@ unsafeAws
 unsafeAws cfg scfg manager request = do
   metadataRef <- liftIO $ newIORef mempty
 
-  let catchAll :: ResourceT IO a -> ResourceT IO (Attempt a)
-      catchAll = E.handle (return . failure') . fmap Success
-
-      failure' :: E.SomeException -> Attempt a
-      failure' = Failure
+  let catchAll :: ResourceT IO a -> ResourceT IO (Either E.SomeException a)
+      catchAll = E.handle (return . Left) . fmap Right
 
   resp <- catchAll $
             unsafeAwsRef cfg scfg manager metadataRef request
@@ -268,8 +264,8 @@ awsIteratedSource cfg scfg manager req_ = go req_
   where go request = do resp <- lift $ aws cfg scfg manager request
                         C.yield resp
                         case responseResult resp of
-                          Failure _ -> return ()
-                          Success x ->
+                          Left _  -> return ()
+                          Right x ->
                             case nextIteratedRequest request x of
                               Nothing -> return ()
                               Just nextRequest -> go nextRequest
