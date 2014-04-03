@@ -92,9 +92,8 @@ import qualified Control.Exception        as E
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource (ResourceT, MonadThrow (throwM))
-import qualified Crypto.Classes           as Crypto
-import qualified Crypto.HMAC              as HMAC
-import           Crypto.Hash.CryptoAPI    (MD5, SHA1, SHA256, hash')
+import           Crypto.Hash
+import           Data.Byteable
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
 import qualified Data.ByteString.Base16   as Base16
@@ -111,7 +110,6 @@ import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
-import qualified Data.Serialize           as Serialize
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
 import qualified Data.Text.IO             as T
@@ -354,7 +352,7 @@ data SignedQuery
         -- | Request body content type.
       , sqContentType :: Maybe B.ByteString
         -- | Request body content MD5.
-      , sqContentMd5 :: Maybe MD5
+      , sqContentMd5 :: Maybe (Digest MD5)
         -- | Additional Amazon "amz" headers.
       , sqAmzHeaders :: HTTP.RequestHeaders
         -- | Additional non-"amz" headers.
@@ -389,7 +387,7 @@ queryToHttpRequest SignedQuery{..} =  do
       , HTTP.queryString = HTTP.renderQuery False sqQuery
       , HTTP.requestHeaders = catMaybes [ checkDate (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
-                                        , fmap (\md5 -> ("Content-MD5", Base64.encode $ Serialize.encode md5)) sqContentMd5
+                                        , fmap (\md5 -> ("Content-MD5", Base64.encode $ toBytes md5)) sqContentMd5
                                         , fmap (\auth -> ("Authorization", auth)) mauth]
                               ++ sqAmzHeaders
                               ++ sqOtherHeaders
@@ -496,12 +494,10 @@ signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
 signature cr ah input = Base64.encode sig
     where
       sig = case ah of
-              HmacSHA1 -> computeSig (undefined :: SHA1)
-              HmacSHA256 -> computeSig (undefined :: SHA256)
-      computeSig :: Crypto.Hash c d => d -> B.ByteString
-      computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
-      key :: HMAC.MacKey c d
-      key = HMAC.MacKey (secretAccessKey cr)
+              HmacSHA1 -> computeSig SHA1
+              HmacSHA256 -> computeSig SHA256
+      computeSig :: HashAlgorithm a => a -> ByteString
+      computeSig t = toBytes (hmacAlg t (secretAccessKey cr) input)
 
 -- | Use this to create the Authorization header to set into 'sqAuthorization'.
 -- See <http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html>: you must create the
@@ -516,12 +512,12 @@ authorizationV4 :: SignatureData
 authorizationV4 sd ah region service headers canonicalRequest = do
     let ref = v4SigningKeys $ signatureCredentials sd
         date = fmtTime "%Y%m%d" $ signatureTime sd
-        hmac k i = case ah of
-                        HmacSHA1 -> Serialize.encode (HMAC.hmac' (HMAC.MacKey k) i :: SHA1)
-                        HmacSHA256 -> Serialize.encode (HMAC.hmac' (HMAC.MacKey k) i :: SHA256)
-        hash i = case ah of
-                        HmacSHA1 -> Serialize.encode (hash' i :: SHA1)
-                        HmacSHA256 -> Serialize.encode (hash' i :: SHA256)
+        mkHmac k i = case ah of
+                        HmacSHA1 -> toBytes (hmac k i :: HMAC SHA1)
+                        HmacSHA256 -> toBytes (hmac k i :: HMAC SHA256)
+        mkHash i = case ah of
+                        HmacSHA1 -> toBytes (hash i :: Digest SHA1)
+                        HmacSHA256 -> toBytes (hash i :: Digest SHA256)
         alg = case ah of
                     HmacSHA1 -> "AWS4-HMAC-SHA1"
                     HmacSHA256 -> "AWS4-HMAC-SHA256"
@@ -538,16 +534,16 @@ authorizationV4 sd ah region service headers canonicalRequest = do
             Just k -> return k
             Nothing -> atomicModifyIORef ref $ \keylist ->
                             let secretKey = secretAccessKey $ signatureCredentials sd
-                                kDate = hmac ("AWS4" <> secretKey) date
-                                kRegion = hmac kDate region
-                                kService = hmac kRegion service
-                                kSigning = hmac kService "aws4_request"
+                                kDate = mkHmac ("AWS4" <> secretKey) date
+                                kRegion = mkHmac kDate region
+                                kService = mkHmac kRegion service
+                                kSigning = mkHmac kService "aws4_request"
                                 lstK = (region,service)
                                 keylist' = (lstK,(date,kSigning)) : filter ((lstK/=).fst) keylist
                              in (keylist', kSigning)
 
     -- now do the signature
-    let canonicalRequestHash = Base16.encode $ hash canonicalRequest
+    let canonicalRequestHash = Base16.encode $ mkHash canonicalRequest
         stringToSign = B.concat [ alg
                                 , "\n"
                                 , fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
@@ -560,7 +556,7 @@ authorizationV4 sd ah region service headers canonicalRequest = do
                                 , "/aws4_request\n"
                                 , canonicalRequestHash
                                 ]
-        sig = Base16.encode $ hmac key stringToSign
+        sig = Base16.encode $ mkHmac key stringToSign
 
     -- finally, return the header
     return $ B.concat [ alg

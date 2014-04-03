@@ -11,7 +11,7 @@ import qualified Network.HTTP.Types   as HTTP
 import qualified Text.XML             as XML
 import qualified Text.XML.Cursor      as Cu
 import           Text.XML.Cursor      (($/), (&|))
-import qualified Crypto.Classes       as C (hash)
+import           Crypto.Hash
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 ({- IsString -})
 import           Control.Applicative     ((<$>))
@@ -70,7 +70,7 @@ instance SignQuery DeleteObjects where
       , s3QSubresources = HTTP.toQuery [("delete" :: B.ByteString, Nothing :: Maybe B.ByteString)]
       , s3QQuery        = []
       , s3QContentType  = Nothing
-      , s3QContentMd5   = Just $ C.hash dosBody
+      , s3QContentMd5   = Just $ hashlazy dosBody
       , s3QObject       = Nothing
       , s3QAmzHeaders   = maybeToList $ (("x-amz-mfa", ) . T.encodeUtf8) <$> dosMultiFactorAuthentication
       , s3QOtherHeaders = []

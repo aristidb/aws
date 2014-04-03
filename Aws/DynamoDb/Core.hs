@@ -3,16 +3,15 @@ module Aws.DynamoDb.Core where
 import           Aws.Core
 import qualified Control.Exception              as C
 import           Control.Monad.Trans.Resource   (throwM)
-import           Crypto.Hash.CryptoAPI (SHA256, hash)
+import           Crypto.Hash
+import           Data.Byteable
 import qualified Data.Aeson                     as A
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Base16         as Base16
-import qualified Data.ByteString.Lazy           as BL
 import           Data.Conduit
 import qualified Data.Conduit.Attoparsec        as Atto
 import           Data.Monoid
 import           Data.Typeable
-import qualified Data.Serialize                 as Serialize
 import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
 
@@ -89,11 +88,8 @@ dySignQuery target body di sd
     where
         sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
 
-        hash256 :: BL.ByteString -> SHA256
-        hash256 = hash
-
         bodyLBS = A.encode body
-        bodyHash = Base16.encode $ Serialize.encode $ hash256 bodyLBS
+        bodyHash = Base16.encode $ toBytes (hashlazy bodyLBS :: Digest SHA256)
 
         canonicalRequest = B.concat [ "POST\n"
                                     , "/\n"
