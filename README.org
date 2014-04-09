@@ -88,6 +88,14 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
+** 0.9 series
+
+- 0.9
+  - Interface changes:
+    - attempt and failure were deprecated, remove
+    - switch to new cryptohash interface
+  - updated version bounds of conduit and xml-conduit
+
 ** 0.8 series
 
 - 0.8.6
