@@ -1,21 +1,22 @@
-{ cabal, attempt, base64Bytestring, blazeBuilder, caseInsensitive
-, cereal, conduit, cryptoApi, cryptohash, cryptohashCryptoapi
-, failure, filepath, httpConduit, httpTypes, liftedBase
-, monadControl, mtl, resourcet, text, time, transformers
-, utf8String, xmlConduit
+{ cabal, aeson, base16Bytestring, base64Bytestring, blazeBuilder
+, byteable, caseInsensitive, cereal, conduit, conduitExtra
+, cryptohash, dataDefault, filepath, httpConduit, httpTypes
+, liftedBase, monadControl, mtl, resourcet, text, time
+, transformers, unorderedContainers, utf8String, vector, xmlConduit
 }:
 
 cabal.mkDerivation (self: {
   pname = "aws";
-  version = "0.8.0";
-  sha256 = "0d9iim0h7ya2b4i59887zapdwxy42ajacp62kg117z15r27j28z9";
+  version = "0.9";
+  sha256 = "07sdz179vqfdcnm6rrdg068xdyqw8m2565bdba5a1s987vdvps21";
   isLibrary = true;
   isExecutable = true;
   buildDepends = [
-    attempt base64Bytestring blazeBuilder caseInsensitive cereal
-    conduit cryptoApi cryptohash cryptohashCryptoapi failure filepath
-    httpConduit httpTypes liftedBase monadControl mtl resourcet text
-    time transformers utf8String xmlConduit
+    aeson base16Bytestring base64Bytestring blazeBuilder byteable
+    caseInsensitive cereal conduit conduitExtra cryptohash dataDefault
+    filepath httpConduit httpTypes liftedBase monadControl mtl
+    resourcet text time transformers unorderedContainers utf8String
+    vector xmlConduit
   ];
   meta = {
     homepage = "http://github.com/aristidb/aws";
