@@ -44,6 +44,7 @@ data GetBucketResponse
       , gbrContents       :: [ObjectInfo]
       , gbrCommonPrefixes :: [T.Text]
       , gbrIsTruncated    :: Bool
+      , gbrNextMarker     :: Maybe T.Text
       }
     deriving (Show)
 
@@ -78,6 +79,7 @@ instance ResponseConsumer r GetBucketResponse where
                        let marker = listToMaybe $ cursor $/ elContent "Marker"
                        maxKeys <- Data.Traversable.sequence . listToMaybe $ cursor $/ elContent "MaxKeys" &| textReadInt
                        let truncated = maybe True (/= "false") $ listToMaybe $ cursor $/ elContent "IsTruncated"
+                       let nextMarker = listToMaybe $ cursor $/ elContent "NextMarker"
                        let prefix = listToMaybe $ cursor $/ elContent "Prefix"
                        contents <- sequence $ cursor $/ Cu.laxElement "Contents" &| parseObjectInfo
                        let commonPrefixes = cursor $/ Cu.laxElement "CommonPrefixes" &// Cu.content
@@ -90,6 +92,7 @@ instance ResponseConsumer r GetBucketResponse where
                                               , gbrContents       = contents
                                               , gbrCommonPrefixes = commonPrefixes
                                               , gbrIsTruncated    = truncated
+                                              , gbrNextMarker     = nextMarker
                                               }
 
 instance Transaction GetBucket GetBucketResponse
