@@ -97,6 +97,13 @@ instance ResponseConsumer r GetBucketResponse where
 
 instance Transaction GetBucket GetBucketResponse
 
+instance IteratedTransaction GetBucket GetBucketResponse where
+    nextIteratedRequest request response
+        = case (gbrIsTruncated response, gbrNextMarker response, gbrContents response) of
+            (True, Just marker, _             ) -> Just $ request { gbMarker = Just marker }
+            (True, Nothing,     contents@(_:_)) -> Just $ request { gbMarker = Just $ objectKey $ last contents }
+            (_,    _,           _             ) -> Nothing
+
 instance AsMemoryResponse GetBucketResponse where
     type MemoryResponse GetBucketResponse = GetBucketResponse
     loadToMemory = return
