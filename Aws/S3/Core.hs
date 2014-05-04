@@ -14,6 +14,7 @@ import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
+import           Control.Applicative            ((<|>))
 import           Data.Time
 import           Data.Typeable
 import           System.Locale
@@ -359,7 +360,8 @@ data ObjectInfo
 parseObjectInfo :: MonadThrow m => Cu.Cursor -> m ObjectInfo
 parseObjectInfo el
     = do key <- force "Missing object Key" $ el $/ elContent "Key"
-         let time s = case parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s of
+         let time s = case (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
+                           (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
                         Nothing -> throwM $ XmlException "Invalid time"
                         Just v -> return v
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time
