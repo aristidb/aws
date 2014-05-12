@@ -305,16 +305,19 @@ writeCannedAcl AclLogDeliveryWrite       = "log-delivery-write"
 data StorageClass
     = Standard
     | ReducedRedundancy
+    | Glacier
     deriving (Show)
 
 parseStorageClass :: MonadThrow m => T.Text -> m StorageClass
 parseStorageClass "STANDARD"           = return Standard
 parseStorageClass "REDUCED_REDUNDANCY" = return ReducedRedundancy
+parseStorageClass "GLACIER"            = return Glacier
 parseStorageClass s = throwM . XmlException $ "Invalid Storage Class: " ++ T.unpack s
 
 writeStorageClass :: StorageClass -> T.Text
 writeStorageClass Standard          = "STANDARD"
 writeStorageClass ReducedRedundancy = "REDUCED_REDUNDANCY"
+writeStorageClass Glacier           = "GLACIER"
 
 data ServerSideEncryption
     = AES256
