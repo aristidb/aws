@@ -14,7 +14,7 @@ Build-type:          Simple
 Extra-source-files:  README.org
                      Examples/GetObject.hs
                      Examples/SimpleDb.hs
-                     Examples/Ec2.hs
+                     Examples/DescribeRegions.hs
 
 Cabal-version:       >=1.10
 
@@ -203,7 +203,7 @@ Executable Sqs
   Default-Language: Haskell2010
 
 Executable DescribeRegions
-  Main-is: Ec2.hs
+  Main-is: DescribeRegions.hs
   Hs-source-dirs: Examples
 
   if !flag(Examples)
