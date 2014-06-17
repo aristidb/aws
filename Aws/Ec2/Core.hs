@@ -10,20 +10,30 @@ module Aws.Ec2.Core
       -- * Metadata
     , Ec2Metadata(..)
 
+      -- * Data
+    , Ec2Region(..)
+    , parseRegion
+
       -- * Queries
     , ec2SignQuery
     , ec2Action
+
+      -- * Request/Response
+    , ec2ResponseConsumer
     ) where
 
 import           Control.Arrow (second)
+import           Control.Exception              (Exception)
 import           Control.Monad
+import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString ()
+import           Data.IORef
 import           Data.List (intersperse, sort)
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text (Text)
-import qualified Data.Text ()
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Typeable
 
@@ -31,6 +41,8 @@ import qualified Blaze.ByteString.Builder as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Network.HTTP.Conduit as HTTP
 import qualified Network.HTTP.Types as HTTP
+import           Text.XML.Cursor                (($//))
+import qualified Text.XML.Cursor                as Cu
 
 import           Aws.Core
 
@@ -69,13 +81,20 @@ ec2 method protocol endpoint
 ec2EndpointDefault :: ByteString
 ec2EndpointDefault = "ec2.amazonaws.com"
 
+
 -- -------------------------------------------------------------------------- --
 -- Errors
 
 -- | Errors returned by the EC2 API.
 data Ec2Error
-    = Ec2Error
+    = Ec2Error {
+        ec2StatusCode   :: HTTP.Status -- ^ HTTP status of the request.
+      , ec2ErrorCode    :: Text -- ^ AWS API error code.
+      , ec2ErrorMessage :: Text -- ^ AWS API error message.
+      }
     deriving (Show, Typeable)
+
+instance Exception Ec2Error
 
 -- -------------------------------------------------------------------------- --
 -- Response metadata
@@ -83,7 +102,7 @@ data Ec2Error
 -- | Metadata about an EC2 API request.
 data Ec2Metadata
     = Ec2Metadata {
-        requestId :: Maybe Text
+        requestId :: Maybe Text -- ^ The identifier assigned by AWS to the request.
       }
     deriving (Show, Typeable)
 
@@ -146,11 +165,49 @@ ec2SignQuery q Ec2Configuration{..} SignatureData{..}
                         ++ [HTTP.renderQueryBuilder False expandedQuery]
     expandedQuery   = HTTP.toQuery . sort $ (q ++) [
                           ("AWSAccessKeyId"  , accessKey)
-                        , ("SignatureMethod" , amzHash HmacSHA256)
-                        , ("SignatureVersion", "2")
-                        , ("Version"         , "2010-05-08")
                         , timestampHeader
+                        , ("SignatureVersion", "2")
+                        , ("SignatureMethod" , amzHash HmacSHA256)
+                        , ("Version"         , "2014-05-01")
                         ]
 
 -- -------------------------------------------------------------------------- --
 -- Response
+
+ec2ResponseConsumer :: (Cu.Cursor -> Response Ec2Metadata a)
+                    -> IORef Ec2Metadata
+                    -> HTTPResponseConsumer a
+ec2ResponseConsumer inner md resp = xmlCursorConsumer parse md resp
+  where
+    parse cursor = do
+      let rid = listToMaybe $ cursor $// elContent "requestID"
+      tellMetadata $ Ec2Metadata rid
+      case cursor $// Cu.laxElement "Error" of
+        []      -> inner cursor
+        (err:_) -> fromError err
+    fromError cursor = do
+      errCode <- force "Missing Error Code"    $ cursor $// elContent "Code"
+      errMsg  <- force "Missing Error Message" $ cursor $// elContent "Message"
+      throwM $ Ec2Error (HTTP.responseStatus resp) errCode errMsg
+
+
+-- -------------------------------------------------------------------------- --
+-- Data Model
+
+-- | Details of an EC2 region.
+data Ec2Region
+    = Ec2Region {
+        regionName :: Text -- ^ Canonical name of the region.
+      , regionEndpoint :: Text -- ^ API endpoint for the region.
+      }
+    deriving (Show, Ord, Eq, Typeable)
+
+-- | Parse an 'Ec2Region' from an API response.
+parseRegion :: MonadThrow m => Cu.Cursor -> m Ec2Region
+parseRegion cursor = do
+    regionName <- attr "regionName"
+    regionEndpoint <- attr "regionEndpoint"
+    return Ec2Region{..}
+  where
+    attr n = force ("Missing " ++ T.unpack n) $
+             cursor $// elContent n
