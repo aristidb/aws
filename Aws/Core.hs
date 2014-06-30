@@ -112,6 +112,7 @@ import qualified Data.Conduit.List        as CL
 import           Data.Default             (def)
 import           Data.IORef
 import           Data.List
+import qualified Data.Map                 as M
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text                as T
@@ -284,18 +285,17 @@ loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
   do
     info <- liftIO $ getInstanceMetadata mgr "latest/meta-data/iam" "info"
-    -- TODO: shouldn't be a [(String, String)], should be a [(String, Value)].
-    let infodict = A.decode info :: Maybe [(String, String)]
-        info' = infodict >>= lookup "InstanceProfileArn"
+    let infodict = A.decode info :: Maybe (M.Map String String)
+        info' = infodict >>= M.lookup "InstanceProfileArn"
     case info' of
       Just name ->
         do
           let name' = drop 1 $ dropWhile (/= '/') $ name
           creds <- liftIO $ getInstanceMetadata mgr "latest/meta-data/iam/security-credentials" name'
           -- this token lasts ~6 hours
-          let dict   = A.decode creds :: Maybe [(String, String)]
-              keyID  = dict >>= lookup "AccessKeyId"
-              secret = dict >>= lookup "SecretAccessKey"
+          let dict   = A.decode creds :: Maybe (M.Map String String)
+              keyID  = dict >>= M.lookup "AccessKeyId"
+              secret = dict >>= M.lookup "SecretAccessKey"
           ref <- liftIO $ newIORef []
           return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID)
                               <*> (T.encodeUtf8 . T.pack <$> secret)
