@@ -53,7 +53,9 @@ module Aws
 , credentialsDefaultKey
 , loadCredentialsFromFile
 , loadCredentialsFromEnv
+, loadCredentialsFromInstanceMetadata
 , loadCredentialsFromEnvOrFile
+, loadCredentialsFromEnvOrFileOrInstanceMetadata
 , loadCredentialsDefault
 )
 where
