@@ -313,7 +313,7 @@ loadCredentialsFromEnvOrFile file key =
       Just cr -> return (Just cr)
       Nothing -> loadCredentialsFromFile file key
 
--- | Load credentials from environment variables if possible, or alternatively from a file with a given key name, or alternatively from the instance metadata store.
+-- | Load credentials from environment variables if possible, or alternatively from the instance metadata store, or alternatively from a file with a given key name.
 --
 -- See 'loadCredentialsFromEnv', 'loadCredentialsFromFile' and 'loadCredentialsFromInstanceMetadata' for details.
 loadCredentialsFromEnvOrFileOrInstanceMetadata :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
@@ -324,10 +324,10 @@ loadCredentialsFromEnvOrFileOrInstanceMetadata file key =
       Just cr -> return (Just cr)
       Nothing ->
         do
-          filecr <- loadCredentialsFromFile file key
-          case filecr of
+          instcr <- loadCredentialsFromInstanceMetadata
+          case instcr of
             Just cr -> return (Just cr)
-            Nothing -> loadCredentialsFromInstanceMetadata
+            Nothing -> loadCredentialsFromFile file key
 
 -- | Load credentials from environment variables if possible, or alternative from the default file with the default
 -- key name.
