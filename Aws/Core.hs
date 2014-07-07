@@ -233,9 +233,11 @@ data Credentials
       , secretAccessKey :: B.ByteString
         -- | Signing keys for signature version 4
       , v4SigningKeys :: IORef [V4Key]
+        -- | Signed IAM token
+      , iamToken :: Maybe B.ByteString
       }
 instance Show Credentials where
-    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ "}"
+    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ ",iamToken=" ++ show (iamToken c) ++ "}"
 
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
 --
@@ -263,6 +265,7 @@ loadCredentialsFromFile file key = liftIO $ do
     return Credentials { accessKeyID = T.encodeUtf8 keyID
                        , secretAccessKey = T.encodeUtf8 secret
                        , v4SigningKeys = ref
+                       , iamToken = Nothing
                        }
       where
         hasKey _ [] = False
@@ -279,7 +282,8 @@ loadCredentialsFromEnv = liftIO $ do
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
   return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) 
                       <*> (T.encodeUtf8 . T.pack <$> secret)
-                      <*> return ref)
+                      <*> return ref
+                      <*> return Nothing)
 
 loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
@@ -296,10 +300,12 @@ loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
           let dict   = A.decode creds :: Maybe (M.Map String String)
               keyID  = dict >>= M.lookup "AccessKeyId"
               secret = dict >>= M.lookup "SecretAccessKey"
+              token  = dict >>= M.lookup "Token"
           ref <- liftIO $ newIORef []
           return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID)
                               <*> (T.encodeUtf8 . T.pack <$> secret)
-                              <*> return ref)
+                              <*> return ref
+                              <*> (Just . T.encodeUtf8 . T.pack <$> token))
       Nothing -> return Nothing
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
