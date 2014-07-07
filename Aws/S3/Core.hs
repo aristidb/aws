@@ -357,7 +357,7 @@ data ObjectInfo
       , objectETag         :: T.Text
       , objectSize         :: Integer
       , objectStorageClass :: StorageClass
-      , objectOwner        :: UserInfo
+      , objectOwner        :: Maybe UserInfo
       }
     deriving (Show)
 
@@ -372,7 +372,9 @@ parseObjectInfo el
          eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
          size <- forceM "Missing object Size" $ el $/ elContent "Size" &| textReadInt
          storageClass <- forceM "Missing object StorageClass" $ el $/ elContent "StorageClass" &| parseStorageClass
-         owner <- forceM "Missing object Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
+         owner <- case el $/ Cu.laxElement "Owner" &| parseUserInfo of
+                    (x:_) -> fmap' Just x
+                    [] -> return Nothing
          return ObjectInfo{
                       objectKey          = key
                     , objectLastModified = lastModified
@@ -381,6 +383,9 @@ parseObjectInfo el
                     , objectStorageClass = storageClass
                     , objectOwner        = owner
                     }
+    where
+      fmap' :: Monad m => (a -> b) -> m a -> m b
+      fmap' f ma = ma >>= return . f
 
 data ObjectMetadata
     = ObjectMetadata {
