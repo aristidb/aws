@@ -155,11 +155,15 @@ mapMetadata f (Response m a) = Response (f m) a
 
 --multiResponse :: Monoid m => Response m a -> Response [m] a ->
 
+instance Monoid m => Applicative (Response m) where
+    pure x = Response mempty (Right x)
+    (<*>) = ap
+
 instance Monoid m => Monad (Response m) where
     return x = Response mempty (Right x)
     Response m1 (Left e) >>= _ = Response m1 (Left e)
     Response m1 (Right x) >>= f = let Response m2 y = f x
-                                    in Response (m1 `mappend` m2) y -- currently using First-semantics, Last SHOULD work too
+                                  in Response (m1 `mappend` m2) y -- currently using First-semantics, Last SHOULD work too
 
 instance Monoid m => MonadThrow (Response m) where
     throwM e = Response mempty (throwM e)
