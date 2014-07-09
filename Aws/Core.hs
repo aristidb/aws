@@ -88,6 +88,7 @@ module Aws.Core
 where
 
 import           Aws.Ec2.InstanceMetadata
+import           Aws.Network
 import qualified Blaze.ByteString.Builder as Blaze
 import           Control.Applicative
 import           Control.Arrow
@@ -288,25 +289,30 @@ loadCredentialsFromEnv = liftIO $ do
 loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
   do
-    info <- liftIO $ getInstanceMetadata mgr "latest/meta-data/iam" "info"
-    let infodict = A.decode info :: Maybe (M.Map String String)
-        info' = infodict >>= M.lookup "InstanceProfileArn"
-    case info' of
-      Just name ->
-        do
-          let name' = drop 1 $ dropWhile (/= '/') $ name
-          creds <- liftIO $ getInstanceMetadata mgr "latest/meta-data/iam/security-credentials" name'
-          -- this token lasts ~6 hours
-          let dict   = A.decode creds :: Maybe (M.Map String String)
-              keyID  = dict >>= M.lookup "AccessKeyId"
-              secret = dict >>= M.lookup "SecretAccessKey"
-              token  = dict >>= M.lookup "Token"
-          ref <- liftIO $ newIORef []
-          return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID)
-                              <*> (T.encodeUtf8 . T.pack <$> secret)
-                              <*> return ref
-                              <*> (Just . T.encodeUtf8 . T.pack <$> token))
-      Nothing -> return Nothing
+    -- check if the path is routable
+    avail <- liftIO $ hostAvailable "169.254.169.254"
+    if not avail
+      then return Nothing
+      else do
+        info <- liftIO $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam" "info" >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
+        let infodict = info >>= A.decode :: Maybe (M.Map String String)
+            info'    = infodict >>= M.lookup "InstanceProfileArn"
+        case info' of
+          Just name ->
+            do
+              let name' = drop 1 $ dropWhile (/= '/') $ name
+              creds <- liftIO $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam/security-credentials" name' >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
+              -- this token lasts ~6 hours
+              let dict   = creds >>= A.decode :: Maybe (M.Map String String)
+                  keyID  = dict  >>= M.lookup "AccessKeyId"
+                  secret = dict  >>= M.lookup "SecretAccessKey"
+                  token  = dict  >>= M.lookup "Token"
+              ref <- liftIO $ newIORef []
+              return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID)
+                                  <*> (T.encodeUtf8 . T.pack <$> secret)
+                                  <*> return ref
+                                  <*> (Just . T.encodeUtf8 . T.pack <$> token))
+          Nothing -> return Nothing
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
 --
