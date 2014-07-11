@@ -6,7 +6,7 @@ import Network.BSD (getProtocolNumber)
 import Network.Socket
 import System.Timeout
 
--- It may give false positives, but never false negatives.
+-- Make a good guess if a host is reachable.
 hostAvailable :: String -> IO Bool
 hostAvailable h = do
   sock <- getProtocolNumber "tcp" >>= socket AF_INET Stream
