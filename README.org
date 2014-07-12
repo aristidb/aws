@@ -90,6 +90,12 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.9 series
 
+- 0.9.1
+  - Support for multi-page S3 GetBucket requests
+  - S3 GLACIER support
+  - Applicative instance for Response to conform to the Applicative-Monad Proposal
+  - Compatibility with transformers 0.4
+
 - 0.9
   - Interface changes:
     - attempt and failure were deprecated, remove
