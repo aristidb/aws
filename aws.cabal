@@ -124,6 +124,7 @@ Library
                        network              == 2.*,
                        old-locale           == 1.*,
                        resourcet            >= 1.1     && < 1.2,
+                       scientific           >= 0.3,
                        text                 >= 0.11,
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2 && < 0.5,
@@ -215,6 +216,8 @@ Executable Sqs
     Build-depends:
                        base == 4.*,
                        aws,
-                       text >=0.11
+                       errors >= 1.4,
+                       text >=0.11,
+                       transformers >= 0.3
 
   Default-Language: Haskell2010
