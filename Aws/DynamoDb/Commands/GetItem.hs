@@ -1,12 +1,26 @@
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies    #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Aws.DynamoDb.Commands.GetItem
+-- Copyright   :  Soostone Inc
+-- License     :  BSD3
+--
+-- Maintainer  :  Ozgun Ataman
+-- Stability   :  experimental
+--
+--
+----------------------------------------------------------------------------
+
 module Aws.DynamoDb.Commands.GetItem where
 
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
-import qualified Data.Text         as T
+import qualified Data.Text           as T
 -------------------------------------------------------------------------------
-import           Aws.DynamoDb.Core
 import           Aws.Core
+import           Aws.DynamoDb.Core
 -------------------------------------------------------------------------------
 
 
@@ -23,7 +37,7 @@ data GetItem = GetItem {
 
 -- | Response to a 'GetItem' query.
 data GetItemResponse = GetItemResponse {
-      girItem :: Item
+      girItem     :: Item
     , girConsumed :: Double
     } deriving (Eq,Show,Read,Ord)
 
@@ -33,8 +47,8 @@ instance Transaction GetItem GetItemResponse
 
 instance ToJSON GetItem where
     toJSON GetItem{..} = object $
-        maybe [] (return . ("AttributesToGet" .=)) giAttrs ++ 
-        [ "TableName" .= giTableName 
+        maybe [] (return . ("AttributesToGet" .=)) giAttrs ++
+        [ "TableName" .= giTableName
         , "Key" .= giKey
         , "ConsistentRead" .= giConsistent
         ]
@@ -42,7 +56,7 @@ instance ToJSON GetItem where
 
 instance SignQuery GetItem where
     type ServiceConfiguration GetItem = DdbConfiguration
-    signQuery gi = ddbSignQuery gi "GetItem"
+    signQuery gi = ddbSignQuery "GetItem" gi
 
 
 
@@ -50,11 +64,12 @@ instance FromJSON GetItemResponse where
     parseJSON (Object v) = GetItemResponse
         <$> v .: "Item"
         <*> v .: "ConsumedCapacityUnits"
+    parseJSON _ = fail "GetItemResponse must be an object."
 
 
 instance ResponseConsumer r GetItemResponse where
     type ResponseMetadata GetItemResponse = DdbResponse
-    responseConsumer rq ref resp = ddbResponseConsumer ref resp
+    responseConsumer _ ref resp = ddbResponseConsumer ref resp
 
 
 instance AsMemoryResponse GetItemResponse where

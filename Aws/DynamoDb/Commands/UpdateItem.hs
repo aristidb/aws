@@ -107,7 +107,7 @@ instance Transaction UpdateItem UpdateItemResponse
 
 instance SignQuery UpdateItem where
     type ServiceConfiguration UpdateItem = DdbConfiguration
-    signQuery gi = ddbSignQuery gi "UpdateItem"
+    signQuery gi = ddbSignQuery "UpdateItem" gi
 
 
 instance FromJSON UpdateItemResponse where
@@ -119,7 +119,7 @@ instance FromJSON UpdateItemResponse where
 
 instance ResponseConsumer r UpdateItemResponse where
     type ResponseMetadata UpdateItemResponse = DdbResponse
-    responseConsumer rq ref resp = ddbResponseConsumer ref resp
+    responseConsumer _ ref resp = ddbResponseConsumer ref resp
 
 
 instance AsMemoryResponse UpdateItemResponse where

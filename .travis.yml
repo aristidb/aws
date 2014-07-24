@@ -1,0 +1,5 @@
+language: haskell
+install:
+        - cabal install --only-dependencies -fexamples
+script:
+        - cabal configure -fexamples && cabal build

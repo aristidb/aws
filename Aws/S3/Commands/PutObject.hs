@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Aws.S3.Commands.PutObject
 where
 
@@ -5,12 +6,11 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow         (second)
+import           Crypto.Hash
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
-import qualified Crypto.Hash.MD5       as MD5
 import qualified Data.ByteString.Char8 as B
 import qualified Data.CaseInsensitive  as CI
-import qualified Data.Conduit          as C
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import qualified Network.HTTP.Conduit  as HTTP
@@ -22,17 +22,26 @@ data PutObject = PutObject {
   poCacheControl :: Maybe T.Text,
   poContentDisposition :: Maybe T.Text,
   poContentEncoding :: Maybe T.Text,
-  poContentMD5 :: Maybe MD5.MD5,
+  poContentMD5 :: Maybe (Digest MD5),
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
   poWebsiteRedirectLocation :: Maybe T.Text,
+  poServerSideEncryption :: Maybe ServerSideEncryption,
+#if MIN_VERSION_http_conduit(2, 0, 0)
+  poRequestBody  :: HTTP.RequestBody,
+#else
   poRequestBody  :: HTTP.RequestBody (C.ResourceT IO),
+#endif
   poMetadata :: [(T.Text,T.Text)]
 }
 
+#if MIN_VERSION_http_conduit(2, 0, 0)
+putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
+#else
 putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
-putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
+#endif
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
 
 data PutObjectResponse
   = PutObjectResponse {
@@ -54,6 +63,7 @@ instance SignQuery PutObject where
                                               ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
                                             , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
                                             , ("x-amz-website-redirect-location",) <$> poWebsiteRedirectLocation
+                                            , ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> poServerSideEncryption
                                             ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
                                , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires

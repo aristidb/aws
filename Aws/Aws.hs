@@ -33,7 +33,6 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
-import           Data.Attempt         (Attempt(Success, Failure))
 import qualified Data.ByteString      as B
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Conduit         as C
@@ -185,11 +184,8 @@ unsafeAws
 unsafeAws cfg scfg manager request = do
   metadataRef <- liftIO $ newIORef mempty
 
-  let catchAll :: ResourceT IO a -> ResourceT IO (Attempt a)
-      catchAll = E.handle (return . failure') . fmap Success
-
-      failure' :: E.SomeException -> Attempt a
-      failure' = Failure
+  let catchAll :: ResourceT IO a -> ResourceT IO (Either E.SomeException a)
+      catchAll = E.handle (return . Left) . fmap Right
 
   resp <- catchAll $
             unsafeAwsRef cfg scfg manager metadataRef request
@@ -213,7 +209,7 @@ unsafeAwsRef cfg info manager metadataRef request = do
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
   let q = signQuery request info sd
   liftIO $ logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
-  let httpRequest = queryToHttpRequest q
+  httpRequest <- liftIO $ queryToHttpRequest q
   liftIO $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
   resp <- do
       hresp <- HTTP.http httpRequest manager
@@ -263,17 +259,13 @@ awsIteratedSource :: (IteratedTransaction r a)
                      -> ServiceConfiguration r NormalQuery
                      -> HTTP.Manager
                      -> r
-#if MIN_VERSION_conduit(1, 0, 0)
                      -> C.Producer (ResourceT IO) (Response (ResponseMetadata a) a)
-#else
-                     -> C.GSource (ResourceT IO) (Response (ResponseMetadata a) a)
-#endif
 awsIteratedSource cfg scfg manager req_ = go req_
   where go request = do resp <- lift $ aws cfg scfg manager request
                         C.yield resp
                         case responseResult resp of
-                          Failure _ -> return ()
-                          Success x ->
+                          Left _  -> return ()
+                          Right x ->
                             case nextIteratedRequest request x of
                               Nothing -> return ()
                               Just nextRequest -> go nextRequest
@@ -283,16 +275,8 @@ awsIteratedList :: (IteratedTransaction r a, ListResponse a i)
                      -> ServiceConfiguration r NormalQuery
                      -> HTTP.Manager
                      -> r
-#if MIN_VERSION_conduit(1, 0, 0)
                      -> C.Producer (ResourceT IO) i
-#else
-                     -> C.GSource (ResourceT IO) i
-#endif
 awsIteratedList cfg scfg manager req
   = awsIteratedSource cfg scfg manager req
-#if MIN_VERSION_conduit(1, 0, 0)
     C.=$=
-#else
-    C.>+>
-#endif
     CL.concatMapM (fmap listResponse . readResponseIO)

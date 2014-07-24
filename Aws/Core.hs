@@ -1,116 +1,115 @@
 {-# LANGUAGE CPP #-}
 module Aws.Core
-    ( -- * Logging
-      Loggable(..)
-      -- * Response
-      -- ** Metadata in responses
-    , Response(..)
-    , readResponse
-    , readResponseIO
-    , tellMetadata
-    , tellMetadataRef
-    , mapMetadata
-    -- ** Response data consumers
-    , HTTPResponseConsumer
-    , ResponseConsumer(..)
-    -- ** Memory response
-    , AsMemoryResponse(..)
-    -- ** List response
-    , ListResponse(..)
-    -- ** Exception types
-    , XmlException(..)
-    , HeaderException(..)
-    , FormException(..)
-    -- ** Response deconstruction helpers
-    , readHex2
-    -- *** XML
-    , elContent
-    , elCont
-    , force
-    , forceM
-    , textReadInt
-    , readInt
-    , xmlCursorConsumer
-    -- * Query
-    , SignedQuery(..)
-    , NormalQuery
-    , UriOnlyQuery
-    , queryToHttpRequest
-    , queryToUri
-    -- ** Expiration
-    , TimeInfo(..)
-    , AbsoluteTimeInfo(..)
-    , fromAbsoluteTimeInfo
-    , makeAbsoluteTimeInfo
-    -- ** Signature
-    , SignatureData(..)
-    , signatureData
-    , SignQuery(..)
-    , AuthorizationHash(..)
-    , amzHash
-    , signature
-    -- ** Query construction helpers
-    , queryList
-    , awsBool
-    , awsTrue
-    , awsFalse
-    , fmtTime
-    , fmtRfc822Time
-    , rfc822Time
-    , fmtAmzTime
-    , fmtTimeEpochSeconds
-    , parseHttpDate
-    , httpDate1
-    , textHttpDate
-    , iso8601UtcDate
-    -- * Transactions
-    , Transaction
-    , IteratedTransaction(..)
-    -- * Credentials
-    , Credentials(..)
-    , credentialsDefaultFile
-    , credentialsDefaultKey
-    , loadCredentialsFromFile
-    , loadCredentialsFromEnv
-    , loadCredentialsFromEnvOrFile
-    , loadCredentialsDefault
-    -- * Service configuration
-    , DefaultServiceConfiguration(..)
-    -- * HTTP types
-    , Protocol(..)
-    , defaultPort
-    , Method(..)
-    , httpMethod
-    ) where
+( -- * Logging
+  Loggable(..)
+  -- * Response
+  -- ** Metadata in responses
+, Response(..)
+, readResponse
+, readResponseIO
+, tellMetadata
+, tellMetadataRef
+, mapMetadata
+  -- ** Response data consumers
+, HTTPResponseConsumer
+, ResponseConsumer(..)
+  -- ** Memory response
+, AsMemoryResponse(..)
+  -- ** List response
+, ListResponse(..)
+  -- ** Exception types
+, XmlException(..)
+, HeaderException(..)
+, FormException(..)
+  -- ** Response deconstruction helpers
+, readHex2
+  -- *** XML
+, elContent
+, elCont
+, force
+, forceM
+, textReadInt
+, readInt
+, xmlCursorConsumer
+  -- * Query
+, SignedQuery(..)
+, NormalQuery
+, UriOnlyQuery
+, queryToHttpRequest
+, queryToUri
+  -- ** Expiration
+, TimeInfo(..)
+, AbsoluteTimeInfo(..)
+, fromAbsoluteTimeInfo
+, makeAbsoluteTimeInfo
+ -- ** Signature
+, SignatureData(..)
+, signatureData
+, SignQuery(..)
+, AuthorizationHash(..)
+, amzHash
+, signature
+, authorizationV4
+  -- ** Query construction helpers
+, queryList
+, awsBool
+, awsTrue
+, awsFalse
+, fmtTime
+, fmtRfc822Time
+, rfc822Time
+, fmtAmzTime
+, fmtTimeEpochSeconds
+, parseHttpDate
+, httpDate1
+, textHttpDate
+, iso8601UtcDate
+  -- * Transactions
+, Transaction
+, IteratedTransaction(..)
+  -- * Credentials
+, Credentials(..)
+, credentialsDefaultFile
+, credentialsDefaultKey
+, loadCredentialsFromFile
+, loadCredentialsFromEnv
+, loadCredentialsFromEnvOrFile
+, loadCredentialsDefault
+  -- * Service configuration
+, DefaultServiceConfiguration(..)
+  -- * HTTP types
+, Protocol(..)
+, defaultPort
+, Method(..)
+, httpMethod
+)
+where
 
--------------------------------------------------------------------------------
 import qualified Blaze.ByteString.Builder as Blaze
 import           Control.Applicative
 import           Control.Arrow
 import qualified Control.Exception        as E
-import qualified Control.Failure          as F
 import           Control.Monad
 import           Control.Monad.IO.Class
-import qualified Crypto.Classes           as Crypto
-import qualified Crypto.HMAC              as HMAC
-import qualified Crypto.Hash.MD5          as MD5
-import qualified Crypto.Hash.SHA1         as SHA1
-import qualified Crypto.Hash.SHA256       as SHA256
-import           Data.Attempt             (Attempt(..), FromAttempt(..))
+import           Control.Monad.Trans.Resource (ResourceT, MonadThrow (throwM))
+import           Crypto.Hash
+import           Data.Byteable
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
+import qualified Data.ByteString.Base16   as Base16
 import qualified Data.ByteString.Base64   as Base64
 import           Data.ByteString.Char8    ({- IsString -})
 import qualified Data.ByteString.Lazy     as L
 import qualified Data.ByteString.UTF8     as BU
 import           Data.Char
-import           Data.Conduit             (ResourceT, ($$+-))
+import           Data.Conduit             (($$+-))
 import qualified Data.Conduit             as C
+import qualified Data.Conduit.List        as CL
+import           Data.Default             (def)
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
-import qualified Data.Serialize           as Serialize
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
 import qualified Data.Text.IO             as T
@@ -138,12 +137,12 @@ class Loggable a where
 -- 
 -- Response forms a Writer-like monad.
 data Response m a = Response { responseMetadata :: m
-                             , responseResult :: Attempt a }
+                             , responseResult :: Either E.SomeException a }
     deriving (Show, Functor)
 
 -- | Read a response result (if it's a success response, fail otherwise).
-readResponse :: FromAttempt f => Response m a -> f a
-readResponse = fromAttempt . responseResult
+readResponse :: MonadThrow n => Response m a -> n a
+readResponse = either throwM return . responseResult
 
 -- | Read a response result (if it's a success response, fail otherwise). In MonadIO.
 readResponseIO :: MonadIO io => Response m a -> io a
@@ -157,16 +156,20 @@ tellMetadata m = Response m (return ())
 mapMetadata :: (m -> n) -> Response m a -> Response n a
 mapMetadata f (Response m a) = Response (f m) a
 
---multiResponse :: Monoid m => Response m a -> Response [m] a -> 
+--multiResponse :: Monoid m => Response m a -> Response [m] a ->
+
+instance Monoid m => Applicative (Response m) where
+    pure x = Response mempty (Right x)
+    (<*>) = ap
 
 instance Monoid m => Monad (Response m) where
-    return x = Response mempty (Success x)
-    Response m1 (Failure e) >>= _ = Response m1 (Failure e)
-    Response m1 (Success x) >>= f = let Response m2 y = f x
-                                    in Response (m1 `mappend` m2) y -- currently using First-semantics, Last SHOULD work too
+    return x = Response mempty (Right x)
+    Response m1 (Left e) >>= _ = Response m1 (Left e)
+    Response m1 (Right x) >>= f = let Response m2 y = f x
+                                  in Response (m1 `mappend` m2) y -- currently using First-semantics, Last SHOULD work too
 
-instance (Monoid m, E.Exception e) => F.Failure e (Response m) where
-    failure e = Response mempty (F.failure e)
+instance Monoid m => MonadThrow (Response m) where
+    throwM e = Response mempty (throwM e)
 
 -- | Add metadata to an 'IORef' (using 'mappend').
 tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
@@ -177,9 +180,9 @@ type HTTPResponseConsumer a = HTTP.Response (C.ResumableSource (ResourceT IO) By
                               -> ResourceT IO a
 
 -- | Class for types that AWS HTTP responses can be parsed into.
--- 
+--
 -- The request is also passed for possibly required additional metadata.
--- 
+--
 -- Note that for debugging, there is an instance for 'L.ByteString'.
 class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
     -- | Metadata associated with a response. Typically there is one
@@ -193,7 +196,11 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
 -- | Does not parse response. For debugging.
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
-    responseConsumer _ _ resp = HTTP.lbsResponse resp
+    responseConsumer _ _ resp = do
+        bss <- HTTP.responseBody resp $$+- CL.consume
+        return resp
+            { HTTP.responseBody = L.fromChunks bss
+            }
 
 -- | Class for responses that are fully loaded into memory
 class AsMemoryResponse resp where
@@ -220,6 +227,9 @@ class (SignQuery r, ResponseConsumer r a, Loggable (ResponseMetadata a))
 class Transaction r a => IteratedTransaction r a | r -> a , a -> r where
     nextIteratedRequest :: r -> a -> Maybe r
 
+-- | Signature version 4: ((region, service),(date,key))
+type V4Key = ((B.ByteString,B.ByteString),(B.ByteString,B.ByteString))
+
 -- | AWS access credentials.
 data Credentials
     = Credentials {
@@ -227,51 +237,61 @@ data Credentials
         accessKeyID :: B.ByteString
         -- | AWS Secret Access Key.
       , secretAccessKey :: B.ByteString
+        -- | Signing keys for signature version 4
+      , v4SigningKeys :: IORef [V4Key]
       }
-    deriving (Show)
+instance Show Credentials where
+    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ "}"
 
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
--- 
+--
 -- Value: /<user directory>/@/.aws-keys@
 credentialsDefaultFile :: MonadIO io => io FilePath
 credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
 
 -- | The key to be used in the access credential file that is loaded, when using 'loadCredentialsDefault'.
--- 
+--
 -- Value: @default@
 credentialsDefaultKey :: T.Text
 credentialsDefaultKey = "default"
 
 -- | Load credentials from a (text) file given a key name.
--- 
+--
 -- The file consists of a sequence of lines, each in the following format:
--- 
+--
 -- @keyName awsKeyID awsKeySecret@
 loadCredentialsFromFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromFile file key = liftIO $ do
   contents <- map T.words . T.lines <$> T.readFile file
-  return $ do 
+  ref <- newIORef []
+  return $ do
     [_key, keyID, secret] <- find (hasKey key) contents
-    return Credentials { accessKeyID = T.encodeUtf8 keyID, secretAccessKey = T.encodeUtf8 secret }
+    return Credentials { accessKeyID = T.encodeUtf8 keyID
+                       , secretAccessKey = T.encodeUtf8 secret
+                       , v4SigningKeys = ref
+                       }
       where
         hasKey _ [] = False
         hasKey k (k2 : _) = k == k2
 
--- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@ 
+-- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@
 --   (or @AWS_SECRET_ACCESS_KEY@), if possible.
 loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromEnv = liftIO $ do
   env <- getEnvironment
+  ref <- newIORef []
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
-  return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) <*> (T.encodeUtf8 . T.pack <$> secret))
+  return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) 
+                      <*> (T.encodeUtf8 . T.pack <$> secret)
+                      <*> return ref)
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
--- 
+--
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
 loadCredentialsFromEnvOrFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
-loadCredentialsFromEnvOrFile file key = 
+loadCredentialsFromEnvOrFile file key =
   do
     envcr <- loadCredentialsFromEnv
     case envcr of
@@ -280,10 +300,10 @@ loadCredentialsFromEnvOrFile file key =
 
 -- | Load credentials from environment variables if possible, or alternative from the default file with the default
 -- key name.
--- 
+--
 -- Default file: /<user directory>/@/.aws-keys@
 -- Default key name: @default@
--- 
+--
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
 loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
 loadCredentialsDefault = do
@@ -338,27 +358,36 @@ data SignedQuery
       , sqQuery :: HTTP.Query
         -- | Request date/time.
       , sqDate :: Maybe UTCTime
-        -- | Authorization string (if applicable), for @Authorization@ header..
-      , sqAuthorization :: Maybe B.ByteString
+        -- | Authorization string (if applicable), for @Authorization@ header.  See 'authorizationV4'
+      , sqAuthorization :: Maybe (IO B.ByteString)
         -- | Request body content type.
       , sqContentType :: Maybe B.ByteString
         -- | Request body content MD5.
-      , sqContentMd5 :: Maybe MD5.MD5
+      , sqContentMd5 :: Maybe (Digest MD5)
         -- | Additional Amazon "amz" headers.
       , sqAmzHeaders :: HTTP.RequestHeaders
         -- | Additional non-"amz" headers.
       , sqOtherHeaders :: HTTP.RequestHeaders
         -- | Request body (used with 'Post' and 'Put').
+#if MIN_VERSION_http_conduit(2, 0, 0)
+      , sqBody :: Maybe HTTP.RequestBody
+#else
       , sqBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
+#endif
         -- | String to sign. Note that the string is already signed, this is passed mostly for debugging purposes.
       , sqStringToSign :: B.ByteString
       }
     --deriving (Show)
 
 -- | Create a HTTP request from a 'SignedQuery' object.
-queryToHttpRequest :: SignedQuery -> HTTP.Request (C.ResourceT IO)
-queryToHttpRequest SignedQuery{..}
-    = HTTP.def {
+#if MIN_VERSION_http_conduit(2, 0, 0)
+queryToHttpRequest :: SignedQuery -> IO HTTP.Request
+#else
+queryToHttpRequest :: SignedQuery -> IO (HTTP.Request (C.ResourceT IO))
+#endif
+queryToHttpRequest SignedQuery{..} =  do
+    mauth <- maybe (return Nothing) (Just<$>) sqAuthorization
+    return $ def {
         HTTP.method = httpMethod sqMethod
       , HTTP.secure = case sqProtocol of
                         HTTP -> False
@@ -367,10 +396,10 @@ queryToHttpRequest SignedQuery{..}
       , HTTP.port = sqPort
       , HTTP.path = sqPath
       , HTTP.queryString = HTTP.renderQuery False sqQuery
-      , HTTP.requestHeaders = catMaybes [fmap (\d -> ("Date", fmtRfc822Time d)) sqDate
+      , HTTP.requestHeaders = catMaybes [ checkDate (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
-                                        , fmap (\md5 -> ("Content-MD5", Base64.encode $ Serialize.encode md5)) sqContentMd5
-                                        , fmap (\auth -> ("Authorization", auth)) sqAuthorization]
+                                        , fmap (\md5 -> ("Content-MD5", Base64.encode $ toBytes md5)) sqContentMd5
+                                        , fmap (\auth -> ("Authorization", auth)) mauth]
                               ++ sqAmzHeaders
                               ++ sqOtherHeaders
       , HTTP.requestBody = 
@@ -386,21 +415,18 @@ queryToHttpRequest SignedQuery{..}
               _         -> HTTP.RequestBodyBuilder 0 mempty
 
       , HTTP.decompress = HTTP.alwaysDecompress
-#if MIN_VERSION_http_conduit(1, 9, 0)
       , HTTP.checkStatus = \_ _ _ -> Nothing
-#else
-      , HTTP.checkStatus = \_ _ -> Nothing
-#endif
       }
     where 
+      checkDate f mb = maybe (f <$> mb) (const Nothing) $ lookup "date" sqOtherHeaders
       -- An explicitly defined content-type should override everything else.
       contentType = sqContentType `mplus` defContentType
       defContentType = case sqMethod of
                          PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
                          _ -> Nothing
 
--- | Create a URI fro a 'SignedQuery' object. 
--- 
+-- | Create a URI fro a 'SignedQuery' object.
+--
 -- Unused / incompatible fields will be silently ignored.
 queryToUri :: SignedQuery -> B.ByteString
 queryToUri SignedQuery{..}
@@ -467,7 +493,7 @@ data UriOnlyQuery
 class SignQuery request where
     -- | Additional information, like API endpoints and service-specific preferences.
     type ServiceConfiguration request :: * {- Query Type -} -> *
-    
+
     -- | Create a 'SignedQuery' from a request, additional 'Info', and 'SignatureData'.
     signQuery :: request -> ServiceConfiguration request queryType -> SignatureData -> SignedQuery
 
@@ -483,18 +509,92 @@ amzHash HmacSHA1 = "HmacSHA1"
 amzHash HmacSHA256 = "HmacSHA256"
 
 -- | Create a signature. Usually, AWS wants a specifically constructed string to be signed.
--- 
+--
 -- The signature is a HMAC-based hash of the string and the secret access key.
 signature :: Credentials -> AuthorizationHash -> B.ByteString -> B.ByteString
 signature cr ah input = Base64.encode sig
     where
       sig = case ah of
-              HmacSHA1 -> computeSig (undefined :: SHA1.SHA1)
-              HmacSHA256 -> computeSig (undefined :: SHA256.SHA256)
-      computeSig :: Crypto.Hash c d => d -> B.ByteString
-      computeSig t = Serialize.encode (HMAC.hmac' key input `asTypeOf` t)
-      key :: HMAC.MacKey c d
-      key = HMAC.MacKey (secretAccessKey cr)
+              HmacSHA1 -> computeSig SHA1
+              HmacSHA256 -> computeSig SHA256
+      computeSig :: HashAlgorithm a => a -> ByteString
+      computeSig t = toBytes (hmacAlg t (secretAccessKey cr) input)
+
+-- | Use this to create the Authorization header to set into 'sqAuthorization'.
+-- See <http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html>: you must create the
+-- canonical request as explained by Step 1 and this function takes care of Steps 2 and 3.
+authorizationV4 :: SignatureData
+                -> AuthorizationHash 
+                -> B.ByteString -- ^ region, e.g. us-east-1
+                -> B.ByteString -- ^ service, e.g. dynamodb
+                -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
+                -> B.ByteString -- ^ canonicalRequest (before hashing)
+                -> IO B.ByteString
+authorizationV4 sd ah region service headers canonicalRequest = do
+    let ref = v4SigningKeys $ signatureCredentials sd
+        date = fmtTime "%Y%m%d" $ signatureTime sd
+        mkHmac k i = case ah of
+                        HmacSHA1 -> toBytes (hmac k i :: HMAC SHA1)
+                        HmacSHA256 -> toBytes (hmac k i :: HMAC SHA256)
+        mkHash i = case ah of
+                        HmacSHA1 -> toBytes (hash i :: Digest SHA1)
+                        HmacSHA256 -> toBytes (hash i :: Digest SHA256)
+        alg = case ah of
+                    HmacSHA1 -> "AWS4-HMAC-SHA1"
+                    HmacSHA256 -> "AWS4-HMAC-SHA256"
+
+    -- Lookup existing signing key
+    allkeys <- readIORef ref
+    let mkey = case lookup (region,service) allkeys of
+                Just (d,k) | d /= date -> Nothing
+                           | otherwise -> Just k
+                Nothing -> Nothing
+
+    -- possibly create a new signing key
+    key <- case mkey of
+            Just k -> return k
+            Nothing -> atomicModifyIORef ref $ \keylist ->
+                            let secretKey = secretAccessKey $ signatureCredentials sd
+                                kDate = mkHmac ("AWS4" <> secretKey) date
+                                kRegion = mkHmac kDate region
+                                kService = mkHmac kRegion service
+                                kSigning = mkHmac kService "aws4_request"
+                                lstK = (region,service)
+                                keylist' = (lstK,(date,kSigning)) : filter ((lstK/=).fst) keylist
+                             in (keylist', kSigning)
+
+    -- now do the signature
+    let canonicalRequestHash = Base16.encode $ mkHash canonicalRequest
+        stringToSign = B.concat [ alg
+                                , "\n"
+                                , fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
+                                , "\n"
+                                , date
+                                , "/"
+                                , region
+                                , "/"
+                                , service
+                                , "/aws4_request\n"
+                                , canonicalRequestHash
+                                ]
+        sig = Base16.encode $ mkHmac key stringToSign
+
+    -- finally, return the header
+    return $ B.concat [ alg
+                      , " Credential="
+                      , accessKeyID (signatureCredentials sd)
+                      , "/"
+                      , date
+                      , "/"
+                      , region
+                      , "/"
+                      , service
+                      , "/aws4_request,"
+                      , "SignedHeaders="
+                      , headers
+                      , ",Signature="
+                      , sig
+                      ]
 
 -- | Default configuration for a specific service.
 class DefaultServiceConfiguration config where
@@ -510,9 +610,9 @@ class DefaultServiceConfiguration config where
 -- function @f@.
 -- 
 -- A dot (@.@) is interspersed between prefix and generated key.
--- 
+--
 -- Example:
--- 
+--
 -- @queryList swap \"pfx\" [(\"a\", \"b\"), (\"c\", \"d\")]@ evaluates to @[(\"pfx.b\", \"a\"), (\"pfx.d\", \"c\")]@
 -- (except with ByteString instead of String, of course).
 queryList :: (a -> [(B.ByteString, B.ByteString)]) -> B.ByteString -> [a] -> [(B.ByteString, B.ByteString)]
@@ -558,6 +658,8 @@ parseHttpDate :: String -> Maybe UTCTime
 parseHttpDate s =     p "%a, %d %b %Y %H:%M:%S GMT" s -- rfc1123-date
                   <|> p "%A, %d-%b-%y %H:%M:%S GMT" s -- rfc850-date
                   <|> p "%a %b %_d %H:%M:%S %Y" s     -- asctime-date
+                  <|> p "%Y-%m-%dT%H:%M:%S%QZ" s      -- iso 8601
+                  <|> p "%Y-%m-%dT%H:%M:%S%Q%Z" s     -- iso 8601
   where p = parseTime defaultTimeLocale
 
 -- | HTTP-date (section 3.3.1 of RFC 2616, first type - RFC1123-style)
@@ -613,28 +715,28 @@ elCont :: T.Text -> Cursor -> [String]
 elCont name = laxElement name &/ content &| T.unpack
 
 -- | Extract the first element from a parser result list, and throw an 'XmlException' if the list is empty.
-force :: F.Failure XmlException m => String -> [a] -> m a
+force :: MonadThrow m => String -> [a] -> m a
 force = Cu.force . XmlException
 
 -- | Extract the first element from a monadic parser result list, and throw an 'XmlException' if the list is empty.
-forceM :: F.Failure XmlException m => String -> [m a] -> m a
+forceM :: MonadThrow m => String -> [m a] -> m a
 forceM = Cu.forceM . XmlException
 
 -- | Read an integer from a 'T.Text', throwing an 'XmlException' on failure.
-textReadInt :: (F.Failure XmlException m, Num a) => T.Text -> m a
+textReadInt :: (MonadThrow m, Num a) => T.Text -> m a
 textReadInt s = case reads $ T.unpack s of
                   [(n,"")] -> return $ fromInteger n
-                  _        -> F.failure $ XmlException "Invalid Integer"
+                  _        -> throwM $ XmlException "Invalid Integer"
 
 -- | Read an integer from a 'String', throwing an 'XmlException' on failure.
-readInt :: (F.Failure XmlException m, Num a) => String -> m a
+readInt :: (MonadThrow m, Num a) => String -> m a
 readInt s = case reads s of
               [(n,"")] -> return $ fromInteger n
-              _        -> F.failure $ XmlException "Invalid Integer"
+              _        -> throwM $ XmlException "Invalid Integer"
 
 -- | Create a complete 'HTTPResponseConsumer' from a simple function that takes a 'Cu.Cursor' to XML in the response
 -- body.
--- 
+--
 -- This function is highly recommended for any services that parse relatively short XML responses. (If status and response
 -- headers are required, simply take them as function parameters, and pass them through to this function.)
 xmlCursorConsumer ::
@@ -648,5 +750,5 @@ xmlCursorConsumer parse metadataRef res
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata
          case x of
-           Failure err -> liftIO $ C.monadThrow err
-           Success v   -> return v
+           Left err -> liftIO $ throwM err
+           Right v  -> return v

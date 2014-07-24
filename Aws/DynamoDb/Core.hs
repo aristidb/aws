@@ -7,17 +7,6 @@
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 
------------------------------------------------------------------------------
--- |
--- Module      :  Aws.DynaboDb.Core
--- Copyright   :  Ozgun Ataman, Soostone Inc.
--- License     :  BSD3
---
--- Maintainer  :  Ozgun Ataman <oz@soostone.com>
--- Stability   :  experimental
---
-----------------------------------------------------------------------------
-
 module Aws.DynamoDb.Core
     (
     -- * Configuration & Regions
@@ -66,48 +55,39 @@ module Aws.DynamoDb.Core
 
 
 -------------------------------------------------------------------------------
-import qualified Blaze.ByteString.Builder       as Blaze
-import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import           Control.Applicative
-import           Control.Arrow
-import qualified Control.Exception              as C
+import qualified Control.Exception            as C
 import           Control.Monad
-import           Control.Monad.IO.Class
-import           Crypto.Hash                    (Digest, SHA256,
-                                                 digestToHexByteString, hash)
-import qualified Crypto.Hash.SHA256             as SHA256
-import           Crypto.HMAC                    (MacKey (..), hmac')
-import           Data.Aeson                     (FromJSON (..), ToJSON (..),
-                                                 Value (..), json', object,
-                                                 parseJSON, toJSON, (.:), (.=))
-import qualified Data.Aeson                     as A
-import           Data.Aeson.Types               (parseEither)
-import qualified Data.ByteString.Base16         as Base16
-import qualified Data.ByteString.Base64         as Base64
-import qualified Data.ByteString.Char8          as B
-import qualified Data.ByteString.Lazy.Char8     as LB
-import           Data.CaseInsensitive           (mk)
+import           Control.Monad.Trans
+import           Control.Monad.Trans.Resource (throwM)
+import           Crypto.Hash
+import           Data.Aeson                   (FromJSON (..), ToJSON (..),
+                                               Value (..), object, parseJSON,
+                                               toJSON, (.:), (.=))
+import qualified Data.Aeson                   as A
+import           Data.Aeson.Types             (parseEither)
+import           Data.Byteable
+import qualified Data.ByteString.Base16       as Base16
+import qualified Data.ByteString.Base64       as Base64
+import qualified Data.ByteString.Char8        as B
 import           Data.Conduit
-import           Data.Conduit.Attoparsec        (sinkParser)
-import           Data.Conduit.List              (consume)
+import           Data.Conduit.Attoparsec      (sinkParser)
+import           Data.Int
 import           Data.IORef
-import           Data.List
-import qualified Data.Map                       as M
+import qualified Data.Map                     as M
 import           Data.Maybe
 import           Data.Monoid
-import           Data.Ord
-import qualified Data.Serialize                 as Ser
-import qualified Data.Set                       as S
-import qualified Data.Text                      as T
-import qualified Data.Text.Encoding             as T
-import           Data.Time
+import           Data.Scientific
+import qualified Data.Serialize               as Ser
+import qualified Data.Set                     as S
+import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as T
 import           Data.Typeable
 -- import           Debug.Trace
 import           Network.HTTP.Conduit
-import qualified Network.HTTP.Conduit           as HTTP
-import qualified Network.HTTP.Types             as HTTP
+import qualified Network.HTTP.Conduit         as HTTP
+import qualified Network.HTTP.Types           as HTTP
 import           Safe
-import           System.Locale
 -------------------------------------------------------------------------------
 import           Aws.Core
 -------------------------------------------------------------------------------
@@ -122,20 +102,20 @@ class DVal a where
 
 
 instance DVal Int where
-    toDVal i = DInt (fromIntegral i)
-    fromDVal (DInt i) = Just $ fromIntegral i
+    toDVal i = DNum (fromIntegral i)
+    fromDVal (DNum i) = toIntegral i
     fromDVal _ = Nothing
 
 
 instance DVal Integer where
-    toDVal i = DInt i
-    fromDVal (DInt i) = Just i
+    toDVal i = DNum (fromIntegral i)
+    fromDVal (DNum i) = toIntegral i
     fromDVal _ = Nothing
 
 
 instance DVal Double where
-    toDVal i = DDouble i
-    fromDVal (DDouble i) = Just i
+    toDVal i = DNum (fromFloatDigits i)
+    fromDVal (DNum i) = Just (toRealFloat i)
     fromDVal _ = Nothing
 
 
@@ -158,33 +138,31 @@ instance DVal (S.Set T.Text) where
 
 
 instance DVal [Double] where
-    toDVal i = DDoubleSet $ S.fromList i
-    fromDVal (DDoubleSet x) = Just $ S.toList x
+    toDVal i = DNumSet $ S.fromList $ map fromFloatDigits i
+    fromDVal (DNumSet x) = Just $ map toRealFloat $ S.toList x
     fromDVal _ = Nothing
 
 
 instance DVal (S.Set Double) where
-    toDVal i = DDoubleSet i
-    fromDVal (DDoubleSet x) = Just x
+    toDVal i = DNumSet $ S.map fromFloatDigits i
+    fromDVal (DNumSet x) = Just $ S.map toRealFloat x
     fromDVal _ = Nothing
 
 
 instance DVal [Int] where
-    toDVal i = DIntSet $ S.fromList $ map fromIntegral i
-    fromDVal (DIntSet x) = Just $ map fromIntegral $ S.toList x
+    toDVal i = DNumSet $ S.fromList $ map fromIntegral i
+    fromDVal (DNumSet x) = sequence $ map toIntegral $ S.toList x
     fromDVal _ = Nothing
 
 
 instance DVal (S.Set Int) where
-    toDVal i = DIntSet $ S.map fromIntegral i
-    fromDVal (DIntSet x) = Just $ S.map fromIntegral x
+    toDVal i = DNumSet $ S.map fromIntegral i
+    fromDVal ds@(DNumSet _) = S.fromList <$> fromDVal ds
     fromDVal _ = Nothing
 
 
-instance DVal (S.Set Integer) where
-    toDVal i = DIntSet i
-    fromDVal (DIntSet x) = Just x
-    fromDVal _ = Nothing
+toIntegral :: (Integral a, RealFrac a1) => a1 -> Maybe a
+toIntegral sc = Just $ floor sc
 
 
 -- | Type wrapper for binary data to be written to DynamoDB. Wrap any
@@ -210,12 +188,10 @@ mkVal = toDVal
 -- | A value as defined/recognized by DynamoDB. We split into more
 -- types to have this work more natively with Haskell.
 data DValue
-    = DInt Integer
-    | DDouble Double
+    = DNum Scientific
     | DString T.Text
     | DBinary B.ByteString
-    | DIntSet (S.Set Integer)
-    | DDoubleSet (S.Set Double)
+    | DNumSet (S.Set Scientific)
     | DStringSet (S.Set T.Text)
     | DBinSet (S.Set B.ByteString)
     deriving (Eq,Show,Read,Ord)
@@ -308,14 +284,11 @@ instance ToJSON Item where
 showT :: Show a => a -> T.Text
 showT = T.pack . show
 
-
 instance ToJSON DValue where
-    toJSON (DInt i) = object ["N" .= showT i]
-    toJSON (DDouble i) = object ["N" .= showT i]
+    toJSON (DNum i) = object ["N" .= showT i]
     toJSON (DString i) = object ["S" .= i]
     toJSON (DBinary i) = object ["B" .= (T.decodeUtf8 $ Base64.encode i)]
-    toJSON (DIntSet i) = object ["NS" .= map showT (S.toList i)]
-    toJSON (DDoubleSet i) = object ["NS" .= map showT (S.toList i)]
+    toJSON (DNumSet i) = object ["NS" .= map showT (S.toList i)]
     toJSON (DStringSet i) = object ["SS" .= S.toList i]
     toJSON (DBinSet i) = object ["BS" .= map (T.decodeUtf8 . Base64.encode) (S.toList i)]
     toJSON x = error $ "aws: bug: DynamoDB can't handle " ++ show x
@@ -325,19 +298,21 @@ instance FromJSON DValue where
     parseJSON o = do
       (obj :: [(T.Text, Value)]) <- M.toList `liftM` parseJSON o
       case obj of
-        [("N", numStr)] -> parseNum numStr
+        [("N", numStr)] -> DNum <$> parseScientific numStr
         [("S", str)] -> DString <$> parseJSON str
         [("B", bin)] -> do
             res <- (Base64.decode . T.encodeUtf8) <$> parseJSON bin
             either fail (return . DBinary) res
-        [("NS", s)] -> (DIntSet <$> parseJSON s) <|> (DDoubleSet <$> parseJSON s)
-        [("SS", s)] -> undefined
-        [("BS", s)] -> undefined
+        [("NS", s)] -> do xs <- mapM parseScientific =<< parseJSON s
+                          return $ DNumSet $ S.fromList xs
+        [("SS", _)] -> undefined
+        [("BS", _)] -> undefined
         x -> fail $ "aws: unknown dynamodb value: " ++ show x
 
       where
-        parseNum str =
-          (DInt <$> parseJSON str) <|> (DDouble <$> parseJSON str)
+        parseScientific str =
+            ((fromIntegral :: Int64 -> Scientific) <$> parseJSON str) <|>
+            ((fromFloatDigits :: Double -> Scientific) <$> parseJSON str)
 
 
 instance ToJSON PrimaryKey where
@@ -362,6 +337,7 @@ data DdbErrCode
     | InternalFailure
     | InternalServerError
     | ServiceUnavailableException
+    | UnknownDynamoError T.Text
     deriving (Read,Show,Eq,Typeable)
 
 
@@ -447,105 +423,64 @@ ddbHttps :: Region -> DdbConfiguration NormalQuery
 ddbHttps endpoint = DdbConfiguration endpoint HTTPS 3
 
 
-
-ddbSignQuery :: A.ToJSON a
-             => a
-             -- ^ The request/payload
-             -> B.ByteString
-             -- ^ Targeted action
-             -> DdbConfiguration qt
-             -- ^ Configuration
-             -> SignatureData
-             -- ^ signature metadata
-             -> SignedQuery
-ddbSignQuery msg target conf sd@SignatureData{..} = SignedQuery {
-        sqMethod = method
-      , sqProtocol = ddbcProtocol conf
+ddbSignQuery
+    :: A.ToJSON a
+    => B.ByteString
+    -> a
+    -> DdbConfiguration qt
+    -> SignatureData
+    -> SignedQuery
+ddbSignQuery target body di sd
+    = SignedQuery {
+        sqMethod = Post
+      , sqProtocol = ddbcProtocol di
       , sqHost = host
-      , sqPort = defaultPort (ddbcProtocol conf)
-      , sqPath = canUri
+      , sqPort = defaultPort (ddbcProtocol di)
+      , sqPath = "/"
       , sqQuery = []
-      , sqDate = Just signatureTime
-      , sqAuthorization = Just authHeader
+      , sqDate = Just $ signatureTime sd
+      , sqAuthorization = Just auth
       , sqContentType = Just "application/x-amz-json-1.0"
       , sqContentMd5 = Nothing
-      , sqAmzHeaders = allHeaders
+      , sqAmzHeaders = [ ("X-Amz-Target", dyApiVersion <> target)
+                       , ("X-Amz-Date", sigTime)
+                       ]
       , sqOtherHeaders = []
-      , sqBody = Just $ RequestBodyBS payload
-      , sqStringToSign = strToSign
+      , sqBody = Just $ HTTP.RequestBodyLBS bodyLBS
+      , sqStringToSign = canonicalRequest
       }
     where
-      allHeaders = filter ((/= "content-type") . fst) $ map (first mk) headers
 
-      Region{..} = ddbcRegion conf
-      host = rUri
+        Region{..} = ddbcRegion di
+        host = rUri
 
-      method = PostQuery
-      canUri = "/"
-      canQuery = ""
-      headers = sortBy (comparing fst)
-        [ ("host", host)
-        , ("content-type", "application/x-amz-json-1.0")
-        , ("x-amz-date", rqDateTime)
-        , ("x-amz-target", amzTarget)
-        ]
+        sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
 
-      -- | Use unlines here because we want a newline per header, even
-      -- on the last in the list.
-      canHeaders = B.unlines $ map mkCanHeader headers
-      mkCanHeader (h,v) = B.concat [h, ":", v]
+        bodyLBS = A.encode body
+        bodyHash = Base16.encode $ toBytes (hashlazy bodyLBS :: Digest SHA256)
 
-      canReq = B.intercalate "\n"
-        [ httpMethod method
-        , canUri
-        , canQuery
-        , canHeaders
-        , signedHeaders
-        , hpayload ]
+        canonicalRequest = B.concat [ "POST\n"
+                                    , "/\n"
+                                    , "\n" -- query string
+                                    , "content-type:application/x-amz-json-1.0\n"
+                                    , "host:"
+                                    , host
+                                    , "\n"
+                                    , "x-amz-date:"
+                                    , sigTime
+                                    , "\n"
+                                    , "x-amz-target:"
+                                    , dyApiVersion
+                                    , target
+                                    , "\n"
+                                    , "\n" -- end headers
+                                    , "content-type;host;x-amz-date;x-amz-target\n"
+                                    , bodyHash
+                                    ]
 
-      payload = B.concat . LB.toChunks $ A.encode msg
-      hpayload = digestToHexByteString $ (hash payload :: Digest SHA256)
-
-      hCanReq = -- trace ("CanReq: " ++ show canReq) $
-                digestToHexByteString $ (hash canReq :: Digest SHA256)
-
-      algo = "AWS4-HMAC-SHA256"
-
-      -- | Everybody needs date in a different format!
-      rqDateTime = B.pack $ formatTime defaultTimeLocale "%Y%m%dT%H%M%SZ" signatureTime
-      credDate = B.pack $ formatTime defaultTimeLocale "%Y%m%d" signatureTime
-
-      credScope = B.intercalate "/" [credDate, rName, "dynamodb", "aws4_request"]
-      strToSign = B.intercalate "\n" [algo, rqDateTime, credScope, hCanReq]
-
-      hmac'' :: B.ByteString -> B.ByteString -> B.ByteString
-      hmac'' k v = Ser.encode $ hmac' f v
-          where
-            f :: MacKey SHA256.Ctx SHA256.SHA256
-            f = MacKey k
-
-      Credentials{..} = signatureCredentials
-      kSecret = secretAccessKey
-      kDate = hmac'' (B.concat ["AWS4", kSecret]) credDate
-      kRegion = hmac'' kDate rName
-      kService = hmac'' kRegion "dynamodb"
-
-      kSigning :: B.ByteString
-      kSigning = hmac'' kService "aws4_request"
-
-      sig :: B.ByteString
-      sig = -- trace ("StrToSign: " ++ show strToSign) $
-            Base16.encode $ hmac'' kSigning strToSign
-
-      amzTarget = B.concat ["DynamoDB_20111205.", target]
-      cred = B.intercalate "/" [accessKeyID, credScope]
-      authHeader = B.concat
-          [ algo, " ", "Credential=", cred, ","
-          , "SignedHeaders=", signedHeaders, ","
-          , "Signature=", sig]
-      signedHeaders = B.intercalate ";" $ map fst headers
-
-
+        auth = authorizationV4 sd HmacSHA256 rName "dynamodb"
+                               "content-type;host;x-amz-date;x-amz-target"
+                               canonicalRequest
 
 data AmazonError = AmazonError {
       aeType    :: T.Text
@@ -560,56 +495,50 @@ instance FromJSON AmazonError where
 
 
 
-ddbResponseConsumer :: (MonadIO m, MonadThrow m, FromJSON b)
-                    => IORef DdbResponse
-                    -> HTTP.Response (ResumableSource m B.ByteString)
-                    -> m b
+
+-------------------------------------------------------------------------------
+ddbResponseConsumer :: A.FromJSON a => IORef DdbResponse -> HTTPResponseConsumer a
 ddbResponseConsumer ref resp = do
+    val <- HTTP.responseBody resp $$+- sinkParser A.json'
     case statusCode of
-      200 -> rSuccess
-      400 -> rError
-      404 -> do
-        body <- responseBody resp $$+- consume
-        error (B.unpack $ B.concat body)
-      413 -> rError
-      500 -> rError
-      x -> error $ "aws: unknown return code: " ++ show x
+      200 -> rSuccess val
+      _   -> rError val
+  where
 
-    where
-      header = fmap T.decodeUtf8 . flip lookup (responseHeaders resp)
-      amzId = header "x-amzn-RequestId"
-      amzCrc = header "x-amz-crc32"
-      meta = DdbResponse amzCrc amzId
+    header = fmap T.decodeUtf8 . flip lookup (responseHeaders resp)
+    amzId = header "x-amzn-RequestId"
+    amzCrc = header "x-amz-crc32"
+    meta = DdbResponse amzCrc amzId
+    tellMeta = liftIO $ tellMetadataRef ref meta
 
-      rSuccess = do
-        res <- responseBody resp $$+- sinkParser json'
-        let res' = parseEither parseJSON res
-        case res' of
-          Left e -> error $ "aws: Could not parse successful result from DynamoDB: " ++ e
-          Right res'' -> do
-            liftIO $ tellMetadataRef ref meta
-            return res''
+    rSuccess val =
+      case A.fromJSON val of
+        A.Success a -> return a
+        A.Error err -> do
+            tellMeta
+            throwM $ DdbError statusCode InternalFailure (T.pack err)
 
-      rError = do
-        err <- responseBody resp $$+- sinkParser json'
-        let err' = parseEither parseJSON err
-        case err' of
-          Left e -> error "aws: Could not parse error message from DynamoDB"
-          Right err'' -> do
-            let e = T.drop 1 . snd . T.breakOn "#" $ aeType err''
-                ddbErr = DdbError statusCode (convErr e) (aeMessage err'')
-            monadThrow ddbErr
+    rError val =
+      case parseEither parseJSON val of
+        Left e -> throwM $ DdbError statusCode InternalFailure (T.pack e)
+        Right err'' -> do
+          let e = T.drop 1 . snd . T.breakOn "#" $ aeType err''
+              ddbErr = DdbError statusCode (convErr e) (aeMessage err'')
+          tellMeta
+          throwM ddbErr
 
-      convErr txt =
-          let txt' = T.unpack txt
-          in case readMay txt' of
-               Just e -> e
-               Nothing -> error txt'
+    convErr txt =
+        let txt' = T.unpack txt
+        in case readMay txt' of
+             Just e -> e
+             Nothing -> UnknownDynamoError txt
 
-      HTTP.Status{..} = responseStatus resp
+    HTTP.Status{..} = responseStatus resp
 
 
 
+
+-------------------------------------------------------------------------------
 type Expects = [Expect]
 
 
@@ -634,3 +563,7 @@ instance ToJSON Expects where
               where
                 sub = maybe [] (return . ("Value" .= )) expectVal ++
                       ["Exists" .= expectExists]
+
+
+dyApiVersion :: B.ByteString
+dyApiVersion = "DynamoDB_20120810."

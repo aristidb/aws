@@ -22,8 +22,8 @@ import           Aws.Core
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
-import qualified Control.Failure                as F
 import           Control.Monad                  (mplus)
+import           Control.Monad.Trans.Resource   (throwM)
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Base64         as B64
 import           Data.ByteString.Char8          ({-IsString-})
@@ -128,7 +128,7 @@ sesResponseConsumer inner metadataRef resp = xmlCursorConsumer parse metadataRef
       fromError cursor = do
         errCode    <- force "Missing Error Code"    $ cursor $// elContent "Code"
         errMessage <- force "Missing Error Message" $ cursor $// elContent "Message"
-        F.failure $ SesError (HTTP.responseStatus resp) errCode errMessage
+        throwM $ SesError (HTTP.responseStatus resp) errCode errMessage
 
 class SesAsQuery a where
     -- | Write a data type as a list of query parameters.

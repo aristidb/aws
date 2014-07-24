@@ -5,9 +5,6 @@
 The ~aws~ package attempts to provide support for using Amazon Web Services like S3 (storage), SQS (queuing) and others
 to Haskell programmers. The ultimate goal is to support all Amazon Web Services.
 
-(If you are viewing this README online, please note that you can find the README
-for the latest stable version at https://github.com/aristidb/aws/blob/stable/README.org).
-
 * Installation
 
 Make sure you have a recent GHC installed, as well as cabal-install, and installation should be as easy as:
@@ -91,8 +88,61 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
+** 0.9 series
+
+- 0.9.1
+  - Support for multi-page S3 GetBucket requests
+  - S3 GLACIER support
+  - Applicative instance for Response to conform to the Applicative-Monad Proposal
+  - Compatibility with transformers 0.4
+
+- 0.9
+  - Interface changes:
+    - attempt and failure were deprecated, remove
+    - switch to new cryptohash interface
+  - updated version bounds of conduit and xml-conduit
+
+** 0.8 series
+
+- 0.8.6
+  - move Instance metadata functions out of ResourceT to remove problem with exceptions-0.5
+    (this makes a fresh install of aws on a clean system possible again)
+
+- 0.8.5
+  - compatibility with case-insensitive 1.2
+  - support for V4 signatures
+  - experimental support for DynamoDB
+
+- 0.8.4
+  - compatibility with http-conduit 2.0
+
+- 0.8.3
+  - compatibility with cryptohash 0.11
+  - experimental IAM support
+
+- 0.8.2
+  - compatibility with cereal 0.4.x
+
+- 0.8.1
+  - compatibility with case-insensitive 1.1
+
+- 0.8.0
+  - S3, SQS: support for US-West2 (#58)
+  - S3: GetObject now has support for Content-Range (#22, #50)
+  - S3: GetBucket now supports the "IsTruncated" flag (#39)
+  - S3: PutObject now supports web page redirects (#46)
+  - S3: support for (multi-object) DeleteObjects (#47, #56)
+  - S3: HeadObject now uses an actual HEAD request (#53)
+  - S3: fixed signing issues for GetObject call (#54)
+  - SES: support for many more operations (#65, #66, #70, #71, #72, #74)
+  - SES: SendRawEmail now correctly encodes destinations and allows multiple destinations (#73)
+  - EC2: support fo Instance metadata (#37)
+  - Core: queryToHttpRequest allows overriding "Date" for the benefit of Chris Dornan's Elastic Transcoder bindings (#77)
+
 ** 0.7 series
 
+- 0.7.6.4
+  - CryptoHash update
 - 0.7.6.3
   - In addition to supporting http-conduit 1.9, it would seem nice to support conduit 1.0. Previously slipped through the radar.
 
@@ -179,11 +229,14 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 | Name               | Github       | E-Mail                    | Company                | Components    |
 |--------------------+--------------+---------------------------+------------------------+---------------|
-| Aristid Breitkreuz | [[https://github.com/aristidb][aristidb]]     | aristidb@gmail.com        | -                      | Maintainer    |
+| Abhinav Gupta      | [[https://github.com/abhinav][abhinav]]  | mail@abhinavg.net | -  | IAM, SES      |
+| Aristid Breitkreuz | [[https://github.com/aristidb][aristidb]]     | aristidb@gmail.com        | -                      | Co-Maintainer    |
 | Bas van Dijk       | [[https://github.com/basvandijk][basvandijk]]   | v.dijk.bas@gmail.com      | [[http://erudify.ch][Erudify AG]]             | S3            |
 | David Vollbracht   | [[https://github.com/qxjit][qxjit]]        |                           |                        |               |
 | Felipe Lessa       | [[https://github.com/meteficha][meteficha]]    | felipe.lessa@gmail.com    | currently secret       | Core, S3, SES |
 | Nathan Howell      | [[https://github.com/NathanHowell][NathanHowell]] | nhowell@alphaheavy.com    | [[http://www.alphaheavy.com][Alpha Heavy Industries]] | S3            |
 | Ozgun Ataman       | [[https://github.com/ozataman][ozataman]]     | ozgun.ataman@soostone.com | [[http://soostone.com][Soostone Inc]]           | Core, S3      |
 | Steve Severance    | [[https://github.com/sseveran][sseveran]]     | sseverance@alphaheavy.com | [[http://www.alphaheavy.com][Alpha Heavy Industries]] | S3, SQS       |
-| John Wiegley       | [[https://github.com/jwiegley][jwiegley]]     | johnw@fpcomplete.com      | [[http://fpcomplete.com][FP Complete]]            | S3            |
+| John Wiegley       | [[https://github.com/jwiegley][jwiegley]]     | johnw@fpcomplete.com      | [[http://fpcomplete.com][FP Complete]]            | Co-Maintainer, S3            |
+| Chris Dornan | [[https://github.com/cdornan][cdornan]] | chris.dornan@irisconnect.co.uk | [[http://irisconnect.co.uk][Iris Connect]] | Core |
+| John Lenz | [[https://github/com/wuzzeb][wuzzeb]] | | | DynamoDB, Core |

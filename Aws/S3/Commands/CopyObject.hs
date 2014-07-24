@@ -5,7 +5,7 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow (second)
-import           Control.Failure
+import           Control.Monad.Trans.Resource (throwM)
 import qualified Data.CaseInsensitive as CI
 import           Data.Maybe
 import qualified Data.Text as T
@@ -93,7 +93,7 @@ instance ResponseConsumer CopyObject CopyObjectResponse where
         return $ CopyObjectResponse vid lastMod etag
       where parse el = do
               let parseHttpDate' x = case parseTime defaultTimeLocale iso8601UtcDate x of
-                                       Nothing -> failure $ XmlException ("Invalid Last-Modified " ++ x)
+                                       Nothing -> throwM $ XmlException ("Invalid Last-Modified " ++ x)
                                        Just y -> return y
               lastMod <- forceM "Missing Last-Modified" $ el $/ elContent "LastModified" &| (parseHttpDate' . T.unpack)
               etag <- force "Missing ETag" $ el $/ elContent "ETag"

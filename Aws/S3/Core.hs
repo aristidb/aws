@@ -1,16 +1,20 @@
+{-# LANGUAGE CPP #-}
 module Aws.S3.Core where
 
 import           Aws.Core
 import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Data.Attempt                   (Attempt(..))
+import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
+import           Crypto.Hash
+import           Data.Byteable
 import           Data.Conduit                   (($$+-))
 import           Data.Function
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
+import           Control.Applicative            ((<|>))
 import           Data.Time
 import           Data.Typeable
 import           System.Locale
@@ -18,14 +22,10 @@ import           Text.XML.Cursor                (($/), (&|))
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
-import qualified Control.Failure                as F
-import qualified Crypto.Hash.MD5                as MD5
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.ByteString.Base64         as Base64
 import qualified Data.CaseInsensitive           as CI
-import qualified Data.Conduit                   as C
-import qualified Data.Serialize                 as Serialize
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import qualified Network.HTTP.Conduit           as HTTP
@@ -33,8 +33,8 @@ import qualified Network.HTTP.Types             as HTTP
 import qualified Text.XML                       as XML
 import qualified Text.XML.Cursor                as Cu
 
-data S3Authorization 
-    = S3AuthorizationHeader 
+data S3Authorization
+    = S3AuthorizationHeader
     | S3AuthorizationQuery
     deriving (Show)
 
@@ -50,6 +50,7 @@ data S3Configuration qt
       , s3Endpoint :: B.ByteString
       , s3RequestStyle :: RequestStyle
       , s3Port :: Int
+      , s3ServerSideEncryption :: Maybe ServerSideEncryption
       , s3UseUri :: Bool
       , s3DefaultExpiry :: NominalDiffTime
       }
@@ -57,7 +58,7 @@ data S3Configuration qt
 
 instance DefaultServiceConfiguration (S3Configuration NormalQuery) where
   defServiceConfig = s3 HTTPS s3EndpointUsClassic False
-  
+
   debugServiceConfig = s3 HTTP s3EndpointUsClassic False
 
 instance DefaultServiceConfiguration (S3Configuration UriOnlyQuery) where
@@ -79,16 +80,20 @@ s3EndpointEu = "s3-eu-west-1.amazonaws.com"
 s3EndpointApSouthEast :: B.ByteString
 s3EndpointApSouthEast = "s3-ap-southeast-1.amazonaws.com"
 
+s3EndpointApSouthEast2 :: B.ByteString
+s3EndpointApSouthEast2 = "s3-ap-southeast-2.amazonaws.com"
+
 s3EndpointApNorthEast :: B.ByteString
 s3EndpointApNorthEast = "s3-ap-northeast-1.amazonaws.com"
 
 s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration qt
-s3 protocol endpoint uri 
-    = S3Configuration { 
+s3 protocol endpoint uri
+    = S3Configuration {
          s3Protocol = protocol
        , s3Endpoint = endpoint
        , s3RequestStyle = BucketStyle
        , s3Port = defaultPort protocol
+       , s3ServerSideEncryption = Nothing
        , s3UseUri = uri
        , s3DefaultExpiry = 15*60
        }
@@ -134,10 +139,14 @@ data S3Query
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QContentType :: Maybe B.ByteString
-      , s3QContentMd5 :: Maybe MD5.MD5
+      , s3QContentMd5 :: Maybe (Digest MD5)
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
+#if MIN_VERSION_http_conduit(2, 0, 0)
+      , s3QRequestBody :: Maybe HTTP.RequestBody
+#else
       , s3QRequestBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
+#endif
       }
 
 instance Show S3Query where
@@ -189,7 +198,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       sig = signature signatureCredentials HmacSHA1 stringToSign
       stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
                        [[Blaze.copyByteString $ httpMethod s3QMethod]
-                       , [maybe mempty (Blaze.copyByteString . Base64.encode . Serialize.encode) s3QContentMd5]
+                       , [maybe mempty (Blaze.copyByteString . Base64.encode . toBytes) s3QContentMd5]
                        , [maybe mempty Blaze.copyByteString s3QContentType]
                        , [Blaze.copyByteString $ case ti of
                                                    AbsoluteTimestamp time -> fmtRfc822Time time
@@ -199,7 +208,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
                        ]
           where amzHeader (k, v) = Blaze.copyByteString (CI.foldedCase k) `mappend` Blaze8.fromChar ':' `mappend` Blaze.copyByteString v
       (authorization, authQuery) = case ti of
-                                 AbsoluteTimestamp _ -> (Just $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
+                                 AbsoluteTimestamp _ -> (Just $ return $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
                                  AbsoluteExpires time -> (Nothing, HTTP.toQuery $ makeAuthQuery time)
       makeAuthQuery time
           = [("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)
@@ -238,10 +247,10 @@ s3ErrorResponseConsumer resp
     = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
-           Success err      -> C.monadThrow err
-           Failure otherErr -> C.monadThrow otherErr
+           Right err      -> throwM err
+           Left otherErr  -> throwM otherErr
     where
-      parseError :: Cu.Cursor -> Attempt S3Error
+      parseError :: Cu.Cursor -> Either C.SomeException S3Error
       parseError root = do code <- force "Missing error Code" $ root $/ elContent "Code"
                            message <- force "Missing error Message" $ root $/ elContent "Message"
                            let resource = listToMaybe $ root $/ elContent "Resource"
@@ -269,7 +278,7 @@ data UserInfo
       }
     deriving (Show)
 
-parseUserInfo :: F.Failure XmlException m => Cu.Cursor -> m UserInfo
+parseUserInfo :: MonadThrow m => Cu.Cursor -> m UserInfo
 parseUserInfo el = do id_ <- force "Missing user ID" $ el $/ elContent "ID"
                       displayName <- force "Missing user DisplayName" $ el $/ elContent "DisplayName"
                       return UserInfo { userId = id_, userDisplayName = displayName }
@@ -296,16 +305,30 @@ writeCannedAcl AclLogDeliveryWrite       = "log-delivery-write"
 data StorageClass
     = Standard
     | ReducedRedundancy
+    | Glacier
     deriving (Show)
 
-parseStorageClass :: F.Failure XmlException m => T.Text -> m StorageClass
+parseStorageClass :: MonadThrow m => T.Text -> m StorageClass
 parseStorageClass "STANDARD"           = return Standard
 parseStorageClass "REDUCED_REDUNDANCY" = return ReducedRedundancy
-parseStorageClass s = F.failure . XmlException $ "Invalid Storage Class: " ++ T.unpack s
+parseStorageClass "GLACIER"            = return Glacier
+parseStorageClass s = throwM . XmlException $ "Invalid Storage Class: " ++ T.unpack s
 
 writeStorageClass :: StorageClass -> T.Text
 writeStorageClass Standard          = "STANDARD"
 writeStorageClass ReducedRedundancy = "REDUCED_REDUNDANCY"
+writeStorageClass Glacier           = "GLACIER"
+
+data ServerSideEncryption
+    = AES256
+    deriving (Show)
+
+parseServerSideEncryption :: MonadThrow m => T.Text -> m ServerSideEncryption
+parseServerSideEncryption "AES256" = return AES256
+parseServerSideEncryption s = throwM . XmlException $ "Invalid Server Side Encryption: " ++ T.unpack s
+
+writeServerSideEncryption :: ServerSideEncryption -> T.Text
+writeServerSideEncryption AES256 = "AES256"
 
 type Bucket = T.Text
 
@@ -337,11 +360,12 @@ data ObjectInfo
       }
     deriving (Show)
 
-parseObjectInfo :: F.Failure XmlException m => Cu.Cursor -> m ObjectInfo
+parseObjectInfo :: MonadThrow m => Cu.Cursor -> m ObjectInfo
 parseObjectInfo el
     = do key <- force "Missing object Key" $ el $/ elContent "Key"
-         let time s = case parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s of
-                        Nothing -> F.failure $ XmlException "Invalid time"
+         let time s = case (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
+                           (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
+                        Nothing -> throwM $ XmlException "Invalid time"
                         Just v -> return v
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time
          eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
@@ -367,11 +391,11 @@ data ObjectMetadata
 --      , omExpiration           :: Maybe (UTCTime, T.Text)
       , omUserMetadata         :: [(T.Text, T.Text)]
       , omMissingUserMetadata  :: Maybe T.Text
-      , omServerSideEncryption :: Maybe T.Text
+      , omServerSideEncryption :: Maybe ServerSideEncryption
       }
     deriving (Show)
 
-parseObjectMetadata :: F.Failure HeaderException m => HTTP.ResponseHeaders -> m ObjectMetadata
+parseObjectMetadata :: MonadThrow m => HTTP.ResponseHeaders -> m ObjectMetadata
 parseObjectMetadata h = ObjectMetadata
                         `liftM` deleteMarker
                         `ap` etag
@@ -380,36 +404,40 @@ parseObjectMetadata h = ObjectMetadata
 --                        `ap` expiration
                         `ap` return userMetadata
                         `ap` return missingUserMetadata
-                        `ap` return serverSideEncryption
+                        `ap` serverSideEncryption
   where deleteMarker = case B8.unpack `fmap` lookup "x-amz-delete-marker" h of
                          Nothing -> return False
                          Just "true" -> return True
                          Just "false" -> return False
-                         Just x -> F.failure $ HeaderException ("Invalid x-amz-delete-marker " ++ x)
+                         Just x -> throwM $ HeaderException ("Invalid x-amz-delete-marker " ++ x)
         etag = case T.decodeUtf8 `fmap` lookup "ETag" h of
                  Just x -> return x
-                 Nothing -> F.failure $ HeaderException "ETag missing"
+                 Nothing -> throwM $ HeaderException "ETag missing"
         lastModified = case B8.unpack `fmap` lookup "Last-Modified" h of
                          Just ts -> case parseHttpDate ts of
                                       Just t -> return t
-                                      Nothing -> F.failure $ HeaderException ("Invalid Last-Modified: " ++ ts)
-                         Nothing -> F.failure $ HeaderException "Last-Modified missing"
+                                      Nothing -> throwM $ HeaderException ("Invalid Last-Modified: " ++ ts)
+                         Nothing -> throwM $ HeaderException "Last-Modified missing"
         versionId = T.decodeUtf8 `fmap` lookup "x-amz-version-id" h
         -- expiration = return undefined
         userMetadata = flip mapMaybe ht $
                        \(k, v) -> do i <- T.stripPrefix "x-amz-meta-" k
                                      return (i, v)
         missingUserMetadata = T.decodeUtf8 `fmap` lookup "x-amz-missing-meta" h
-        serverSideEncryption = T.decodeUtf8 `fmap` lookup "x-amz-server-side-encryption" h
+        serverSideEncryption = case T.decodeUtf8 `fmap` lookup "x-amz-server-side-encryption" h of
+                                 Just x -> return $ parseServerSideEncryption x
+                                 Nothing -> return Nothing
 
         ht = map ((T.decodeUtf8 . CI.foldedCase) *** T.decodeUtf8) h
 
 type LocationConstraint = T.Text
 
-locationUsClassic, locationUsWest, locationUsWest2, locationEu, locationApSouthEast, locationApNorthEast :: LocationConstraint
+locationUsClassic, locationUsWest, locationUsWest2, locationEu, locationApSouthEast, locationApSouthEast2, locationApNorthEast :: LocationConstraint
 locationUsClassic = ""
 locationUsWest = "us-west-1"
 locationUsWest2 = "us-west-2"
 locationEu = "EU"
 locationApSouthEast = "ap-southeast-1"
+locationApSouthEast2 = "ap-southeast-2"
 locationApNorthEast = "ap-northeast-1"
+

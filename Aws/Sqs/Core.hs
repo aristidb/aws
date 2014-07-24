@@ -5,14 +5,12 @@ import           Aws.S3.Core                    (LocationConstraint, locationUsC
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
-import qualified Control.Failure                as F
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Data.Attempt                   (Attempt(..))
+import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as BC
 import           Data.Conduit                   (($$+-))
-import qualified Data.Conduit                   as C
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -234,10 +232,10 @@ sqsErrorResponseConsumer resp
     = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
-           Success err -> C.monadThrow err
-           Failure otherErr -> C.monadThrow otherErr
+           Right err     -> throwM err
+           Left otherErr -> throwM otherErr
     where
-      parseError :: Cu.Cursor -> Attempt SqsError
+      parseError :: Cu.Cursor -> Either C.SomeException SqsError
       parseError root = do cursor <- force "Missing Error" $ root $/ Cu.laxElement "Error"
                            code <- force "Missing error Code" $ cursor $/ elContent "Code"
                            message <- force "Missing error Message" $ cursor $/ elContent "Message"
@@ -291,7 +289,7 @@ data SqsPermission
     | PermissionGetQueueAttributes
     deriving (Show, Enum, Eq)
 
-parseQueueAttribute :: F.Failure XmlException m  => T.Text -> m QueueAttribute
+parseQueueAttribute :: MonadThrow m  => T.Text -> m QueueAttribute
 parseQueueAttribute "ApproximateNumberOfMessages" = return ApproximateNumberOfMessages 
 parseQueueAttribute "ApproximateNumberOfMessagesNotVisible" = return ApproximateNumberOfMessagesNotVisible
 parseQueueAttribute "VisibilityTimeout" = return VisibilityTimeout
@@ -301,7 +299,7 @@ parseQueueAttribute "Policy" = return Policy
 parseQueueAttribute "MaximumMessageSize" = return MaximumMessageSize
 parseQueueAttribute "MessageRetentionPeriod" = return MessageRetentionPeriod
 parseQueueAttribute "QueueArn" = return QueueArn
-parseQueueAttribute x = F.failure $ XmlException ( "Invalid Attribute Name. " ++ show x)
+parseQueueAttribute x = throwM $ XmlException ( "Invalid Attribute Name. " ++ show x)
 
 printQueueAttribute :: QueueAttribute -> T.Text
 printQueueAttribute QueueAll = "All"
@@ -315,12 +313,12 @@ printQueueAttribute MaximumMessageSize = "MaximumMessageSize"
 printQueueAttribute MessageRetentionPeriod = "MessageRetentionPeriod"
 printQueueAttribute QueueArn = "QueueArn"
 
-parseMessageAttribute :: F.Failure XmlException m  =>  T.Text -> m MessageAttribute
+parseMessageAttribute :: MonadThrow m  =>  T.Text -> m MessageAttribute
 parseMessageAttribute "SenderId" = return SenderId
 parseMessageAttribute "SentTimestamp" = return SentTimestamp
 parseMessageAttribute "ApproximateReceiveCount" = return ApproximateReceiveCount
 parseMessageAttribute "ApproximateFirstReceiveTimestamp" = return ApproximateFirstReceiveTimestamp
-parseMessageAttribute x = F.failure $ XmlException ( "Invalid Attribute Name. " ++ show x)
+parseMessageAttribute x = throwM $ XmlException ( "Invalid Attribute Name. " ++ show x)
 
 printMessageAttribute :: MessageAttribute -> T.Text
 printMessageAttribute MessageAll = "All"

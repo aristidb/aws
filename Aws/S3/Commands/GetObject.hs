@@ -9,6 +9,7 @@ import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as L
 import qualified Data.Conduit          as C
+import qualified Data.Conduit.List     as CL
 import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
@@ -52,15 +53,14 @@ instance SignQuery GetObject where
                                  , s3QObject = Just $ T.encodeUtf8 goObjectName
                                  , s3QSubresources = HTTP.toQuery [
                                                        ("versionId" :: B8.ByteString,) <$> goVersionId
+                                                     , ("response-content-type" :: B8.ByteString,) <$> goResponseContentType
+                                                     , ("response-content-language",) <$> goResponseContentLanguage
+                                                     , ("response-expires",) <$> goResponseExpires
+                                                     , ("response-cache-control",) <$> goResponseCacheControl
+                                                     , ("response-content-disposition",) <$> goResponseContentDisposition
+                                                     , ("response-content-encoding",) <$> goResponseContentEncoding
                                                      ]
-                                 , s3QQuery = HTTP.toQuery [
-                                                ("response-content-type" :: B8.ByteString,) <$> goResponseContentType
-                                              , ("response-content-language",) <$> goResponseContentLanguage
-                                              , ("response-expires",) <$> goResponseExpires
-                                              , ("response-cache-control",) <$> goResponseCacheControl
-                                              , ("response-content-disposition",) <$> goResponseContentDisposition
-                                              , ("response-content-encoding",) <$> goResponseContentEncoding
-                                              ]
+                                 , s3QQuery = []
                                  , s3QContentType = Nothing
                                  , s3QContentMd5 = Nothing
                                  , s3QAmzHeaders = []
@@ -82,4 +82,8 @@ instance Transaction GetObject GetObjectResponse
 
 instance AsMemoryResponse GetObjectResponse where
     type MemoryResponse GetObjectResponse = GetObjectMemoryResponse
-    loadToMemory (GetObjectResponse om x) = GetObjectMemoryResponse om <$> HTTP.lbsResponse x
+    loadToMemory (GetObjectResponse om x) = do
+        bss <- HTTP.responseBody x C.$$+- CL.consume
+        return $ GetObjectMemoryResponse om x
+            { HTTP.responseBody = L.fromChunks bss
+            }
