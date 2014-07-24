@@ -13,7 +13,7 @@
 -- Copyright   :  Soostone Inc
 -- License     :  BSD3
 --
--- Maintainer  :  Ozgun Ataman
+-- Maintainer  :  Ozgun Ataman <ozgun.ataman@soostone.com>
 -- Stability   :  experimental
 --
 --
@@ -24,6 +24,7 @@ module Aws.DynamoDb.Commands.PutItem where
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
+import           Data.Default
 import qualified Data.Text           as T
 -------------------------------------------------------------------------------
 import           Aws.Core
@@ -32,27 +33,27 @@ import           Aws.DynamoDb.Core
 
 
 data PutItem = PutItem {
-      piTable  :: T.Text
+      piTable   :: T.Text
     -- ^ Target table
-    , piItem   :: Item
+    , piItem    :: Item
     -- ^ An item to Put
-    , piExpect :: [Expect]
+    , piExpect  :: [Expect]
     -- ^ (Possible) set of expections for a conditional Put
-    , piReturn :: PutReturn
+    , piReturn  :: PutReturn
     -- ^ What to return from this query.
+    , piRetCons :: ReturnConsumption
+    , piRetMet  :: ReturnItemCollectionMetrics
     } deriving (Eq,Show,Read,Ord)
 
 
-
--- | A simple starting point for a 'PutItem' request.
---
--- It sets 'piExpect' to 'Nothing' and 'piReturn' to 'RNone'.
+-------------------------------------------------------------------------------
+-- | Construct a minimal 'PutItem' request.
 putItem :: T.Text
         -- ^ A Dynamo table name
         -> Item
         -- ^ Item to be saved
         -> PutItem
-putItem tn it = PutItem tn it [] RNone
+putItem tn it = PutItem tn it [] RNone def def
 
 
 instance ToJSON PutItem where
@@ -64,6 +65,8 @@ instance ToJSON PutItem where
           [ "TableName" .= piTable
           , "Item" .= piItem
           , "ReturnValues" .= piReturn
+          , "ReturnConsumedCapacity" .= piRetCons
+          , "ReturnItemCollectionMetrics" .= piRetMet
           ]
 
 
@@ -81,7 +84,7 @@ instance ToJSON PutReturn where
 data PutItemResponse = PutItemResponse {
       pirAttrs    :: Maybe Item
     -- ^ Old attributes, if requested
-    , pirConsumed :: Double
+    , pirConsumed :: Maybe ConsumedCapacity
     -- ^ Amount of capacity consumed
     } deriving (Eq,Show,Read,Ord)
 
@@ -98,7 +101,7 @@ instance SignQuery PutItem where
 instance FromJSON PutItemResponse where
     parseJSON (Object v) = PutItemResponse
         <$> v .:? "Attributes"
-        <*> v .: "ConsumedCapacityUnits"
+        <*> v .:? "ConsumedCapacity"
     parseJSON _ = fail "PutItemResponse must be an object."
 
 

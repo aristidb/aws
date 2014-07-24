@@ -37,6 +37,11 @@ module Aws.DynamoDb.Core
     , text, int, double
     , item
 
+    , Expect (..)
+    , ConsumedCapacity (..)
+    , ReturnConsumption (..)
+    , ReturnItemCollectionMetrics (..)
+
     -- * Responses & Errors
     , DdbResponse (..)
     , DdbErrCode (..)
@@ -48,8 +53,6 @@ module Aws.DynamoDb.Core
     , ddbResponseConsumer
     , ddbHttp
     , ddbHttps
-
-    , Expect (..)
 
     ) where
 
@@ -72,6 +75,8 @@ import qualified Data.ByteString.Base64       as Base64
 import qualified Data.ByteString.Char8        as B
 import           Data.Conduit
 import           Data.Conduit.Attoparsec      (sinkParser)
+import           Data.Default
+import qualified Data.HashMap.Strict          as HM
 import           Data.Int
 import           Data.IORef
 import qualified Data.Map                     as M
@@ -83,7 +88,6 @@ import qualified Data.Set                     as S
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Typeable
--- import           Debug.Trace
 import           Network.HTTP.Conduit
 import qualified Network.HTTP.Conduit         as HTTP
 import qualified Network.HTTP.Types           as HTTP
@@ -200,9 +204,9 @@ data DValue
 -- | A primary key recognized by DynamoDB. Used in many of the
 -- DynamoDB operations.
 data PrimaryKey
-    = HPK { pkHashElem :: DValue }
+    = HPK T.Text DValue
     -- ^ When the key is just a hash primary key
-    | HRPK { pkHashElem :: DValue, pkRangeElem :: DValue }
+    | HRPK T.Text DValue DValue
     -- ^ When the key is a hash-and-range primary key
     deriving (Eq,Show,Read,Ord)
 
@@ -211,14 +215,14 @@ data PrimaryKey
 --
 -- Assuming @name@ is a primary hash key attribute:
 -- >> hpk "john"
-hpk :: DVal a => a -> PrimaryKey
-hpk a = HPK $ mkVal a
+hpk :: DVal a => T.Text -> a -> PrimaryKey
+hpk k a = HPK k $ mkVal a
 
 
 -- | Make a composite primary key from a hash attribute and a range
 -- attribute.
-hrpk :: (DVal a, DVal b) => a -> b -> PrimaryKey
-hrpk a b = HRPK (mkVal a) (mkVal b)
+hrpk :: (DVal a, DVal b) => T.Text -> a -> b -> PrimaryKey
+hrpk k a b = HRPK k (mkVal a) (mkVal b)
 
 
 -- | A key-value pair
@@ -305,8 +309,12 @@ instance FromJSON DValue where
             either fail (return . DBinary) res
         [("NS", s)] -> do xs <- mapM parseScientific =<< parseJSON s
                           return $ DNumSet $ S.fromList xs
-        [("SS", _)] -> undefined
-        [("BS", _)] -> undefined
+        [("SS", s)] -> DStringSet <$> parseJSON s
+        [("BS", s)] -> do
+            xs <- mapM (either fail return . Base64.decode . T.encodeUtf8)
+                  =<< parseJSON s
+            return $ DBinSet $ S.fromList xs
+
         x -> fail $ "aws: unknown dynamodb value: " ++ show x
 
       where
@@ -316,9 +324,11 @@ instance FromJSON DValue where
 
 
 instance ToJSON PrimaryKey where
-    toJSON (HPK k) = object ["HashKeyElement" .= toJSON k]
-    toJSON (HRPK k r) = object
-        [ "HashKeyElement" .= toJSON k, "RangeKeyElement" .= toJSON r ]
+    toJSON (HPK nm k) = object [nm .= toJSON k]
+    toJSON (HRPK nm k r) =
+      let Object p1 = toJSON k
+          Object p2 = toJSON r
+      in object [ nm .= Object (p1 `HM.union` p2) ]
 
 
 data DdbErrCode
@@ -553,7 +563,7 @@ data Expect = Expect {
     , expectExists :: Bool
     -- ^ If 'True', will only match if attribute exists. If 'False'
     -- will only match if the attribute is missing.
-    } deriving (Eq,Show,Read,Ord)
+    } deriving (Eq,Show,Read,Ord,Typeable)
 
 
 instance ToJSON Expects where
@@ -567,3 +577,49 @@ instance ToJSON Expects where
 
 dyApiVersion :: B.ByteString
 dyApiVersion = "DynamoDB_20120810."
+
+
+
+-------------------------------------------------------------------------------
+-- | The standard response metrics on capacity consumption.
+data ConsumedCapacity = ConsumedCapacity {
+      capacityUnits       :: Int64
+    , capacityGlobalIndex :: [(T.Text, Int64)]
+    , capacityLocalIndex  :: [(T.Text, Int64)]
+    , capacityTableUnits  :: Int64
+    , capacityTable       :: T.Text
+    } deriving (Eq,Show,Read,Ord,Typeable)
+
+
+instance FromJSON ConsumedCapacity where
+    parseJSON (Object v) = ConsumedCapacity
+      <$> v .: "CapacityUnits"
+      <*> (HM.toList <$> v .: "GlobalSecondaryIndexes")
+      <*> (HM.toList <$> v .: "LocalSecondaryIndexes")
+      <*> (v .: "Table" >>= (.: "CapacityUnits"))
+      <*> v .: "TableName"
+    parseJSON _ = fail "ConsumedCapacity must be an Object."
+
+
+
+data ReturnConsumption = RCIndexes | RCTotal | RCNone
+    deriving (Eq,Show,Read,Ord,Typeable)
+
+instance ToJSON ReturnConsumption where
+    toJSON RCIndexes = String "INDEXES"
+    toJSON RCTotal = String "TOTAL"
+    toJSON RCNone = String "NONE"
+
+instance Default ReturnConsumption where
+    def = RCNone
+
+data ReturnItemCollectionMetrics = RICMSize | RICMNone
+    deriving (Eq,Show,Read,Ord,Typeable)
+
+instance ToJSON ReturnItemCollectionMetrics where
+    toJSON RICMSize = String "SIZE"
+    toJSON RICMNone = String "NONE"
+
+instance Default ReturnItemCollectionMetrics where
+    def = RICMNone
+

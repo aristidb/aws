@@ -6,7 +6,7 @@
 -- Copyright   :  Soostone Inc
 -- License     :  BSD3
 --
--- Maintainer  :  Ozgun Ataman
+-- Maintainer  :  Ozgun Ataman <ozgun.ataman@soostone.com>
 -- Stability   :  experimental
 --
 --
@@ -17,6 +17,7 @@ module Aws.DynamoDb.Commands.GetItem where
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
+import           Data.Default
 import qualified Data.Text           as T
 -------------------------------------------------------------------------------
 import           Aws.Core
@@ -32,13 +33,20 @@ data GetItem = GetItem {
     , giKey        :: PrimaryKey
     , giAttrs      :: Maybe [T.Text]
     , giConsistent :: Bool
+    , giRetCons    :: ReturnConsumption
     } deriving (Eq,Show,Read,Ord)
+
+
+-------------------------------------------------------------------------------
+-- | Construct a minimal 'GetItem' request.
+getItem :: T.Text -> PrimaryKey -> GetItem
+getItem tn k = GetItem tn k Nothing False def
 
 
 -- | Response to a 'GetItem' query.
 data GetItemResponse = GetItemResponse {
       girItem     :: Item
-    , girConsumed :: Double
+    , girConsumed :: Maybe ConsumedCapacity
     } deriving (Eq,Show,Read,Ord)
 
 
@@ -51,6 +59,7 @@ instance ToJSON GetItem where
         [ "TableName" .= giTableName
         , "Key" .= giKey
         , "ConsistentRead" .= giConsistent
+        , "ReturnConsumedCapacity" .= giRetCons
         ]
 
 
@@ -63,7 +72,7 @@ instance SignQuery GetItem where
 instance FromJSON GetItemResponse where
     parseJSON (Object v) = GetItemResponse
         <$> v .: "Item"
-        <*> v .: "ConsumedCapacityUnits"
+        <*> v .:? "ConsumedCapacity"
     parseJSON _ = fail "GetItemResponse must be an object."
 
 

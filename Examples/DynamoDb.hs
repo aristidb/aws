@@ -35,13 +35,13 @@ main = do
 
   {- Make request -}
 
-  let req2 = GetItem "devel-1" (hpk ("josh" :: T.Text)) Nothing False
+  let req2 = getItem "devel-1" (hpk "name" ("josh" :: T.Text))
   (resp2 :: GetItemResponse) <- Aws.simpleAws cfg debugServiceConfig req2
   print resp2
 
 
   let up = AttributeUpdate "class" (mkVal ("awesome" :: T.Text)) def
-  let req3 = UpdateItem "devel-1" (hpk ("josh" :: T.Text)) [up] def URAllNew
+  let req3 = UpdateItem "devel-1" (hpk "name" ("josh" :: T.Text)) [up] def URAllNew def def
 
   (resp3 :: UpdateItemResponse) <- Aws.simpleAws cfg debugServiceConfig req3
   print resp3

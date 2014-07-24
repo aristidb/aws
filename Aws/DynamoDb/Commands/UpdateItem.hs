@@ -28,6 +28,8 @@ data UpdateItem = UpdateItem {
     , uiUpdates :: [AttributeUpdate]
     , uiExpect  :: [Expect]
     , uiReturn  :: UpdateReturn
+    , uiRetCons :: ReturnConsumption
+    , uiRetMet  :: ReturnItemCollectionMetrics
     } deriving (Eq,Show,Read,Ord)
 
 
@@ -90,13 +92,15 @@ instance ToJSON UpdateItem where
           , "Key" .= uiKey
           , "AttributeUpdates" .= uiUpdates
           , "ReturnValues" .= uiReturn
+          , "ReturnConsumedCapacity" .= uiRetCons
+          , "ReturnItemCollectionMetrics" .= uiRetMet
           ]
 
 
 data UpdateItemResponse = UpdateItemResponse {
       uirAttrs    :: Maybe Item
     -- ^ Old attributes, if requested
-    , uirConsumed :: Double
+    , uirConsumed :: Maybe ConsumedCapacity
     -- ^ Amount of capacity consumed
     } deriving (Eq,Show,Read,Ord)
 
@@ -113,7 +117,7 @@ instance SignQuery UpdateItem where
 instance FromJSON UpdateItemResponse where
     parseJSON (Object v) = UpdateItemResponse
         <$> v .:? "Attributes"
-        <*> v .: "ConsumedCapacityUnits"
+        <*> v .:? "ConsumedCapacity"
     parseJSON _ = fail "UpdateItemResponse expected a JSON object"
 
 
