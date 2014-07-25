@@ -39,7 +39,7 @@ data PutItem = PutItem {
     -- ^ An item to Put
     , piExpect  :: Expects
     -- ^ (Possible) set of expections for a conditional Put
-    , piReturn  :: PutReturn
+    , piReturn  :: UpdateReturn
     -- ^ What to return from this query.
     , piRetCons :: ReturnConsumption
     , piRetMet  :: ReturnItemCollectionMetrics
@@ -53,7 +53,7 @@ putItem :: T.Text
         -> Item
         -- ^ Item to be saved
         -> PutItem
-putItem tn it = PutItem tn it def RNone def def
+putItem tn it = PutItem tn it def def def def
 
 
 instance ToJSON PutItem where
@@ -65,16 +65,6 @@ instance ToJSON PutItem where
           , "ReturnConsumedCapacity" .= piRetCons
           , "ReturnItemCollectionMetrics" .= piRetMet
           ]
-
-
-
-data PutReturn = RNone | RAll
-    deriving (Eq,Show,Read,Ord)
-
-
-instance ToJSON PutReturn where
-    toJSON RNone = toJSON ("NONE" :: T.Text)
-    toJSON RAll = toJSON ("ALL_OLD" :: T.Text)
 
 
 

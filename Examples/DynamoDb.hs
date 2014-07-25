@@ -25,7 +25,7 @@ main = do
   let x = item [ attrAs text "name" "josh"
                , attrAs text "class" "not-so-awesome"]
 
-  let req1 = (putItem "devel-1" x ) { piReturn = RAll
+  let req1 = (putItem "devel-1" x ) { piReturn = URAllOld
                                     , piRetCons =  RCTotal
                                     , piRetMet = RICMSize
                                     }
@@ -36,16 +36,16 @@ main = do
 
   putStrLn "Getting the item back..."
 
-  let req2 = getItem "devel-1" (HPK "name" "josh")
+  let req2 = getItem "devel-1" (hk "name" "josh")
   resp2 <- Aws.simpleAws cfg debugServiceConfig req2
   print resp2
 
   print =<< Aws.simpleAws cfg debugServiceConfig
-    (updateItem "devel-1" (HPK "name" "josh") [au "class" "awesome"])
+    (updateItem "devel-1" (hk "name" "josh") [au "class" "awesome"])
 
   echo "Updating with false conditional."
   (print =<< Aws.simpleAws cfg debugServiceConfig
-    (updateItem "devel-1" (HPK "name" "josh") [au "class" "awesomer"])
+    (updateItem "devel-1" (hk "name" "josh") [au "class" "awesomer"])
       { uiExpect = Expects CondAnd [Expect "name" (DEq "john")] })
     `catch` (\ (e :: DdbError) -> echo ("Eating exception: " ++ show e))
 
@@ -55,7 +55,7 @@ main = do
 
   echo "Updating with true conditional"
   print =<< Aws.simpleAws cfg debugServiceConfig
-    (updateItem "devel-1" (HPK "name" "josh") [au "class" "awesomer"])
+    (updateItem "devel-1" (hk "name" "josh") [au "class" "awesomer"])
       { uiExpect = Expects CondAnd [Expect "name" (DEq "josh")] }
 
   echo "Getting the item back..."

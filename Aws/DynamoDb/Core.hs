@@ -24,18 +24,19 @@ module Aws.DynamoDb.Core
     -- * DynamoDB Types
     , DValue (..)
     , DVal (..)
-    , PrimaryKey (..)
-    , Attribute
     , Bin (..)
     , Item (..)
+    , Attribute (..)
+    , attrTuple
     , defItem
     , mkVal
-    , hpk
-    , hrpk
     , attr
     , attrAs
     , text, int, double
     , item
+    , PrimaryKey (..)
+    , hk
+    , hrk
 
     , Expects (..)
     , expectsJson
@@ -46,6 +47,7 @@ module Aws.DynamoDb.Core
     , ReturnConsumption (..)
     , ItemCollectionMetrics (..)
     , ReturnItemCollectionMetrics (..)
+    , UpdateReturn (..)
 
     -- * Responses & Errors
     , DdbResponse (..)
@@ -107,6 +109,11 @@ import           Aws.Core
 class DVal a where
     toDVal :: a -> DValue
     fromDVal :: DValue -> Maybe a
+
+
+instance DVal DValue where
+    toDVal = id
+    fromDVal = Just
 
 
 instance DVal Int where
@@ -208,45 +215,62 @@ data DValue
 instance IsString DValue where
     fromString t = DString (T.pack t)
 
-
--- | A primary key recognized by DynamoDB. Used in many of the
--- DynamoDB operations.
-data PrimaryKey
-    = HPK T.Text DValue
-    -- ^ When the key is just a hash primary key
-    | HRPK T.Text DValue DValue
-    -- ^ When the key is a hash-and-range primary key
-    deriving (Eq,Show,Read,Ord)
+-------------------------------------------------------------------------------
+-- | Primary keys consist of either just a Hash key (mandatory) or a
+-- hash key and a range key (optional).
+data PrimaryKey = PrimaryKey {
+      pkHash  :: Attribute
+    , pkRange :: Maybe Attribute
+    } deriving (Read,Show,Ord,Eq,Typeable)
 
 
--- | Make a primary key from a single value
---
--- Assuming @name@ is a primary hash key attribute:
--- >> hpk "john"
-hpk :: DVal a => T.Text -> a -> PrimaryKey
-hpk k a = HPK k $ mkVal a
+-------------------------------------------------------------------------------
+-- | Construct a hash-only primary key.
+hk :: T.Text -> DValue -> PrimaryKey
+hk k v = PrimaryKey (attr k v) Nothing
 
 
--- | Make a composite primary key from a hash attribute and a range
--- attribute.
-hrpk :: (DVal a, DVal b) => T.Text -> a -> b -> PrimaryKey
-hrpk k a b = HRPK k (mkVal a) (mkVal b)
+-------------------------------------------------------------------------------
+-- | Construct a hash-and-range primary key.
+hrk :: (DVal a, DVal b)
+    => T.Text                   -- ^ Hash key name
+    -> DValue                   -- ^ Hash key value
+    -> T.Text                   -- ^ Range key name
+    -> DValue                   -- ^ Range key value
+    -> PrimaryKey
+hrk k v k2 v2 = PrimaryKey (attr k v) (Just (attr k2 v2))
+
+
+instance ToJSON PrimaryKey where
+    toJSON (PrimaryKey h Nothing) = toJSON h
+    toJSON (PrimaryKey h (Just r)) =
+      let Object p1 = toJSON h
+          Object p2 = toJSON r
+      in Object (p1 `HM.union` p2)
 
 
 -- | A key-value pair
-type Attribute = (T.Text, DValue)
+data Attribute = Attribute {
+      attrKey :: T.Text
+    , attrVal :: DValue
+    } deriving (Read,Show,Ord,Eq,Typeable)
+
+
+-- | Convert attribute to a tuple representation
+attrTuple :: Attribute -> (T.Text, DValue)
+attrTuple (Attribute a b) = (a,b)
 
 
 -- | Convenience function for constructing key-value pairs
-attr :: DVal a => T.Text -> a -> (T.Text, DValue)
-attr k v = (k, mkVal v)
+attr :: DVal a => T.Text -> a -> Attribute
+attr k v = Attribute k (toDVal v)
 
 
 -- | 'attr' with type witness to help with cases where you're manually
 -- supplying values in code.
 --
 -- >> item [ attrAs text "name" "john" ]
-attrAs :: DVal a => a -> T.Text -> a -> (T.Text, DValue)
+attrAs :: DVal a => a -> T.Text -> a -> Attribute
 attrAs _ k v = attr k v
 
 
@@ -270,7 +294,7 @@ double = undefined
 --
 -- >> item [ attr "name" name, attr "age" age]
 item :: [Attribute] -> Item
-item atts = Item $ M.fromList atts
+item atts = Item $ M.fromList $ map attrTuple atts
 
 
 -- | Haskell data structure representing a single fetched item/object
@@ -331,12 +355,8 @@ instance FromJSON DValue where
             ((fromFloatDigits :: Double -> Scientific) <$> parseJSON str)
 
 
-instance ToJSON PrimaryKey where
-    toJSON (HPK nm k) = object [nm .= toJSON k]
-    toJSON (HRPK nm k r) =
-      let Object p1 = toJSON k
-          Object p2 = toJSON r
-      in object [ nm .= Object (p1 `HM.union` p2) ]
+instance ToJSON Attribute where
+    toJSON (Attribute nm v) = object [nm .= v]
 
 
 -------------------------------------------------------------------------------
@@ -732,3 +752,20 @@ instance FromJSON ItemCollectionMetrics where
               return $ head $ HM.toList m)
       <*> v .: "SizeEstimateRangeGB"
     parseJSON _ = fail "ItemCollectionMetrics must be an Object."
+
+
+data UpdateReturn = URNone | URAllOld | URUpdatedOld | URAllNew | URUpdatedNew
+    deriving (Eq,Show,Read,Ord,Typeable)
+
+
+instance ToJSON UpdateReturn where
+    toJSON URNone = toJSON (String "NONE")
+    toJSON URAllOld = toJSON (String "ALL_OLD")
+    toJSON URUpdatedOld = toJSON (String "UPDATED_OLD")
+    toJSON URAllNew = toJSON (String "ALL_NEW")
+    toJSON URUpdatedNew = toJSON (String "UPDATED_NEW")
+
+
+instance Default UpdateReturn where
+    def = URNone
+

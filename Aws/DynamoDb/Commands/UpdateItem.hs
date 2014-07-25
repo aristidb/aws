@@ -80,22 +80,6 @@ instance Default UpdateAction where
     def = UPut
 
 
-data UpdateReturn = URNone | URAllOld | URUpdatedOld | URAllNew | URUpdatedNew
-    deriving (Eq,Show,Read,Ord)
-
-
-instance Default UpdateReturn where
-    def = URNone
-
-
-instance ToJSON UpdateReturn where
-    toJSON URNone = toJSON ("NONE" :: T.Text)
-    toJSON URAllOld = toJSON ("ALL_OLD" :: T.Text)
-    toJSON URUpdatedOld = toJSON ("UPDATED_OLD" :: T.Text)
-    toJSON URAllNew = toJSON ("ALL_NEW" :: T.Text)
-    toJSON URUpdatedNew = toJSON ("UPDATED_NEW" :: T.Text)
-
-
 instance ToJSON UpdateItem where
     toJSON UpdateItem{..} =
         object $ expectsJson uiExpect ++
