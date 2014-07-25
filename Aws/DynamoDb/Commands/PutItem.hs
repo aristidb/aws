@@ -36,7 +36,8 @@ data PutItem = PutItem {
       piTable   :: T.Text
     -- ^ Target table
     , piItem    :: Item
-    -- ^ An item to Put
+    -- ^ An item to Put. Attributes here will replace what maybe under
+    -- the key on DDB.
     , piExpect  :: Expects
     -- ^ (Possible) set of expections for a conditional Put
     , piReturn  :: UpdateReturn

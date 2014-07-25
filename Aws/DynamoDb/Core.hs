@@ -25,18 +25,16 @@ module Aws.DynamoDb.Core
     , DValue (..)
     , DVal (..)
     , Bin (..)
-    , Item (..)
     , Attribute (..)
     , attrTuple
-    , defItem
     , mkVal
     , attr
     , attrAs
     , text, int, double
-    , item
     , PrimaryKey (..)
     , hk
     , hrk
+    , Item
 
     , Expects (..)
     , expectsJson
@@ -226,6 +224,10 @@ data PrimaryKey = PrimaryKey {
 
 -------------------------------------------------------------------------------
 -- | Construct a hash-only primary key.
+--
+-- >>> hk "user-id" "ABCD"
+--
+-- >>> hk "user-id" (mkVal 23)
 hk :: T.Text -> DValue -> PrimaryKey
 hk k v = PrimaryKey (attr k v) Nothing
 
@@ -289,32 +291,8 @@ double :: Double
 double = undefined
 
 
--- | Convenience function for constructing 'Item's from manually
--- entered key-value pairs.
---
--- >> item [ attr "name" name, attr "age" age]
-item :: [Attribute] -> Item
-item atts = Item $ M.fromList $ map attrTuple atts
-
-
--- | Haskell data structure representing a single fetched item/object
--- from DynamoDB.
-newtype Item = Item { itemAttrs :: M.Map T.Text DValue }
-    deriving (Eq,Show,Read,Ord)
-
-
--- | Empty item.
-defItem :: Item
-defItem = Item M.empty
-
-
-instance FromJSON Item where
-    parseJSON v = Item <$> parseJSON v
-    parseJSON _ = fail "aws: failed while parsing Item"
-
-
-instance ToJSON Item where
-    toJSON (Item v) = toJSON v
+-- | A DynamoDb object is simply a key-value dictionary.
+type Item = M.Map T.Text DValue
 
 
 showT :: Show a => a -> T.Text
@@ -434,8 +412,6 @@ data DdbConfiguration qt = DdbConfiguration {
     -- ^ The regional endpoint. Ex: 'ddbUsEast'
     , ddbcProtocol :: Protocol
     -- ^ 'HTTP' o  r 'HTTPS'
-    , ddbcRetries  :: Int
-    -- ^ Number of times server errors should result in a retry.
     } deriving (Show)
 
 
@@ -469,10 +445,10 @@ ddbSaEast1 :: Region
 ddbSaEast1 = Region "dynamodb.sa-east-1.amazonaws.com" "sa-east-1"
 
 ddbHttp :: Region -> DdbConfiguration NormalQuery
-ddbHttp endpoint = DdbConfiguration endpoint HTTP 3
+ddbHttp endpoint = DdbConfiguration endpoint HTTP
 
 ddbHttps :: Region -> DdbConfiguration NormalQuery
-ddbHttps endpoint = DdbConfiguration endpoint HTTPS 3
+ddbHttps endpoint = DdbConfiguration endpoint HTTPS
 
 
 ddbSignQuery

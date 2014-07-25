@@ -32,14 +32,20 @@ data GetItem = GetItem {
       giTableName  :: T.Text
     , giKey        :: PrimaryKey
     , giAttrs      :: Maybe [T.Text]
+    -- ^ Attributes to get. 'Nothing' grabs everything.
     , giConsistent :: Bool
+    -- ^ Whether to issue a consistent read.
     , giRetCons    :: ReturnConsumption
+    -- ^ Whether to return consumption stats.
     } deriving (Eq,Show,Read,Ord)
 
 
 -------------------------------------------------------------------------------
 -- | Construct a minimal 'GetItem' request.
-getItem :: T.Text -> PrimaryKey -> GetItem
+getItem
+    :: T.Text                   -- ^ Table name
+    -> PrimaryKey               -- ^ Primary key
+    -> GetItem
 getItem tn k = GetItem tn k Nothing False def
 
 
