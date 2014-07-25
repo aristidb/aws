@@ -46,6 +46,7 @@ module Aws.DynamoDb.Core
     , hk
     , hrk
     , Item
+    , item
 
     , Expects (..)
     , expectsJson
@@ -304,6 +305,12 @@ double = undefined
 
 -- | A DynamoDb object is simply a key-value dictionary.
 type Item = M.Map T.Text DValue
+
+
+-------------------------------------------------------------------------------
+-- | Pack a list of attributes into an Item.
+item :: [Attribute] -> Item
+item = M.fromList . map attrTuple
 
 
 showT :: Show a => a -> T.Text
