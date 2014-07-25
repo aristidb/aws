@@ -198,10 +198,11 @@ Executable DynamoDb
   else
     Buildable: True
     Build-depends:
-                       base == 4.*,
                        aws,
-                       text >=0.11,
-                       data-default
+                       base == 4.*,
+                       data-default,
+                       exceptions,
+                       text >=0.11
 
   Default-Language: Haskell2010
 

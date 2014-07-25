@@ -37,9 +37,14 @@ module Aws.DynamoDb.Core
     , text, int, double
     , item
 
+    , Expects (..)
+    , expectsJson
+    , Condition (..)
+    , CondOp (..)
     , Expect (..)
     , ConsumedCapacity (..)
     , ReturnConsumption (..)
+    , ItemCollectionMetrics (..)
     , ReturnItemCollectionMetrics (..)
 
     -- * Responses & Errors
@@ -64,11 +69,9 @@ import           Control.Monad
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource (throwM)
 import           Crypto.Hash
-import           Data.Aeson                   (FromJSON (..), ToJSON (..),
-                                               Value (..), object, parseJSON,
-                                               toJSON, (.:), (.=))
+import           Data.Aeson
 import qualified Data.Aeson                   as A
-import           Data.Aeson.Types             (parseEither)
+import           Data.Aeson.Types             (Pair, parseEither)
 import           Data.Byteable
 import qualified Data.ByteString.Base16       as Base16
 import qualified Data.ByteString.Base64       as Base64
@@ -85,6 +88,7 @@ import           Data.Monoid
 import           Data.Scientific
 import qualified Data.Serialize               as Ser
 import qualified Data.Set                     as S
+import           Data.String
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Typeable
@@ -199,6 +203,10 @@ data DValue
     | DStringSet (S.Set T.Text)
     | DBinSet (S.Set B.ByteString)
     deriving (Eq,Show,Read,Ord)
+
+
+instance IsString DValue where
+    fromString t = DString (T.pack t)
 
 
 -- | A primary key recognized by DynamoDB. Used in many of the
@@ -331,6 +339,8 @@ instance ToJSON PrimaryKey where
       in object [ nm .= Object (p1 `HM.union` p2) ]
 
 
+-------------------------------------------------------------------------------
+-- | Errors defined by AWS.
 data DdbErrCode
     = AccessDeniedException
     | ConditionalCheckFailedException
@@ -347,8 +357,19 @@ data DdbErrCode
     | InternalFailure
     | InternalServerError
     | ServiceUnavailableException
-    | UnknownDynamoError T.Text
+    | SerializationException
+    -- ^ Raised by AWS when the request JSON is missing fields or is
+    -- somehow malformed.
     deriving (Read,Show,Eq,Typeable)
+
+-------------------------------------------------------------------------------
+-- | Errors related to this library.
+data DdbLibraryError
+    = UnknownDynamoErrCode T.Text
+    -- ^ A DynamoDB error code we do not know about.
+    | JsonProtocolError Value T.Text
+    -- ^ A JSON response we could not parse.
+    deriving (Show,Eq,Typeable)
 
 
 -- | Potential errors raised by DynamoDB
@@ -360,6 +381,7 @@ data DdbError = DdbError {
 
 
 instance C.Exception DdbError
+instance C.Exception DdbLibraryError
 
 
 -- | Response metadata that is present in every DynamoDB response.
@@ -494,13 +516,13 @@ ddbSignQuery target body di sd
 
 data AmazonError = AmazonError {
       aeType    :: T.Text
-    , aeMessage :: T.Text
+    , aeMessage :: Maybe T.Text
     }
 
 instance FromJSON AmazonError where
     parseJSON (Object v) = AmazonError
         <$> v .: "__type"
-        <*> v .: "message"
+        <*> v .:? "message"
     parseJSON _ = error $ "aws: unexpected AmazonError message"
 
 
@@ -526,55 +548,129 @@ ddbResponseConsumer ref resp = do
         A.Success a -> return a
         A.Error err -> do
             tellMeta
-            throwM $ DdbError statusCode InternalFailure (T.pack err)
+            throwM $ JsonProtocolError val (T.pack err)
 
-    rError val =
+    rError val = do
+      tellMeta
       case parseEither parseJSON val of
-        Left e -> throwM $ DdbError statusCode InternalFailure (T.pack e)
+        Left e ->
+          throwM $ JsonProtocolError val (T.pack e)
+
         Right err'' -> do
           let e = T.drop 1 . snd . T.breakOn "#" $ aeType err''
-              ddbErr = DdbError statusCode (convErr e) (aeMessage err'')
-          tellMeta
-          throwM ddbErr
+          errCode <- readErrCode e
+          throwM $ DdbError statusCode errCode (fromMaybe "" $ aeMessage err'')
 
-    convErr txt =
+    readErrCode txt =
         let txt' = T.unpack txt
         in case readMay txt' of
-             Just e -> e
-             Nothing -> UnknownDynamoError txt
+             Just e -> return $ e
+             Nothing -> throwM (UnknownDynamoErrCode txt)
 
     HTTP.Status{..} = responseStatus resp
 
 
+-- | Conditions used by mutation operations ('PutItem', 'UpdateItem', etc.).
+data Expects = Expects CondOp [Expect]
+    deriving (Eq,Show,Read,Ord,Typeable)
 
+instance Default Expects where
+    def = Expects CondAnd []
+
+expectsJson :: Expects -> [Pair]
+expectsJson (Expects op es) = b ++ a
+    where
+      a = if null es
+          then []
+          else ["Expected" .= object (map expectJson es)]
+
+      b = if length (take 2 es) > 1
+          then ["ConditionalOperator" .= String (rendCondOp op) ]
+          else []
 
 -------------------------------------------------------------------------------
-type Expects = [Expect]
+rendCondOp :: CondOp -> T.Text
+rendCondOp CondAnd = "AND"
+rendCondOp CondOr = "OR"
 
 
--- | Perform 'PutItem' only if 'peExists' matches the reality for the
--- other parameters here.
+data CondOp = CondAnd | CondOr
+    deriving (Eq,Show,Read,Ord,Typeable)
+
+
+-- | A condition used by mutation operations ('PutItem', 'UpdateItem', etc.).
 data Expect = Expect {
-      expectAttr   :: T.Text
+      expectAttr      :: T.Text
     -- ^ Attribute for the existence check
-    , expectVal    :: Maybe DValue
-    -- ^ Further constrain this check and make it apply only if
-    -- attribute has this value
-    , expectExists :: Bool
-    -- ^ If 'True', will only match if attribute exists. If 'False'
-    -- will only match if the attribute is missing.
+    , expectCondition :: Condition
     } deriving (Eq,Show,Read,Ord,Typeable)
 
 
-instance ToJSON Expects where
-    toJSON  = object . map mk
-        where
-          mk Expect{..} = expectAttr .= object sub
-              where
-                sub = maybe [] (return . ("Value" .= )) expectVal ++
-                      ["Exists" .= expectExists]
+-------------------------------------------------------------------------------
+data Condition
+    = DEq DValue
+    | NotEq DValue
+    | DLE DValue
+    | DLT DValue
+    | DGE DValue
+    | DGT DValue
+    | NotNull
+    | IsNull
+    | Contains DValue
+    | NotContains DValue
+    | Begins DValue
+    | In [DValue]
+    | Between DValue DValue
+    deriving (Eq,Show,Read,Ord,Typeable)
 
 
+-------------------------------------------------------------------------------
+getCondValues :: Condition -> [DValue]
+getCondValues c = case c of
+    DEq v -> [v]
+    NotEq v -> [v]
+    DLE v -> [v]
+    DLT v -> [v]
+    DGE v -> [v]
+    DGT v -> [v]
+    NotNull -> []
+    IsNull -> []
+    Contains v -> [v]
+    NotContains v -> [v]
+    Begins v -> [v]
+    In v -> v
+    Between a b -> [a,b]
+
+
+-------------------------------------------------------------------------------
+renderCondOp :: Condition -> T.Text
+renderCondOp c = case c of
+    DEq{} -> "EQ"
+    NotEq{} -> "NE"
+    DLE{} -> "LE"
+    DLT{} -> "LT"
+    DGE{} -> "GE"
+    DGT{} -> "GT"
+    NotNull -> "NOT_NULL"
+    IsNull -> "NULL"
+    Contains{} -> "CONTAINS"
+    NotContains{} -> "NOT_CONTAINS"
+    Begins{} -> "BEGINS_WITH"
+    In{} -> "IN"
+    Between{} -> "BETWEEN"
+
+
+expectJson :: Expect -> Pair
+expectJson Expect{..} = expectAttr .= expectCondition
+
+
+instance ToJSON Condition where
+    toJSON c = object
+      [ "ComparisonOperator" .= String (renderCondOp c)
+      , "AttributeValueList" .= getCondValues c ]
+
+
+-------------------------------------------------------------------------------
 dyApiVersion :: B.ByteString
 dyApiVersion = "DynamoDB_20120810."
 
@@ -586,7 +682,7 @@ data ConsumedCapacity = ConsumedCapacity {
       capacityUnits       :: Int64
     , capacityGlobalIndex :: [(T.Text, Int64)]
     , capacityLocalIndex  :: [(T.Text, Int64)]
-    , capacityTableUnits  :: Int64
+    , capacityTableUnits  :: Maybe Int64
     , capacityTable       :: T.Text
     } deriving (Eq,Show,Read,Ord,Typeable)
 
@@ -594,9 +690,9 @@ data ConsumedCapacity = ConsumedCapacity {
 instance FromJSON ConsumedCapacity where
     parseJSON (Object v) = ConsumedCapacity
       <$> v .: "CapacityUnits"
-      <*> (HM.toList <$> v .: "GlobalSecondaryIndexes")
-      <*> (HM.toList <$> v .: "LocalSecondaryIndexes")
-      <*> (v .: "Table" >>= (.: "CapacityUnits"))
+      <*> (HM.toList <$> v .:? "GlobalSecondaryIndexes" .!= mempty)
+      <*> (HM.toList <$> v .:? "LocalSecondaryIndexes" .!= mempty)
+      <*> (v .:? "Table" >>= maybe (return Nothing) (.: "CapacityUnits"))
       <*> v .: "TableName"
     parseJSON _ = fail "ConsumedCapacity must be an Object."
 
@@ -623,3 +719,16 @@ instance ToJSON ReturnItemCollectionMetrics where
 instance Default ReturnItemCollectionMetrics where
     def = RICMNone
 
+
+data ItemCollectionMetrics = ItemCollectionMetrics {
+      icmKey      :: (T.Text, DValue)
+    , icmEstimate :: [Double]
+    } deriving (Eq,Show,Read,Ord,Typeable)
+
+
+instance FromJSON ItemCollectionMetrics where
+    parseJSON (Object v) = ItemCollectionMetrics
+      <$> (do m <- v .: "ItemCollectionKey"
+              return $ head $ HM.toList m)
+      <*> v .: "SizeEstimateRangeGB"
+    parseJSON _ = fail "ItemCollectionMetrics must be an Object."

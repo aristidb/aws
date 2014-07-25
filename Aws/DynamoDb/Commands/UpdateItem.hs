@@ -26,11 +26,17 @@ data UpdateItem = UpdateItem {
       uiTable   :: T.Text
     , uiKey     :: PrimaryKey
     , uiUpdates :: [AttributeUpdate]
-    , uiExpect  :: [Expect]
+    , uiExpect  :: Expects
     , uiReturn  :: UpdateReturn
     , uiRetCons :: ReturnConsumption
     , uiRetMet  :: ReturnItemCollectionMetrics
     } deriving (Eq,Show,Read,Ord)
+
+
+-------------------------------------------------------------------------------
+-- | Construct a minimal 'UpdateItem' request.
+updateItem :: T.Text -> PrimaryKey -> [AttributeUpdate] -> UpdateItem
+updateItem tn key ups = UpdateItem tn key ups def def def def
 
 
 type AttributeUpdates = [AttributeUpdate]
@@ -46,10 +52,18 @@ data AttributeUpdate = AttributeUpdate {
     } deriving (Eq,Show,Read,Ord)
 
 
+-------------------------------------------------------------------------------
+-- | Shorthand for the 'AttributeUpdate' constructor. Defaults to PUT
+-- for the update action.
+au :: T.Text -> DValue -> AttributeUpdate
+au a b = AttributeUpdate a b def
+
+
 instance ToJSON AttributeUpdates where
     toJSON = object . map mk
         where
-          mk AttributeUpdate{..} = auName .= object ["Value" .= auValue, "Action" .= auAction]
+          mk AttributeUpdate{..} = auName .= object
+            ["Value" .= auValue, "Action" .= auAction]
 
 
 data UpdateAction = UPut | UAdd | UDelete
@@ -57,9 +71,9 @@ data UpdateAction = UPut | UAdd | UDelete
 
 
 instance ToJSON UpdateAction where
-    toJSON UPut = toJSON ("PUT" :: T.Text)
-    toJSON UAdd = toJSON ("ADD" :: T.Text)
-    toJSON UDelete = toJSON ("DELETE" :: T.Text)
+    toJSON UPut = String "PUT"
+    toJSON UAdd = String "ADD"
+    toJSON UDelete = String "DELETE"
 
 
 instance Default UpdateAction where
@@ -84,10 +98,7 @@ instance ToJSON UpdateReturn where
 
 instance ToJSON UpdateItem where
     toJSON UpdateItem{..} =
-        let expect = if (uiExpect == [])
-                     then []
-                     else ["Expected" .= uiExpect]
-        in object $ expect ++
+        object $ expectsJson uiExpect ++
           [ "TableName" .= uiTable
           , "Key" .= uiKey
           , "AttributeUpdates" .= uiUpdates

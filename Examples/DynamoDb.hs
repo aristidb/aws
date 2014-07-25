@@ -4,13 +4,13 @@
 module Main where
 
 -------------------------------------------------------------------------------
-import           Data.Default
-import qualified Data.Text             as T
+
+
 -------------------------------------------------------------------------------
 import           Aws
-import           Aws.Core
 import           Aws.DynamoDb.Commands
 import           Aws.DynamoDb.Core
+import           Control.Monad.Catch
 -------------------------------------------------------------------------------
 
 
@@ -25,31 +25,44 @@ main = do
   let x = item [ attrAs text "name" "josh"
                , attrAs text "class" "not-so-awesome"]
 
-  let req1 = putItem "devel-1" x
+  let req1 = (putItem "devel-1" x ) { piReturn = RAll
+                                    , piRetCons =  RCTotal
+                                    , piRetMet = RICMSize
+                                    }
 
 
-  (resp1 :: PutItemResponse) <- Aws.simpleAws cfg debugServiceConfig req1
+  resp1 <- Aws.simpleAws cfg debugServiceConfig req1
   print resp1
 
   putStrLn "Getting the item back..."
 
-  {- Make request -}
-
-  let req2 = getItem "devel-1" (hpk "name" ("josh" :: T.Text))
-  (resp2 :: GetItemResponse) <- Aws.simpleAws cfg debugServiceConfig req2
+  let req2 = getItem "devel-1" (HPK "name" "josh")
+  resp2 <- Aws.simpleAws cfg debugServiceConfig req2
   print resp2
 
+  print =<< Aws.simpleAws cfg debugServiceConfig
+    (updateItem "devel-1" (HPK "name" "josh") [au "class" "awesome"])
 
-  let up = AttributeUpdate "class" (mkVal ("awesome" :: T.Text)) def
-  let req3 = UpdateItem "devel-1" (hpk "name" ("josh" :: T.Text)) [up] def URAllNew def def
+  echo "Updating with false conditional."
+  (print =<< Aws.simpleAws cfg debugServiceConfig
+    (updateItem "devel-1" (HPK "name" "josh") [au "class" "awesomer"])
+      { uiExpect = Expects CondAnd [Expect "name" (DEq "john")] })
+    `catch` (\ (e :: DdbError) -> echo ("Eating exception: " ++ show e))
 
-  (resp3 :: UpdateItemResponse) <- Aws.simpleAws cfg debugServiceConfig req3
-  print resp3
+  echo "Getting the item back..."
+  print =<< Aws.simpleAws cfg debugServiceConfig req2
 
-  putStrLn "Getting the item back..."
 
-  (resp4 :: GetItemResponse) <- Aws.simpleAws cfg debugServiceConfig req2
-  print resp4
+  echo "Updating with true conditional"
+  print =<< Aws.simpleAws cfg debugServiceConfig
+    (updateItem "devel-1" (HPK "name" "josh") [au "class" "awesomer"])
+      { uiExpect = Expects CondAnd [Expect "name" (DEq "josh")] }
 
+  echo "Getting the item back..."
+  print =<< Aws.simpleAws cfg debugServiceConfig req2
+
+
+
+echo = putStrLn
 
 

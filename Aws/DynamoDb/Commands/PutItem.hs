@@ -37,7 +37,7 @@ data PutItem = PutItem {
     -- ^ Target table
     , piItem    :: Item
     -- ^ An item to Put
-    , piExpect  :: [Expect]
+    , piExpect  :: Expects
     -- ^ (Possible) set of expections for a conditional Put
     , piReturn  :: PutReturn
     -- ^ What to return from this query.
@@ -53,15 +53,12 @@ putItem :: T.Text
         -> Item
         -- ^ Item to be saved
         -> PutItem
-putItem tn it = PutItem tn it [] RNone def def
+putItem tn it = PutItem tn it def RNone def def
 
 
 instance ToJSON PutItem where
     toJSON PutItem{..} =
-        let e = if (piExpect == [])
-                    then []
-                    else ["Expected" .= piExpect]
-        in object $ e ++
+        object $ expectsJson piExpect ++
           [ "TableName" .= piTable
           , "Item" .= piItem
           , "ReturnValues" .= piReturn
@@ -86,6 +83,8 @@ data PutItemResponse = PutItemResponse {
     -- ^ Old attributes, if requested
     , pirConsumed :: Maybe ConsumedCapacity
     -- ^ Amount of capacity consumed
+    , pirColMet   :: Maybe ItemCollectionMetrics
+    -- ^ Collection metrics if they have been requested.
     } deriving (Eq,Show,Read,Ord)
 
 
@@ -102,6 +101,7 @@ instance FromJSON PutItemResponse where
     parseJSON (Object v) = PutItemResponse
         <$> v .:? "Attributes"
         <*> v .:? "ConsumedCapacity"
+        <*> v .:? "ItemCollectionMetrics"
     parseJSON _ = fail "PutItemResponse must be an object."
 
 
