@@ -251,8 +251,8 @@ instance ToJSON PrimaryKey where
 
 -- | A key-value pair
 data Attribute = Attribute {
-      attrKey :: T.Text
-    , attrVal :: DValue
+      attrName :: T.Text
+    , attrVal  :: DValue
     } deriving (Read,Show,Ord,Eq,Typeable)
 
 

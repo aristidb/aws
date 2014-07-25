@@ -43,10 +43,8 @@ type AttributeUpdates = [AttributeUpdate]
 
 
 data AttributeUpdate = AttributeUpdate {
-      auName   :: T.Text
-    -- ^ Attribute name
-    , auValue  :: DValue
-    -- ^ Attribute value
+      auAttr   :: Attribute
+    -- ^ Attribute key-value
     , auAction :: UpdateAction
     -- ^ Type of update operation.
     } deriving (Eq,Show,Read,Ord)
@@ -55,15 +53,15 @@ data AttributeUpdate = AttributeUpdate {
 -------------------------------------------------------------------------------
 -- | Shorthand for the 'AttributeUpdate' constructor. Defaults to PUT
 -- for the update action.
-au :: T.Text -> DValue -> AttributeUpdate
-au a b = AttributeUpdate a b def
+au :: Attribute -> AttributeUpdate
+au a = AttributeUpdate a def
 
 
 instance ToJSON AttributeUpdates where
     toJSON = object . map mk
         where
-          mk AttributeUpdate{..} = auName .= object
-            ["Value" .= auValue, "Action" .= auAction]
+          mk AttributeUpdate{..} = (attrName auAttr) .= object
+            ["Value" .= (attrVal auAttr), "Action" .= auAction]
 
 
 data UpdateAction = UPut | UAdd | UDelete
