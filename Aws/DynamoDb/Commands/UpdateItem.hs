@@ -7,6 +7,17 @@
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeFamilies              #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Aws.DynamoDb.Commands.UpdateItem
+-- Copyright   :  Soostone Inc
+-- License     :  BSD3
+--
+-- Maintainer  :  Ozgun Ataman <ozgun.ataman@soostone.com>
+-- Stability   :  experimental
+--
+--
+----------------------------------------------------------------------------
 
 module Aws.DynamoDb.Commands.UpdateItem where
 
@@ -27,6 +38,7 @@ data UpdateItem = UpdateItem {
     , uiKey     :: PrimaryKey
     , uiUpdates :: [AttributeUpdate]
     , uiExpect  :: Expects
+    -- ^ Conditional update - see DynamoDb documentation
     , uiReturn  :: UpdateReturn
     , uiRetCons :: ReturnConsumption
     , uiRetMet  :: ReturnItemCollectionMetrics
@@ -35,7 +47,11 @@ data UpdateItem = UpdateItem {
 
 -------------------------------------------------------------------------------
 -- | Construct a minimal 'UpdateItem' request.
-updateItem :: T.Text -> PrimaryKey -> [AttributeUpdate] -> UpdateItem
+updateItem
+    :: T.Text                   -- ^ Table name
+    -> PrimaryKey               -- ^ Primary key for item
+    -> [AttributeUpdate]        -- ^ Updates for this item
+    -> UpdateItem
 updateItem tn key ups = UpdateItem tn key ups def def def def
 
 
@@ -64,7 +80,16 @@ instance ToJSON AttributeUpdates where
             ["Value" .= (attrVal auAttr), "Action" .= auAction]
 
 
-data UpdateAction = UPut | UAdd | UDelete
+-------------------------------------------------------------------------------
+-- | Type of attribute update to perform.
+--
+-- See AWS docs at:
+--
+-- @http:\/\/docs.aws.amazon.com\/amazondynamodb\/latest\/APIReference\/API_UpdateItem.html@
+data UpdateAction
+    = UPut                      -- ^ Simpley write, overwriting any previous value
+    | UAdd                      -- ^ Numerical add or add to set.
+    | UDelete                   -- ^ Empty value: remove; Set value: Subtract from set.
     deriving (Eq,Show,Read,Ord)
 
 

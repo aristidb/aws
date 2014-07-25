@@ -6,6 +6,17 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Aws.DynamoDb.Core
+-- Copyright   :  Soostone Inc, Chris Allen
+-- License     :  BSD3
+--
+-- Maintainer  :  Ozgun Ataman, Chris Allen
+-- Stability   :  experimental
+--
+-- Shared types and utilities for DyanmoDb functionality.
+----------------------------------------------------------------------------
 
 module Aws.DynamoDb.Core
     (
@@ -198,8 +209,8 @@ mkVal :: DVal a => a -> DValue
 mkVal = toDVal
 
 
--- | A value as defined/recognized by DynamoDB. We split into more
--- types to have this work more natively with Haskell.
+-- | Value types recognized by DynamoDb. We pretty much exactly
+-- reflect the AWS API into Haskell types.
 data DValue
     = DNum Scientific
     | DString T.Text
@@ -373,6 +384,8 @@ data DdbLibraryError
 -- | Potential errors raised by DynamoDB
 data DdbError = DdbError {
       ddbStatusCode :: Int
+    -- ^ 200 if successful, 400 for client errors and 500 for
+    -- server-side errors.
     , ddbErrCode    :: DdbErrCode
     , ddbErrMsg     :: T.Text
     } deriving (Show,Eq,Typeable)
@@ -566,7 +579,8 @@ ddbResponseConsumer ref resp = do
     HTTP.Status{..} = responseStatus resp
 
 
--- | Conditions used by mutation operations ('PutItem', 'UpdateItem', etc.).
+-- | Conditions used by mutation operations ('PutItem', 'UpdateItem',
+-- etc.). The default 'def' instance is empty (no condition).
 data Expects = Expects CondOp [Expect]
     deriving (Eq,Show,Read,Ord,Typeable)
 
@@ -590,6 +604,8 @@ rendCondOp CondAnd = "AND"
 rendCondOp CondOr = "OR"
 
 
+-------------------------------------------------------------------------------
+-- | Logical operator for merging multiple conditions.
 data CondOp = CondAnd | CondOr
     deriving (Eq,Show,Read,Ord,Typeable)
 
@@ -597,12 +613,13 @@ data CondOp = CondAnd | CondOr
 -- | A condition used by mutation operations ('PutItem', 'UpdateItem', etc.).
 data Expect = Expect {
       expectAttr      :: T.Text
-    -- ^ Attribute for the existence check
+    -- ^ Attribute to use as the basis for this conditional
     , expectCondition :: Condition
     } deriving (Eq,Show,Read,Ord,Typeable)
 
 
 -------------------------------------------------------------------------------
+-- | Conditional check for a given attribute.
 data Condition
     = DEq DValue
     | NotEq DValue
@@ -730,7 +747,14 @@ instance FromJSON ItemCollectionMetrics where
     parseJSON _ = fail "ItemCollectionMetrics must be an Object."
 
 
-data UpdateReturn = URNone | URAllOld | URUpdatedOld | URAllNew | URUpdatedNew
+-------------------------------------------------------------------------------
+-- | What to return from the current update operation
+data UpdateReturn
+    = URNone                    -- ^ Return nothing
+    | URAllOld                  -- ^ Return old values
+    | URUpdatedOld              -- ^ Return old values with a newer replacement
+    | URAllNew                  -- ^ Return new values
+    | URUpdatedNew              -- ^ Return new values that were replacements
     deriving (Eq,Show,Read,Ord,Typeable)
 
 
