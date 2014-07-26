@@ -95,7 +95,8 @@ Library
                        Aws.Ses.Core,
                        Aws.DynamoDb.Commands,
                        Aws.DynamoDb.Commands.Table,
-                       Aws.DynamoDb.Core
+                       Aws.DynamoDb.Core,
+                       Aws.Network
 
   Build-depends:
                        aeson                >= 0.6     && < 0.8,
@@ -119,6 +120,7 @@ Library
                        lifted-base          >= 0.1     && < 0.3,
                        monad-control        >= 0.3,
                        mtl                  == 2.*,
+                       network              == 2.*,
                        old-locale           == 1.*,
                        resourcet            >= 1.1     && < 1.2,
                        text                 >= 0.11,

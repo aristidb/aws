@@ -177,7 +177,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       , sqStringToSign = stringToSign
       }
     where
-      amzHeaders = merge $ sortBy (compare `on` fst) s3QAmzHeaders
+      amzHeaders = merge $ sortBy (compare `on` fst) (s3QAmzHeaders ++ (fmap (\(k, v) -> (CI.mk k, v)) iamTok))
           where merge (x1@(k1,v1):x2@(k2,v2):xs) | k1 == k2  = merge ((k1, B8.intercalate "," [v1, v2]) : xs)
                                                  | otherwise = x1 : merge (x2 : xs)
                 merge xs = xs
@@ -196,6 +196,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
              (True, AbsoluteExpires time) -> AbsoluteExpires time
       sig = signature signatureCredentials HmacSHA1 stringToSign
+      iamTok = maybe [] (\x -> [("x-amz-security-token", x)]) (iamToken signatureCredentials)
       stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
                        [[Blaze.copyByteString $ httpMethod s3QMethod]
                        , [maybe mempty (Blaze.copyByteString . Base64.encode . toBytes) s3QContentMd5]
@@ -214,7 +215,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
           = [("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)
             , ("AWSAccessKeyId", accessKeyID signatureCredentials)
             , ("SignatureMethod", "HmacSHA256")
-            , ("Signature", sig)]
+            , ("Signature", sig)] ++ iamTok
 
 s3ResponseConsumer :: HTTPResponseConsumer a
                    -> IORef S3Metadata
@@ -356,7 +357,7 @@ data ObjectInfo
       , objectETag         :: T.Text
       , objectSize         :: Integer
       , objectStorageClass :: StorageClass
-      , objectOwner        :: UserInfo
+      , objectOwner        :: Maybe UserInfo
       }
     deriving (Show)
 
@@ -371,7 +372,9 @@ parseObjectInfo el
          eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
          size <- forceM "Missing object Size" $ el $/ elContent "Size" &| textReadInt
          storageClass <- forceM "Missing object StorageClass" $ el $/ elContent "StorageClass" &| parseStorageClass
-         owner <- forceM "Missing object Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo
+         owner <- case el $/ Cu.laxElement "Owner" &| parseUserInfo of
+                    (x:_) -> fmap' Just x
+                    [] -> return Nothing
          return ObjectInfo{
                       objectKey          = key
                     , objectLastModified = lastModified
@@ -380,6 +383,9 @@ parseObjectInfo el
                     , objectStorageClass = storageClass
                     , objectOwner        = owner
                     }
+    where
+      fmap' :: Monad m => (a -> b) -> m a -> m b
+      fmap' f ma = ma >>= return . f
 
 data ObjectMetadata
     = ObjectMetadata {

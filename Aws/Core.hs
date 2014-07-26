@@ -73,7 +73,9 @@ module Aws.Core
 , credentialsDefaultKey
 , loadCredentialsFromFile
 , loadCredentialsFromEnv
+, loadCredentialsFromInstanceMetadata
 , loadCredentialsFromEnvOrFile
+, loadCredentialsFromEnvOrFileOrInstanceMetadata
 , loadCredentialsDefault
   -- * Service configuration
 , DefaultServiceConfiguration(..)
@@ -85,6 +87,8 @@ module Aws.Core
 )
 where
 
+import           Aws.Ec2.InstanceMetadata
+import           Aws.Network
 import qualified Blaze.ByteString.Builder as Blaze
 import           Control.Applicative
 import           Control.Arrow
@@ -93,6 +97,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource (ResourceT, MonadThrow (throwM))
 import           Crypto.Hash
+import qualified Data.Aeson               as A
 import           Data.Byteable
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
@@ -108,6 +113,7 @@ import qualified Data.Conduit.List        as CL
 import           Data.Default             (def)
 import           Data.IORef
 import           Data.List
+import qualified Data.Map                 as M
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text                as T
@@ -232,9 +238,11 @@ data Credentials
       , secretAccessKey :: B.ByteString
         -- | Signing keys for signature version 4
       , v4SigningKeys :: IORef [V4Key]
+        -- | Signed IAM token
+      , iamToken :: Maybe B.ByteString
       }
 instance Show Credentials where
-    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ "}"
+    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ ",iamToken=" ++ show (iamToken c) ++ "}"
 
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
 --
@@ -262,6 +270,7 @@ loadCredentialsFromFile file key = liftIO $ do
     return Credentials { accessKeyID = T.encodeUtf8 keyID
                        , secretAccessKey = T.encodeUtf8 secret
                        , v4SigningKeys = ref
+                       , iamToken = Nothing
                        }
       where
         hasKey _ [] = False
@@ -278,7 +287,36 @@ loadCredentialsFromEnv = liftIO $ do
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
   return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) 
                       <*> (T.encodeUtf8 . T.pack <$> secret)
-                      <*> return ref)
+                      <*> return ref
+                      <*> return Nothing)
+
+loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
+loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
+  do
+    -- check if the path is routable
+    avail <- liftIO $ hostAvailable "169.254.169.254"
+    if not avail
+      then return Nothing
+      else do
+        info <- liftIO $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam" "info" >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
+        let infodict = info >>= A.decode :: Maybe (M.Map String String)
+            info'    = infodict >>= M.lookup "InstanceProfileArn"
+        case info' of
+          Just name ->
+            do
+              let name' = drop 1 $ dropWhile (/= '/') $ name
+              creds <- liftIO $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam/security-credentials" name' >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
+              -- this token lasts ~6 hours
+              let dict   = creds >>= A.decode :: Maybe (M.Map String String)
+                  keyID  = dict  >>= M.lookup "AccessKeyId"
+                  secret = dict  >>= M.lookup "SecretAccessKey"
+                  token  = dict  >>= M.lookup "Token"
+              ref <- liftIO $ newIORef []
+              return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID)
+                                  <*> (T.encodeUtf8 . T.pack <$> secret)
+                                  <*> return ref
+                                  <*> (Just . T.encodeUtf8 . T.pack <$> token))
+          Nothing -> return Nothing
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
 --
@@ -291,6 +329,22 @@ loadCredentialsFromEnvOrFile file key =
       Just cr -> return (Just cr)
       Nothing -> loadCredentialsFromFile file key
 
+-- | Load credentials from environment variables if possible, or alternatively from the instance metadata store, or alternatively from a file with a given key name.
+--
+-- See 'loadCredentialsFromEnv', 'loadCredentialsFromFile' and 'loadCredentialsFromInstanceMetadata' for details.
+loadCredentialsFromEnvOrFileOrInstanceMetadata :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
+loadCredentialsFromEnvOrFileOrInstanceMetadata file key =
+  do
+    envcr <- loadCredentialsFromEnv
+    case envcr of
+      Just cr -> return (Just cr)
+      Nothing ->
+        do
+          instcr <- loadCredentialsFromInstanceMetadata
+          case instcr of
+            Just cr -> return (Just cr)
+            Nothing -> loadCredentialsFromFile file key
+
 -- | Load credentials from environment variables if possible, or alternative from the default file with the default
 -- key name.
 --
@@ -301,7 +355,7 @@ loadCredentialsFromEnvOrFile file key =
 loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
 loadCredentialsDefault = do
   file <- credentialsDefaultFile
-  loadCredentialsFromEnvOrFile file credentialsDefaultKey
+  loadCredentialsFromEnvOrFileOrInstanceMetadata file credentialsDefaultKey
 
 -- | Protocols supported by AWS. Currently, all AWS services use the HTTP or HTTPS protocols.
 data Protocol
