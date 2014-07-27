@@ -81,13 +81,12 @@ baseConfiguration :: MonadIO io => io Configuration
 baseConfiguration = liftIO $ do
   cr <- loadCredentialsDefault
   case cr of
-    Nothing -> error "unable to load credentials"
+    Nothing -> E.throw $ NoCredentialsException "could not locate aws credentials"
     Just cr' -> return Configuration {
                       timeInfo = Timestamp
                     , credentials = cr'
                     , logger = defaultLog Warning
                     }
--- TODO: better error handling when credentials cannot be loaded
 
 -- | Debug configuration, which logs much more verbosely.
 dbgConfiguration :: MonadIO io => io Configuration

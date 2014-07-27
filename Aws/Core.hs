@@ -21,6 +21,7 @@ module Aws.Core
 , XmlException(..)
 , HeaderException(..)
 , FormException(..)
+, NoCredentialsException(..)
   -- ** Response deconstruction helpers
 , readHex2
   -- *** XML
@@ -736,10 +737,16 @@ newtype HeaderException = HeaderException { headerErrorMessage :: String }
 instance E.Exception HeaderException
 
 -- | An error that occurred during form parsing / validation.
-newtype FormException  = FormException { formErrorMesage :: String }
+newtype FormException = FormException { formErrorMesage :: String }
     deriving (Show, Typeable)
 
 instance E.Exception FormException
+
+-- | No credentials were found and an invariant was violated.
+newtype NoCredentialsException = NoCredentialsException { noCredentialsErrorMesage :: String }
+    deriving (Show, Typeable)
+
+instance E.Exception NoCredentialsException
 
 
 -- | A specific element (case-insensitive, ignoring namespace - sadly necessary), extracting only the textual contents.
