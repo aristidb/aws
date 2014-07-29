@@ -97,14 +97,15 @@ import           Data.IORef
 import qualified Data.Map                     as M
 import           Data.Maybe
 import           Data.Monoid
+import           Data.Proxy
 import           Data.Scientific
 import qualified Data.Serialize               as Ser
 import qualified Data.Set                     as S
 import           Data.String
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
+import           Data.Time
 import           Data.Typeable
-import           Network.HTTP.Conduit
 import qualified Network.HTTP.Conduit         as HTTP
 import qualified Network.HTTP.Types           as HTTP
 import           Safe
@@ -124,18 +125,6 @@ class DVal a where
 instance DVal DValue where
     toDVal = id
     fromDVal = Just
-
-
-instance DVal Int where
-    toDVal i = DNum (fromIntegral i)
-    fromDVal (DNum i) = toIntegral i
-    fromDVal _ = Nothing
-
-
-instance DVal Integer where
-    toDVal i = DNum (fromIntegral i)
-    fromDVal (DNum i) = toIntegral i
-    fromDVal _ = Nothing
 
 
 instance DVal Double where
@@ -174,6 +163,24 @@ instance DVal (S.Set Double) where
     fromDVal _ = Nothing
 
 
+instance DVal Integer where
+    toDVal i = DNum (fromIntegral i)
+    fromDVal (DNum i) = toIntegral i
+    fromDVal _ = Nothing
+
+
+instance DVal [Integer] where
+    toDVal i = DNumSet $ S.fromList $ map fromIntegral i
+    fromDVal (DNumSet i) = mapM toIntegral $ S.toList i
+    fromDVal _ = Nothing
+
+
+instance DVal Int where
+    toDVal i = DNum (fromIntegral i)
+    fromDVal (DNum i) = toIntegral i
+    fromDVal _ = Nothing
+
+
 instance DVal [Int] where
     toDVal i = DNumSet $ S.fromList $ map fromIntegral i
     fromDVal (DNumSet x) = sequence $ map toIntegral $ S.toList x
@@ -184,6 +191,52 @@ instance DVal (S.Set Int) where
     toDVal i = DNumSet $ S.map fromIntegral i
     fromDVal ds@(DNumSet _) = S.fromList <$> fromDVal ds
     fromDVal _ = Nothing
+
+
+instance DVal B.ByteString where
+    toDVal = DBinary
+    fromDVal (DBinary i) = Just i
+    fromDVal _ = Nothing
+
+
+instance DVal [B.ByteString] where
+    toDVal = DBinSet . S.fromList
+    fromDVal (DBinSet s) = Just $ S.toList s
+    fromDVal _ = Nothing
+
+
+instance DVal (S.Set B.ByteString) where
+    toDVal = DBinSet
+    fromDVal (DBinSet s) = Just s
+    fromDVal _ = Nothing
+
+
+-------------------------------------------------------------------------------
+-- | Encoded as Int.
+instance DVal Day where
+    toDVal (ModifiedJulianDay i) = toDVal i
+    fromDVal x = ModifiedJulianDay <$> fromDVal x
+
+
+-------------------------------------------------------------------------------
+-- | Encoded as Int.
+instance DVal [Day] where
+    toDVal xs = toDVal $ map (\ (ModifiedJulianDay i) -> i) xs
+    fromDVal xs = (map ModifiedJulianDay) <$> fromDVal xs
+
+
+-------------------------------------------------------------------------------
+-- | Encoded as 'Int" - 0 or 1
+instance DVal Bool where
+    toDVal True = toDVal (1 :: Int)
+    toDVal False = toDVal (0 :: Int)
+    fromDVal x = do
+        i <- fromDVal x
+        case i of
+          (0 :: Int) -> Just False
+          1 -> Just True
+          _ -> Nothing
+
 
 
 toIntegral :: (Integral a, RealFrac a1) => a1 -> Maybe a
@@ -197,9 +250,9 @@ newtype Bin a = Bin a deriving (Eq,Show,Read,Ord)
 
 
 instance Ser.Serialize a => DVal (Bin a) where
-    toDVal (Bin a) = DBinary (Base64.encode (Ser.encode a))
+    toDVal (Bin a) = DBinary (Ser.encode a)
     fromDVal (DBinary x) = either (const Nothing) (Just . Bin) $
-                           Ser.decode =<< Base64.decode x
+                           Ser.decode x
     fromDVal _ = Nothing
 
 
@@ -284,23 +337,23 @@ attr k v = Attribute k (toDVal v)
 -- supplying values in code.
 --
 -- >> item [ attrAs text "name" "john" ]
-attrAs :: DVal a => a -> T.Text -> a -> Attribute
+attrAs :: DVal a => Proxy a -> T.Text -> a -> Attribute
 attrAs _ k v = attr k v
 
 
 -- | Type witness for 'Text'. See 'attrAs'.
-text :: T.Text
-text = undefined
+text :: Proxy T.Text
+text = Proxy
 
 
 -- | Type witness for 'Integer'. See 'attrAs'.
-int :: Integer
-int = undefined
+int :: Proxy Integer
+int = Proxy
 
 
 -- | Type witness for 'Double'. See 'attrAs'.
-double :: Double
-double = undefined
+double :: Proxy Double
+double = Proxy
 
 
 -- | A DynamoDb object is simply a key-value dictionary.
@@ -553,7 +606,7 @@ ddbResponseConsumer ref resp = do
       _   -> rError val
   where
 
-    header = fmap T.decodeUtf8 . flip lookup (responseHeaders resp)
+    header = fmap T.decodeUtf8 . flip lookup (HTTP.responseHeaders resp)
     amzId = header "x-amzn-RequestId"
     amzCrc = header "x-amz-crc32"
     meta = DdbResponse amzCrc amzId
@@ -583,7 +636,7 @@ ddbResponseConsumer ref resp = do
              Just e -> return $ e
              Nothing -> throwM (UnknownDynamoErrCode txt)
 
-    HTTP.Status{..} = responseStatus resp
+    HTTP.Status{..} = HTTP.responseStatus resp
 
 
 -- | Conditions used by mutation operations ('PutItem', 'UpdateItem',
