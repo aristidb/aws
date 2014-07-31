@@ -22,7 +22,7 @@
 
 module Aws.DynamoDb.Core
     (
-    -- * Configuration & Regions
+    -- * Configuration and Regions
       Region (..)
     , ddbUsEast1
     , ddbUsWest1
@@ -34,15 +34,19 @@ module Aws.DynamoDb.Core
     , ddbSaEast1
     , DdbConfiguration (..)
 
-    -- * DynamoDB Types
+    -- * DynamoDB values
     , DValue (..)
+
+    -- * Converting to/from 'DValue'
     , DynVal(..)
     , toValue, fromValue
+    , Bin (..)
 
+    -- * Defining new 'DynVal' instances
     , DynData(..)
     , DynBinary(..), DynNumber(..), DynString(..)
 
-    , Bin (..)
+    -- * Working with key/value pairs
     , Attribute (..)
     , attrTuple
     , attr
@@ -51,9 +55,12 @@ module Aws.DynamoDb.Core
     , PrimaryKey (..)
     , hk
     , hrk
+
+    -- * Working with objects (attribute collections)
     , Item
     , item
 
+    -- * Common types used by operations
     , Expects (..)
     , expectsJson
     , Condition (..)
@@ -112,6 +119,7 @@ import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
 import           Data.Typeable
+import           Data.Word
 import qualified Network.HTTP.Conduit         as HTTP
 import qualified Network.HTTP.Types           as HTTP
 import           Safe
@@ -150,6 +158,8 @@ newtype DynBinary = DynBinary { unDynBinary :: B.ByteString }
 -- This is here so that any 'DynVal' haskell value can automatically
 -- be lifted to a list or a 'Set' without any instance code
 -- duplication.
+--
+-- Do not try to create your own instances.
 class Ord a => DynData a where
     fromData :: a -> DValue
     toData :: DValue -> Maybe a
@@ -192,16 +202,20 @@ instance DynData DValue where
 -------------------------------------------------------------------------------
 -- | Class of Haskell types that can be represented as DynamoDb values.
 --
--- This is the easy conversion layer; instantiate this class for your
--- own types and then use the 'toValue' and 'fromValue' combinators to
--- convert.
+-- This is the conversion layer; instantiate this class for your own
+-- types and then use the 'toValue' and 'fromValue' combinators to
+-- convert in application code.
 class DynData (DynRep a) => DynVal a where
 
-    -- | Which of the 'DynData' instances does this data type map to?
+    -- | Which of the 'DynData' instances does this data type directly
+    -- map to?
     type DynRep a
 
-    fromRep :: DynRep a -> Maybe a
+    -- | Convert to representation
     toRep :: a -> DynRep a
+
+    -- | Convert from representation
+    fromRep :: DynRep a -> Maybe a
 
 
 -------------------------------------------------------------------------------
@@ -252,6 +266,30 @@ instance DynVal Int32 where
 
 instance DynVal Int64 where
     type DynRep Int64 = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Word8 where
+    type DynRep Word8 = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Word16 where
+    type DynRep Word16 = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Word32 where
+    type DynRep Word32 = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Word64 where
+    type DynRep Word64 = DynNumber
     fromRep (DynNumber i) = toIntegral i
     toRep i = DynNumber (fromIntegral i)
 
@@ -314,13 +352,13 @@ instance (Ser.Serialize a) => DynVal (Bin a) where
 
 
 -------------------------------------------------------------------------------
--- | Encode a Haskell value as DynamoDb value.
+-- | Encode a Haskell value.
 toValue :: DynVal a  => a -> DValue
 toValue a = fromData $ toRep a
 
 
 -------------------------------------------------------------------------------
--- | Decode a DynamoDb value into Haskell value.
+-- | Decode a Haskell value.
 fromValue :: DynVal a => DValue -> Maybe a
 fromValue d = toData d >>= fromRep
 
@@ -331,7 +369,7 @@ toIntegral sc = Just $ floor sc
 
 
 -- | Value types natively recognized by DynamoDb. We pretty much
--- exactly reflect the AWS API into Haskell types.
+-- exactly reflect the AWS API onto Haskell types.
 data DValue
     = DNum Scientific
     | DString T.Text
