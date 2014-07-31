@@ -299,8 +299,7 @@ hk k v = PrimaryKey (attr k v) Nothing
 
 -------------------------------------------------------------------------------
 -- | Construct a hash-and-range primary key.
-hrk :: (DVal a, DVal b)
-    => T.Text                   -- ^ Hash key name
+hrk :: T.Text                   -- ^ Hash key name
     -> DValue                   -- ^ Hash key value
     -> T.Text                   -- ^ Range key name
     -> DValue                   -- ^ Range key value
