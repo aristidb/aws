@@ -6,6 +6,8 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE UndecidableInstances      #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Aws.DynamoDb.Core
@@ -34,11 +36,15 @@ module Aws.DynamoDb.Core
 
     -- * DynamoDB Types
     , DValue (..)
-    , DVal (..)
+    , DynVal(..)
+    , toValue, fromValue
+
+    , DynData(..)
+    , DynBinary(..), DynNumber(..), DynString(..)
+
     , Bin (..)
     , Attribute (..)
     , attrTuple
-    , mkVal
     , attr
     , attrAs
     , text, int, double
@@ -114,164 +120,227 @@ import           Aws.Core
 -------------------------------------------------------------------------------
 
 
--- | Class of native Haskell types that can be converted to DynamoDB
--- types using this common interface. DynamoDB is typed and this class
--- helps us work with that through a more convenient interface.
-class DVal a where
-    toDVal :: a -> DValue
-    fromDVal :: DValue -> Maybe a
 
-
-instance DVal DValue where
-    toDVal = id
-    fromDVal = Just
-
-
-instance DVal Double where
-    toDVal i = DNum (fromFloatDigits i)
-    fromDVal (DNum i) = Just (toRealFloat i)
-    fromDVal _ = Nothing
-
-
-instance DVal T.Text where
-    toDVal i = DString i
-    fromDVal (DString x) = Just x
-    fromDVal _ = Nothing
-
-
-instance DVal [T.Text] where
-    toDVal i = DStringSet $ S.fromList i
-    fromDVal (DStringSet x) = Just $ S.toList x
-    fromDVal _ = Nothing
-
-
-instance DVal (S.Set T.Text) where
-    toDVal i = DStringSet i
-    fromDVal (DStringSet x) = Just x
-    fromDVal _ = Nothing
-
-
-instance DVal [Double] where
-    toDVal i = DNumSet $ S.fromList $ map fromFloatDigits i
-    fromDVal (DNumSet x) = Just $ map toRealFloat $ S.toList x
-    fromDVal _ = Nothing
-
-
-instance DVal (S.Set Double) where
-    toDVal i = DNumSet $ S.map fromFloatDigits i
-    fromDVal (DNumSet x) = Just $ S.map toRealFloat x
-    fromDVal _ = Nothing
-
-
-instance DVal Integer where
-    toDVal i = DNum (fromIntegral i)
-    fromDVal (DNum i) = toIntegral i
-    fromDVal _ = Nothing
-
-
-instance DVal [Integer] where
-    toDVal i = DNumSet $ S.fromList $ map fromIntegral i
-    fromDVal (DNumSet i) = mapM toIntegral $ S.toList i
-    fromDVal _ = Nothing
-
-
-instance DVal Int where
-    toDVal i = DNum (fromIntegral i)
-    fromDVal (DNum i) = toIntegral i
-    fromDVal _ = Nothing
-
-
-instance DVal [Int] where
-    toDVal i = DNumSet $ S.fromList $ map fromIntegral i
-    fromDVal (DNumSet x) = sequence $ map toIntegral $ S.toList x
-    fromDVal _ = Nothing
-
-
-instance DVal (S.Set Int) where
-    toDVal i = DNumSet $ S.map fromIntegral i
-    fromDVal ds@(DNumSet _) = S.fromList <$> fromDVal ds
-    fromDVal _ = Nothing
-
-
-instance DVal B.ByteString where
-    toDVal = DBinary
-    fromDVal (DBinary i) = Just i
-    fromDVal _ = Nothing
-
-
-instance DVal [B.ByteString] where
-    toDVal = DBinSet . S.fromList
-    fromDVal (DBinSet s) = Just $ S.toList s
-    fromDVal _ = Nothing
-
-
-instance DVal (S.Set B.ByteString) where
-    toDVal = DBinSet
-    fromDVal (DBinSet s) = Just s
-    fromDVal _ = Nothing
+-------------------------------------------------------------------------------
+-- | Numeric values stored in DynamoDb. Only used in defining new
+-- 'DynVal' instances.
+newtype DynNumber = DynNumber { unDynNumber :: Scientific }
+    deriving (Eq,Show,Read,Ord,Typeable)
 
 
 -------------------------------------------------------------------------------
--- | Encoded as Int.
-instance DVal Day where
-    toDVal (ModifiedJulianDay i) = toDVal i
-    fromDVal x = ModifiedJulianDay <$> fromDVal x
+-- | String values stored in DynamoDb. Only used in defining new
+-- 'DynVal' instances.
+newtype DynString = DynString { unDynString :: T.Text }
+    deriving (Eq,Show,Read,Ord,Typeable)
 
 
 -------------------------------------------------------------------------------
--- | Encoded as Int.
-instance DVal [Day] where
-    toDVal xs = toDVal $ map (\ (ModifiedJulianDay i) -> i) xs
-    fromDVal xs = (map ModifiedJulianDay) <$> fromDVal xs
+-- | Binary values stored in DynamoDb. Only used in defining new
+-- 'DynVal' instances.
+newtype DynBinary = DynBinary { unDynBinary :: B.ByteString }
+    deriving (Eq,Show,Read,Ord,Typeable)
 
 
 -------------------------------------------------------------------------------
--- | Encoded as 'Int" - 0 or 1
-instance DVal Bool where
-    toDVal True = toDVal (1 :: Int)
-    toDVal False = toDVal (0 :: Int)
-    fromDVal x = do
-        i <- fromDVal x
-        case i of
-          (0 :: Int) -> Just False
-          1 -> Just True
+-- | An internally used closed typeclass for values that have direct
+-- DynamoDb representations. Based on AWS API, this is basically
+-- numbers, strings and binary blobs.
+--
+-- This is here so that any 'DynVal' haskell value can automatically
+-- be lifted to a list or a 'Set' without any instance code
+-- duplication.
+class Ord a => DynData a where
+    fromData :: a -> DValue
+    toData :: DValue -> Maybe a
+
+instance DynData DynNumber where
+    fromData (DynNumber i) = DNum i
+    toData (DNum i) = Just $ DynNumber i
+    toData _ = Nothing
+
+instance DynData (S.Set DynNumber) where
+    fromData set = DNumSet (S.map unDynNumber set)
+    toData (DNumSet i) = Just $ S.map DynNumber i
+    toData _ = Nothing
+
+instance DynData DynString where
+    fromData (DynString i) = DString i
+    toData (DString i) = Just $ DynString i
+    toData _ = Nothing
+
+instance DynData (S.Set DynString) where
+    fromData set = DStringSet (S.map unDynString set)
+    toData (DStringSet i) = Just $ S.map DynString i
+    toData _ = Nothing
+
+instance DynData DynBinary where
+    fromData (DynBinary i) = DBinary i
+    toData (DBinary i) = Just $ DynBinary i
+    toData _ = Nothing
+
+instance DynData (S.Set DynBinary) where
+    fromData set = DBinSet (S.map unDynBinary set)
+    toData (DBinSet i) = Just $ S.map DynBinary i
+    toData _ = Nothing
+
+instance DynData DValue where
+    fromData = id
+    toData = Just
+
+
+-------------------------------------------------------------------------------
+-- | Class of Haskell types that can be represented as DynamoDb values.
+--
+-- This is the easy conversion layer; instantiate this class for your
+-- own types and then use the 'toValue' and 'fromValue' combinators to
+-- convert.
+class DynData (DynRep a) => DynVal a where
+
+    -- | Which of the 'DynData' instances does this data type map to?
+    type DynRep a
+
+    fromRep :: DynRep a -> Maybe a
+    toRep :: a -> DynRep a
+
+
+-------------------------------------------------------------------------------
+-- | Any singular 'DynVal' can be upgraded to a list.
+instance (DynData (DynRep [a]), DynVal a) => DynVal [a] where
+    type DynRep [a] = S.Set (DynRep a)
+    fromRep set = mapM fromRep $ S.toList set
+    toRep as = S.fromList $ map toRep as
+
+
+-------------------------------------------------------------------------------
+-- | Any singular 'DynVal' can be upgraded to a 'Set'.
+instance (DynData (DynRep [a]), DynVal a, Ord a) => DynVal (S.Set a) where
+    type DynRep (S.Set a) = S.Set (DynRep a)
+    fromRep set = fmap S.fromList . mapM fromRep $ S.toList set
+    toRep as = S.map toRep as
+
+
+instance DynVal DValue where
+    type DynRep DValue = DValue
+    fromRep = Just
+    toRep   = id
+
+
+instance DynVal Int where
+    type DynRep Int = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Int8 where
+    type DynRep Int8 = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Int16 where
+    type DynRep Int16 = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Int32 where
+    type DynRep Int32 = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Int64 where
+    type DynRep Int64 = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal Integer where
+    type DynRep Integer = DynNumber
+    fromRep (DynNumber i) = toIntegral i
+    toRep i = DynNumber (fromIntegral i)
+
+
+instance DynVal T.Text where
+    type DynRep T.Text = DynString
+    fromRep (DynString i) = Just i
+    toRep i = DynString i
+
+
+instance DynVal B.ByteString where
+    type DynRep B.ByteString = DynString
+    fromRep (DynString i) = Just $ T.encodeUtf8 i
+    toRep i = DynString (T.decodeUtf8 i)
+
+
+instance DynVal Double where
+    type DynRep Double = DynNumber
+    fromRep (DynNumber i) = Just $ toRealFloat i
+    toRep i = DynNumber (fromFloatDigits i)
+
+
+instance DynVal Day where
+    type DynRep Day = DynNumber
+    fromRep (DynNumber i) = ModifiedJulianDay <$> (toIntegral i)
+    toRep (ModifiedJulianDay i) = DynNumber (fromIntegral i)
+
+
+-- | Encoded as 0 and 1.
+instance DynVal Bool where
+    type DynRep Bool = DynNumber
+    fromRep (DynNumber i) = do
+        (i' :: Int) <- toIntegral i
+        case i' of
+          0 -> return False
+          1 -> return True
           _ -> Nothing
+    toRep b = DynNumber (if b then 1 else 0)
 
+
+
+-- | Type wrapper for binary data to be written to DynamoDB. Wrap any
+-- 'Serialize' instance in there and 'DynVal' will know how to
+-- automatically handle conversions in binary form.
+newtype Bin a = Bin a deriving (Eq,Show,Read,Ord)
+
+
+instance (Ser.Serialize a) => DynVal (Bin a) where
+    type DynRep (Bin a) = DynBinary
+    toRep (Bin i) = DynBinary (Ser.encode i)
+    fromRep (DynBinary i) = either (const Nothing) (Just . Bin) $
+                            Ser.decode i
+
+
+
+-------------------------------------------------------------------------------
+-- | Encode a Haskell value as DynamoDb value.
+toValue :: DynVal a  => a -> DValue
+toValue a = fromData $ toRep a
+
+
+-------------------------------------------------------------------------------
+-- | Decode a DynamoDb value into Haskell value.
+fromValue :: DynVal a => DValue -> Maybe a
+fromValue d = toData d >>= fromRep
 
 
 toIntegral :: (Integral a, RealFrac a1) => a1 -> Maybe a
 toIntegral sc = Just $ floor sc
 
 
--- | Type wrapper for binary data to be written to DynamoDB. Wrap any
--- 'Serialize' instance in there and 'DVal' will know how to
--- automatically handle conversions in binary form.
-newtype Bin a = Bin a deriving (Eq,Show,Read,Ord)
 
-
-instance Ser.Serialize a => DVal (Bin a) where
-    toDVal (Bin a) = DBinary (Ser.encode a)
-    fromDVal (DBinary x) = either (const Nothing) (Just . Bin) $
-                           Ser.decode x
-    fromDVal _ = Nothing
-
-
-
--- | Convenience to construct DynamoDB values from Haskell types. Just
--- a synonym for 'toDVal'.
-mkVal :: DVal a => a -> DValue
-mkVal = toDVal
-
-
--- | Value types recognized by DynamoDb. We pretty much exactly
--- reflect the AWS API into Haskell types.
+-- | Value types natively recognized by DynamoDb. We pretty much
+-- exactly reflect the AWS API into Haskell types.
 data DValue
     = DNum Scientific
     | DString T.Text
     | DBinary B.ByteString
+    -- ^ Binary data will automatically be base64 marshalled.
     | DNumSet (S.Set Scientific)
     | DStringSet (S.Set T.Text)
     | DBinSet (S.Set B.ByteString)
+    -- ^ Binary data will automatically be base64 marshalled.
     deriving (Eq,Show,Read,Ord)
 
 
@@ -328,15 +397,15 @@ attrTuple (Attribute a b) = (a,b)
 
 
 -- | Convenience function for constructing key-value pairs
-attr :: DVal a => T.Text -> a -> Attribute
-attr k v = Attribute k (toDVal v)
+attr :: DynVal a => T.Text -> a -> Attribute
+attr k v = Attribute k (toValue v)
 
 
 -- | 'attr' with type witness to help with cases where you're manually
 -- supplying values in code.
 --
 -- >> item [ attrAs text "name" "john" ]
-attrAs :: DVal a => Proxy a -> T.Text -> a -> Attribute
+attrAs :: DynVal a => Proxy a -> T.Text -> a -> Attribute
 attrAs _ k v = attr k v
 
 
