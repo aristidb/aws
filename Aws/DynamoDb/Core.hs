@@ -205,6 +205,9 @@ instance DynData DValue where
 -- This is the conversion layer; instantiate this class for your own
 -- types and then use the 'toValue' and 'fromValue' combinators to
 -- convert in application code.
+--
+-- Each Haskell type instantiated with this class will map to a
+-- DynamoDb-supported type that most naturally represents it.
 class DynData (DynRep a) => DynVal a where
 
     -- | Which of the 'DynData' instances does this data type directly
