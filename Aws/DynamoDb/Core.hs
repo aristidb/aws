@@ -310,9 +310,9 @@ instance DynVal T.Text where
 
 
 instance DynVal B.ByteString where
-    type DynRep B.ByteString = DynString
-    fromRep (DynString i) = Just $ T.encodeUtf8 i
-    toRep i = DynString (T.decodeUtf8 i)
+    type DynRep B.ByteString = DynBinary
+    fromRep (DynBinary i) = Just i
+    toRep i = DynBinary i
 
 
 instance DynVal Double where
