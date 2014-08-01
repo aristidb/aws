@@ -19,6 +19,7 @@ module Aws.DynamoDb.Commands.Query where
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
+import           Data.Conduit        (Producer)
 import           Data.Default
 import           Data.Maybe
 import qualified Data.Text           as T
@@ -28,6 +29,35 @@ import qualified Data.Vector         as V
 import           Aws.Core
 import           Aws.DynamoDb.Core
 -------------------------------------------------------------------------------
+
+
+-------------------------------------------------------------------------------
+-- | Low level pagination for 'Query'
+paginateQuery
+    :: Monad m
+    => (Query -> m QueryResponse)
+    -- ^ A way to run queries
+    -> Query
+    -- ^ A starting point for the pagination
+    -> m (Page m Query QueryResponse)
+paginateQuery run q0 = do
+    res <- run q0
+    let next = case qrLastKey res of
+          Nothing -> Nothing
+          Just _ -> Just $ paginateQuery run q0 { qStartKey = qrLastKey res }
+    return $ Page res next
+
+
+-------------------------------------------------------------------------------
+-- | Conduit 'Producer' of 'QueryResponse' pages.
+querySource
+    :: Monad m
+    => (Query -> m QueryResponse)
+    -- ^ A way to run 'Query' commands
+    -> Query
+    -- ^ An initial starting point
+    -> Producer m QueryResponse
+querySource run q0 = pageSource $ paginateQuery run q0
 
 
 -------------------------------------------------------------------------------
@@ -45,11 +75,6 @@ data Slice = Slice {
     }  deriving (Eq,Show,Read,Ord,Typeable)
 
 
-sliceJson Slice{..} = object (map conditionJson cs)
-    where
-      cs = maybe [] return sliceCond ++ [hashCond]
-      hashCond = Condition (attrName sliceHash) (DEq (attrVal sliceHash))
-
 
 -- | A Query command that uses primary keys for an expedient scan.
 data Query = Query {
@@ -59,7 +84,7 @@ data Query = Query {
     -- ^ Required. Hash or hash-range main condition.
     , qFilter        :: Conditions
     -- ^ Whether to filter results before returning to client
-    , qStartKey      :: Maybe PrimaryKey
+    , qStartKey      :: Maybe [Attribute]
     -- ^ Exclusive start key to resume a previous query.
     , qLimit         :: Maybe Int
     -- ^ Whether to limit result set size
@@ -78,7 +103,7 @@ data Query = Query {
 instance ToJSON Query where
     toJSON Query{..} = object $
       catMaybes
-        [ ("ExclusiveStartKey" .= ) <$> qStartKey
+        [ (("ExclusiveStartKey" .= ) . attributesJson) <$> qStartKey
         , ("Limit" .= ) <$> qLimit
         , ("IndexName" .= ) <$> qIndex
         ] ++
@@ -141,3 +166,10 @@ instance ResponseConsumer r QueryResponse where
 instance AsMemoryResponse QueryResponse where
     type MemoryResponse QueryResponse = QueryResponse
     loadToMemory = return
+
+
+sliceJson :: Slice -> Value
+sliceJson Slice{..} = object (map conditionJson cs)
+    where
+      cs = maybe [] return sliceCond ++ [hashCond]
+      hashCond = Condition (attrName sliceHash) (DEq (attrVal sliceHash))

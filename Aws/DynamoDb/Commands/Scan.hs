@@ -36,7 +36,7 @@ data Scan = Scan {
     -- ^ Required.
     , sFilter        :: Conditions
     -- ^ Whether to filter results before returning to client
-    , sStartKey      :: Maybe PrimaryKey
+    , sStartKey      :: Maybe [Attribute]
     -- ^ Exclusive start key to resume a previous query.
     , sLimit         :: Maybe Int
     -- ^ Whether to limit result set size
@@ -44,7 +44,9 @@ data Scan = Scan {
     -- ^ What to return from 'Scan'
     , sRetCons       :: ReturnConsumption
     , sSegment       :: Int
+    -- ^ Segment number, starting at 0, for parallel queries.
     , sTotalSegments :: Int
+    -- ^ Total number of parallel segments. 1 means sequential scan.
     } deriving (Eq,Show,Read,Ord,Typeable)
 
 
@@ -52,21 +54,6 @@ data Scan = Scan {
 scan :: T.Text                   -- ^ Table name
      -> Scan
 scan tn = Scan tn def Nothing Nothing def def 0 1
-
--------------------------------------------------------------------------------
-instance ToJSON Scan where
-    toJSON Scan{..} = object $
-      catMaybes
-        [ ("ExclusiveStartKey" .= ) <$> sStartKey
-        , ("Limit" .= ) <$> sLimit
-        ] ++
-      conditionsJson "ScanFilter" sFilter ++
-      querySelectJson sSelect ++
-      [ "TableName".= sTableName
-      , "ReturnConsumedCapacity" .= sRetCons
-      , "Segment" .= sSegment
-      , "TotalSegments" .= sTotalSegments
-      ]
 
 
 -- | Response to a 'Scan' query.
@@ -77,6 +64,22 @@ data ScanResponse = ScanResponse {
     , srScanned  :: Int
     , srConsumed :: Maybe ConsumedCapacity
     } deriving (Eq,Show,Read,Ord)
+
+
+-------------------------------------------------------------------------------
+instance ToJSON Scan where
+    toJSON Scan{..} = object $
+      catMaybes
+        [ (("ExclusiveStartKey" .= ) . attributesJson) <$> sStartKey
+        , ("Limit" .= ) <$> sLimit
+        ] ++
+      conditionsJson "ScanFilter" sFilter ++
+      querySelectJson sSelect ++
+      [ "TableName".= sTableName
+      , "ReturnConsumedCapacity" .= sRetCons
+      , "Segment" .= sSegment
+      , "TotalSegments" .= sTotalSegments
+      ]
 
 
 instance FromJSON ScanResponse where

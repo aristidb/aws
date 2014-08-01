@@ -49,6 +49,9 @@ module Aws.DynamoDb.Core
     -- * Working with key/value pairs
     , Attribute (..)
     , parseAttributeJson
+    , attributeJson
+    , attributesJson
+
     , attrTuple
     , attr
     , attrAs
@@ -77,6 +80,10 @@ module Aws.DynamoDb.Core
     , UpdateReturn (..)
     , QuerySelect
     , querySelectJson
+
+    -- * Pagination helpers
+    , Page (..)
+    , pageSource
 
     -- * Responses & Errors
     , DdbResponse (..)
@@ -521,7 +528,7 @@ instance FromJSON DValue where
 
 
 instance ToJSON Attribute where
-    toJSON (Attribute nm v) = object [nm .= v]
+    toJSON a = object $ [attributeJson a]
 
 
 -------------------------------------------------------------------------------
@@ -530,6 +537,16 @@ parseAttributeJson :: Value -> A.Parser [Attribute]
 parseAttributeJson (Object v) = mapM conv $ HM.toList v
     where
       conv (k, o) = Attribute k <$> parseJSON o
+
+
+-- | Convert into JSON object for AWS.
+attributesJson :: [Attribute] -> Value
+attributesJson as = object $ map attributeJson as
+
+
+-- | Convert into JSON pair
+attributeJson :: Attribute -> Pair
+attributeJson (Attribute nm v) = nm .= v
 
 
 -------------------------------------------------------------------------------
@@ -987,4 +1004,31 @@ querySelectJson (SelectSpecific as) =
 querySelectJson SelectCount = ["Select" .= String "COUNT"]
 querySelectJson SelectProjected = ["Select" .= String "ALL_PROJECTED_ATTRIBUTES"]
 querySelectJson SelectAll = ["Select" .= String "ALL_ATTRIBUTES"]
+
+
+-------------------------------------------------------------------------------
+-- | Pagination through results in 'Query' and 'Scan' queries.
+data Page m req resp = Page {
+      pageResult :: resp
+    , pageNext   :: Maybe (m (Page m req resp))
+    }
+
+
+-------------------------------------------------------------------------------
+-- | Turn a 'Query' or 'Scan' pagination into a conduit 'Producer'.
+--
+-- For example, the following will get you a nice 'Producer' of
+-- 'QueryResponse' objects:
+--
+-- >>> 'pageSource' $ 'paginateQuery' ('simpleAws' cfg scfg mgr myQuery)
+pageSource :: Monad m => m (Page m req resp) -> Producer m resp
+pageSource p0 = lift p0 >>= go
+    where
+      go Page{..} = do
+          yield pageResult
+          case pageNext of
+            Nothing -> return ()
+            Just run -> lift run >>= go
+
+
 
