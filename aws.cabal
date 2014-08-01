@@ -205,7 +205,8 @@ Executable DynamoDb
                        base == 4.*,
                        data-default,
                        exceptions,
-                       text >=0.11
+                       text,
+                       conduit
 
   Default-Language: Haskell2010
 

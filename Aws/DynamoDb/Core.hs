@@ -131,6 +131,7 @@ import qualified Data.Set                     as S
 import           Data.String
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
+import qualified Data.Text.Read               as T
 import           Data.Time
 import           Data.Typeable
 import           Data.Word
@@ -522,9 +523,11 @@ instance FromJSON DValue where
         x -> fail $ "aws: unknown dynamodb value: " ++ show x
 
       where
-        parseScientific str =
-            ((fromIntegral :: Int64 -> Scientific) <$> parseJSON str) <|>
-            ((fromFloatDigits :: Double -> Scientific) <$> parseJSON str)
+        parseScientific (String str) = do
+            case T.rational str of
+              Right (i, _) -> return $ fromFloatDigits i
+              Left e -> fail $ "parseScientific failed: " ++ e
+        parseScientific _ = fail "Unexpected JSON in parseScientific"
 
 
 instance ToJSON Attribute where

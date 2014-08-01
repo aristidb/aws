@@ -4,13 +4,15 @@
 module Main where
 
 -------------------------------------------------------------------------------
-
-
--------------------------------------------------------------------------------
 import           Aws
 import           Aws.DynamoDb.Commands
 import           Aws.DynamoDb.Core
+import           Control.Concurrent
+import           Control.Monad
 import           Control.Monad.Catch
+import           Data.Conduit
+import qualified Data.Conduit.List     as C
+import qualified Data.Text             as T
 -------------------------------------------------------------------------------
 
 
@@ -66,6 +68,19 @@ main = do
 
   echo "Running a Scan command..."
   print =<< runCommand (scan "devel-1")
+
+  echo "Filling table with several items..."
+  forM_ [0..30] $ \ i -> do
+    threadDelay 50000
+    runCommand $ putItem "devel-1" $
+      item [Attribute "name" (toValue $ T.pack ("lots-" ++ show i)), attrAs int "val" i]
+
+  echo "Now paginating in increments of 5..."
+  let q0 = (scan "devel-1") { sLimit = Just 5 }
+
+  xs <- scanItemSource runCommand q0 $$ C.consume
+  echo ("Pagination returned " ++ show (length xs) ++ " items")
+
 
 
 runCommand r = do

@@ -14,12 +14,21 @@
 -- See: @http:\/\/docs.aws.amazon.com\/amazondynamodb\/latest\/APIReference\/API_Query.html@
 ----------------------------------------------------------------------------
 
-module Aws.DynamoDb.Commands.Query where
+module Aws.DynamoDb.Commands.Query
+    ( Query (..)
+    , Slice (..)
+    , query
+    , QueryResponse (..)
+    , queryPageSource
+    , queryItemSource
+    , paginateQuery
+    ) where
 
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
-import           Data.Conduit        (Producer)
+import           Data.Conduit        (Producer, (=$=))
+import qualified Data.Conduit.List   as C
 import           Data.Default
 import           Data.Maybe
 import qualified Data.Text           as T
@@ -36,7 +45,7 @@ import           Aws.DynamoDb.Core
 paginateQuery
     :: Monad m
     => (Query -> m QueryResponse)
-    -- ^ A way to run queries
+    -- ^ A way to run queries.
     -> Query
     -- ^ A starting point for the pagination
     -> m (Page m Query QueryResponse)
@@ -50,14 +59,24 @@ paginateQuery run q0 = do
 
 -------------------------------------------------------------------------------
 -- | Conduit 'Producer' of 'QueryResponse' pages.
-querySource
+queryPageSource
     :: Monad m
     => (Query -> m QueryResponse)
     -- ^ A way to run 'Query' commands
     -> Query
     -- ^ An initial starting point
     -> Producer m QueryResponse
-querySource run q0 = pageSource $ paginateQuery run q0
+queryPageSource run q0 = pageSource $ paginateQuery run q0
+
+
+-------------------------------------------------------------------------------
+-- | Stream 'Item's via conduit's 'Producer'.
+queryItemSource
+    :: Monad m
+    => (Query -> m QueryResponse)
+    -> Query
+    -> Producer m Item
+queryItemSource run q0 = queryPageSource run q0 =$= C.concatMap (V.toList . qrItems)
 
 
 -------------------------------------------------------------------------------
