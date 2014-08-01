@@ -98,6 +98,7 @@ Library
                        Aws.DynamoDb.Commands.GetItem
                        Aws.DynamoDb.Commands.PutItem
                        Aws.DynamoDb.Commands.Query
+                       Aws.DynamoDb.Commands.Scan
                        Aws.DynamoDb.Commands.Table
                        Aws.DynamoDb.Commands.UpdateItem
                        Aws.DynamoDb.Core

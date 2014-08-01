@@ -63,8 +63,9 @@ module Aws.DynamoDb.Core
 
     -- * Common types used by operations
     , Conditions (..)
+    , conditionsJson
     , expectsJson
-    , queryFilterJson
+
     , Condition (..)
     , conditionJson
     , CondOp (..)
@@ -74,6 +75,8 @@ module Aws.DynamoDb.Core
     , ItemCollectionMetrics (..)
     , ReturnItemCollectionMetrics (..)
     , UpdateReturn (..)
+    , QuerySelect
+    , querySelectJson
 
     -- * Responses & Errors
     , DdbResponse (..)
@@ -769,26 +772,18 @@ instance Default Conditions where
     def = Conditions CondAnd []
 
 
--- | JSON encoding of "Expected" parameter in mutation commands.
-expectsJson :: Conditions -> [Pair]
-expectsJson (Conditions op es) = b ++ a
+
+expectsJson :: Conditions -> [A.Pair]
+expectsJson = conditionsJson "Expected"
+
+
+-- | JSON encoding of conditions parameter in various contexts.
+conditionsJson :: T.Text -> Conditions -> [A.Pair]
+conditionsJson key (Conditions op es) = b ++ a
     where
       a = if null es
           then []
-          else ["Expected" .= object (map conditionJson es)]
-
-      b = if length (take 2 es) > 1
-          then ["ConditionalOperator" .= String (rendCondOp op) ]
-          else []
-
-
--- | JSON encoding of "Expected" parameter in mutation commands.
-queryFilterJson :: Conditions -> [Pair]
-queryFilterJson (Conditions op es) = b ++ a
-    where
-      a = if null es
-          then []
-          else ["QueryFilter" .= object (map conditionJson es)]
+          else [key .= object (map conditionJson es)]
 
       b = if length (take 2 es) > 1
           then ["ConditionalOperator" .= String (rendCondOp op) ]
@@ -966,4 +961,30 @@ instance ToJSON UpdateReturn where
 
 instance Default UpdateReturn where
     def = URNone
+
+
+
+-------------------------------------------------------------------------------
+-- | What to return from a 'Query' or 'Scan' query.
+data QuerySelect
+    = SelectSpecific [T.Text]
+    -- ^ Only return selected attributes
+    | SelectCount
+    -- ^ Return counts instead of attributes
+    | SelectProjected
+    -- ^ Return index-projected attributes
+    | SelectAll
+    -- ^ Default. Return everything.
+    deriving (Eq,Show,Read,Ord,Typeable)
+
+
+instance Default QuerySelect where def = SelectAll
+
+-------------------------------------------------------------------------------
+querySelectJson (SelectSpecific as) =
+    [ "Select" .= String "SPECIFIC_ATTRIBUTES"
+    , "AttributesToGet" .= as]
+querySelectJson SelectCount = ["Select" .= String "COUNT"]
+querySelectJson SelectProjected = ["Select" .= String "ALL_PROJECTED_ATTRIBUTES"]
+querySelectJson SelectAll = ["Select" .= String "ALL_ATTRIBUTES"]
 

@@ -64,6 +64,9 @@ main = do
   echo "Running a Query command..."
   print =<< runCommand (query "devel-1" (Slice (Attribute "name" "josh") Nothing))
 
+  echo "Running a Scan command..."
+  print =<< runCommand (scan "devel-1")
+
 
 runCommand r = do
     cfg <- Aws.baseConfiguration

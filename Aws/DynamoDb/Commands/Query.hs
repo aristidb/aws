@@ -9,7 +9,9 @@
 -- Maintainer  :  Ozgun Ataman <ozgun.ataman@soostone.com>
 -- Stability   :  experimental
 --
+-- Implementation of Amazon DynamoDb Query command.
 --
+-- See: @http:\/\/docs.aws.amazon.com\/amazondynamodb\/latest\/APIReference\/API_Query.html@
 ----------------------------------------------------------------------------
 
 module Aws.DynamoDb.Commands.Query where
@@ -26,30 +28,6 @@ import qualified Data.Vector         as V
 import           Aws.Core
 import           Aws.DynamoDb.Core
 -------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------
--- | What to return from a 'Query' or 'Scan' query.
-data QuerySelect
-    = SelectSpecific [T.Text]
-    -- ^ Only return selected attributes
-    | SelectCount
-    -- ^ Return counts instead of attributes
-    | SelectProjected
-    -- ^ Return index-projected attributes
-    | SelectAll
-    -- ^ Default. Return everything.
-    deriving (Eq,Show,Read,Ord,Typeable)
-
-
-instance Default QuerySelect where def = SelectAll
-
--------------------------------------------------------------------------------
-querySelectJson (SelectSpecific as) =
-    [ "Select" .= String "SPECIFIC_ATTRIBUTES"
-    , "AttributesToGet" .= as]
-querySelectJson SelectCount = ["Select" .= String "COUNT"]
-querySelectJson SelectProjected = ["Select" .= String "ALL_PROJECTED_ATTRIBUTES"]
-querySelectJson SelectAll = ["Select" .= String "ALL_ATTRIBUTES"]
 
 
 -------------------------------------------------------------------------------
@@ -74,8 +52,6 @@ sliceJson Slice{..} = object (map conditionJson cs)
 
 
 -- | A Query command that uses primary keys for an expedient scan.
---
--- See: @http:\/\/docs.aws.amazon.com\/amazondynamodb\/latest\/APIReference\/API_Query.html@
 data Query = Query {
       qTableName     :: T.Text
     -- ^ Required.
@@ -106,7 +82,7 @@ instance ToJSON Query where
         , ("Limit" .= ) <$> qLimit
         , ("IndexName" .= ) <$> qIndex
         ] ++
-      queryFilterJson qFilter ++
+      conditionsJson "QueryFilter" qFilter ++
       querySelectJson qSelect ++
       [ "ScanIndexForward" .= qForwardScan
       , "TableName".= qTableName
@@ -139,7 +115,7 @@ data QueryResponse = QueryResponse {
 
 instance FromJSON QueryResponse where
     parseJSON (Object v) = QueryResponse
-        <$> v .:  "Items"
+        <$> v .:?  "Items" .!= V.empty
         <*> ((do o <- v .: "LastEvaluatedKey"
                  Just <$> parseAttributeJson o)
              <|> pure Nothing)
