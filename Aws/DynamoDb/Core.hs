@@ -48,6 +48,7 @@ module Aws.DynamoDb.Core
 
     -- * Working with key/value pairs
     , Attribute (..)
+    , parseAttributeJson
     , attrTuple
     , attr
     , attrAs
@@ -63,7 +64,9 @@ module Aws.DynamoDb.Core
     -- * Common types used by operations
     , Conditions (..)
     , expectsJson
+    , queryFilterJson
     , Condition (..)
+    , conditionJson
     , CondOp (..)
     , CondMerge (..)
     , ConsumedCapacity (..)
@@ -97,6 +100,7 @@ import           Crypto.Hash
 import           Data.Aeson
 import qualified Data.Aeson                   as A
 import           Data.Aeson.Types             (Pair, parseEither)
+import qualified Data.Aeson.Types             as A
 import           Data.Byteable
 import qualified Data.ByteString.Base16       as Base16
 import qualified Data.ByteString.Base64       as Base64
@@ -518,6 +522,14 @@ instance ToJSON Attribute where
 
 
 -------------------------------------------------------------------------------
+-- | Parse a JSON object that contains attributes
+parseAttributeJson :: Value -> A.Parser [Attribute]
+parseAttributeJson (Object v) = mapM conv $ HM.toList v
+    where
+      conv (k, o) = Attribute k <$> parseJSON o
+
+
+-------------------------------------------------------------------------------
 -- | Errors defined by AWS.
 data DdbErrCode
     = AccessDeniedException
@@ -764,6 +776,19 @@ expectsJson (Conditions op es) = b ++ a
       a = if null es
           then []
           else ["Expected" .= object (map conditionJson es)]
+
+      b = if length (take 2 es) > 1
+          then ["ConditionalOperator" .= String (rendCondOp op) ]
+          else []
+
+
+-- | JSON encoding of "Expected" parameter in mutation commands.
+queryFilterJson :: Conditions -> [Pair]
+queryFilterJson (Conditions op es) = b ++ a
+    where
+      a = if null es
+          then []
+          else ["QueryFilter" .= object (map conditionJson es)]
 
       b = if length (take 2 es) > 1
           then ["ConditionalOperator" .= String (rendCondOp op) ]
