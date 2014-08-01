@@ -37,7 +37,7 @@ data UpdateItem = UpdateItem {
       uiTable   :: T.Text
     , uiKey     :: PrimaryKey
     , uiUpdates :: [AttributeUpdate]
-    , uiExpect  :: Expects
+    , uiExpect  :: Conditions
     -- ^ Conditional update - see DynamoDb documentation
     , uiReturn  :: UpdateReturn
     , uiRetCons :: ReturnConsumption

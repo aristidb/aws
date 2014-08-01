@@ -38,7 +38,7 @@ data PutItem = PutItem {
     , piItem    :: Item
     -- ^ An item to Put. Attributes here will replace what maybe under
     -- the key on DDB.
-    , piExpect  :: Expects
+    , piExpect  :: Conditions
     -- ^ (Possible) set of expections for a conditional Put
     , piReturn  :: UpdateReturn
     -- ^ What to return from this query.

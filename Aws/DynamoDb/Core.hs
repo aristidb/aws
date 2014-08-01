@@ -61,11 +61,11 @@ module Aws.DynamoDb.Core
     , item
 
     -- * Common types used by operations
-    , Expects (..)
+    , Conditions (..)
     , expectsJson
     , Condition (..)
     , CondOp (..)
-    , Expect (..)
+    , CondMerge (..)
     , ConsumedCapacity (..)
     , ReturnConsumption (..)
     , ItemCollectionMetrics (..)
@@ -750,46 +750,50 @@ ddbResponseConsumer ref resp = do
 
 -- | Conditions used by mutation operations ('PutItem', 'UpdateItem',
 -- etc.). The default 'def' instance is empty (no condition).
-data Expects = Expects CondOp [Expect]
+data Conditions = Conditions CondMerge [Condition]
     deriving (Eq,Show,Read,Ord,Typeable)
 
-instance Default Expects where
-    def = Expects CondAnd []
+instance Default Conditions where
+    def = Conditions CondAnd []
 
-expectsJson :: Expects -> [Pair]
-expectsJson (Expects op es) = b ++ a
+
+-- | JSON encoding of "Expected" parameter in mutation commands.
+expectsJson :: Conditions -> [Pair]
+expectsJson (Conditions op es) = b ++ a
     where
       a = if null es
           then []
-          else ["Expected" .= object (map expectJson es)]
+          else ["Expected" .= object (map conditionJson es)]
 
       b = if length (take 2 es) > 1
           then ["ConditionalOperator" .= String (rendCondOp op) ]
           else []
 
+
 -------------------------------------------------------------------------------
-rendCondOp :: CondOp -> T.Text
+rendCondOp :: CondMerge -> T.Text
 rendCondOp CondAnd = "AND"
 rendCondOp CondOr = "OR"
 
 
 -------------------------------------------------------------------------------
--- | Logical operator for merging multiple conditions.
-data CondOp = CondAnd | CondOr
+-- | How to merge multiple conditions.
+data CondMerge = CondAnd | CondOr
     deriving (Eq,Show,Read,Ord,Typeable)
 
 
 -- | A condition used by mutation operations ('PutItem', 'UpdateItem', etc.).
-data Expect = Expect {
-      expectAttr      :: T.Text
+data Condition = Condition {
+      condAttr :: T.Text
     -- ^ Attribute to use as the basis for this conditional
-    , expectCondition :: Condition
+    , condOp   :: CondOp
+    -- ^ Operation on the selected attribute
     } deriving (Eq,Show,Read,Ord,Typeable)
 
 
 -------------------------------------------------------------------------------
--- | Conditional check for a given attribute.
-data Condition
+-- | Conditional operation to perform on a field.
+data CondOp
     = DEq DValue
     | NotEq DValue
     | DLE DValue
@@ -807,7 +811,7 @@ data Condition
 
 
 -------------------------------------------------------------------------------
-getCondValues :: Condition -> [DValue]
+getCondValues :: CondOp -> [DValue]
 getCondValues c = case c of
     DEq v -> [v]
     NotEq v -> [v]
@@ -825,7 +829,7 @@ getCondValues c = case c of
 
 
 -------------------------------------------------------------------------------
-renderCondOp :: Condition -> T.Text
+renderCondOp :: CondOp -> T.Text
 renderCondOp c = case c of
     DEq{} -> "EQ"
     NotEq{} -> "NE"
@@ -842,11 +846,11 @@ renderCondOp c = case c of
     Between{} -> "BETWEEN"
 
 
-expectJson :: Expect -> Pair
-expectJson Expect{..} = expectAttr .= expectCondition
+conditionJson :: Condition -> Pair
+conditionJson Condition{..} = condAttr .= condOp
 
 
-instance ToJSON Condition where
+instance ToJSON CondOp where
     toJSON c = object
       [ "ComparisonOperator" .= String (renderCondOp c)
       , "AttributeValueList" .= getCondValues c ]

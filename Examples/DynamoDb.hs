@@ -46,7 +46,7 @@ main = do
   echo "Updating with false conditional."
   (print =<< Aws.simpleAws cfg debugServiceConfig
     (updateItem "devel-1" (hk "name" "josh") [au (Attribute "class" "awesomer")])
-      { uiExpect = Expects CondAnd [Expect "name" (DEq "john")] })
+      { uiExpect = Conditions CondAnd [Condition "name" (DEq "john")] })
     `catch` (\ (e :: DdbError) -> echo ("Eating exception: " ++ show e))
 
   echo "Getting the item back..."
@@ -56,7 +56,7 @@ main = do
   echo "Updating with true conditional"
   print =<< Aws.simpleAws cfg debugServiceConfig
     (updateItem "devel-1" (hk "name" "josh") [au (Attribute "class" "awesomer")])
-      { uiExpect = Expects CondAnd [Expect "name" (DEq "josh")] }
+      { uiExpect = Conditions CondAnd [Condition "name" (DEq "josh")] }
 
   echo "Getting the item back..."
   print =<< Aws.simpleAws cfg debugServiceConfig req2
