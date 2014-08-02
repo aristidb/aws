@@ -398,7 +398,7 @@ data DValue
     | DStringSet (S.Set T.Text)
     | DBinSet (S.Set B.ByteString)
     -- ^ Binary data will automatically be base64 marshalled.
-    deriving (Eq,Show,Read,Ord)
+    deriving (Eq,Show,Read,Ord,Typeable)
 
 
 instance IsString DValue where
@@ -541,6 +541,7 @@ parseAttributeJson :: Value -> A.Parser [Attribute]
 parseAttributeJson (Object v) = mapM conv $ HM.toList v
     where
       conv (k, o) = Attribute k <$> parseJSON o
+parseAttributeJson _ = error "Attribute JSON must be an Object"
 
 
 -- | Convert into JSON object for AWS.
@@ -638,7 +639,7 @@ instance Monoid DdbResponse where
 data Region = Region {
       rUri  :: B.ByteString
     , rName :: B.ByteString
-    } deriving (Eq,Show)
+    } deriving (Eq,Show,Read,Typeable)
 
 
 data DdbConfiguration qt = DdbConfiguration {
@@ -646,7 +647,7 @@ data DdbConfiguration qt = DdbConfiguration {
     -- ^ The regional endpoint. Ex: 'ddbUsEast'
     , ddbcProtocol :: Protocol
     -- ^ 'HTTP' o  r 'HTTPS'
-    } deriving (Show)
+    } deriving (Show,Typeable)
 
 
 instance DefaultServiceConfiguration (DdbConfiguration NormalQuery) where
