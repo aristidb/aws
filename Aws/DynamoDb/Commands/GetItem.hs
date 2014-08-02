@@ -51,7 +51,7 @@ getItem tn k = GetItem tn k Nothing False def
 
 -- | Response to a 'GetItem' query.
 data GetItemResponse = GetItemResponse {
-      girItem     :: Item
+      girItem     :: Maybe Item
     , girConsumed :: Maybe ConsumedCapacity
     } deriving (Eq,Show,Read,Ord)
 
@@ -77,7 +77,7 @@ instance SignQuery GetItem where
 
 instance FromJSON GetItemResponse where
     parseJSON (Object v) = GetItemResponse
-        <$> v .: "Item"
+        <$> v .:? "Item"
         <*> v .:? "ConsumedCapacity"
     parseJSON _ = fail "GetItemResponse must be an object."
 
