@@ -88,6 +88,7 @@ module Aws.DynamoDb.Core
     -- * Responses & Errors
     , DdbResponse (..)
     , DdbErrCode (..)
+    , shouldRetry
     , DdbError (..)
 
     -- * Internal Helpers
@@ -525,7 +526,7 @@ instance FromJSON DValue where
       where
         parseScientific (String str) = do
             case T.rational str of
-              Right (i, _) -> return $ fromFloatDigits i
+              Right (i, _) -> return $ fromFloatDigits (i :: Double)
               Left e -> fail $ "parseScientific failed: " ++ e
         parseScientific _ = fail "Unexpected JSON in parseScientific"
 
@@ -574,6 +575,22 @@ data DdbErrCode
     -- ^ Raised by AWS when the request JSON is missing fields or is
     -- somehow malformed.
     deriving (Read,Show,Eq,Typeable)
+
+
+-------------------------------------------------------------------------------
+-- | Whether the action should be retried based on the received error.
+shouldRetry :: DdbErrCode -> Bool
+shouldRetry e = go e
+    where
+      go LimitExceededException = True
+      go ProvisionedThroughputExceededException = True
+      go ResourceInUseException = True
+      go ThrottlingException = True
+      go InternalFailure = True
+      go InternalServerError = True
+      go ServiceUnavailableException = True
+      go _ = False
+
 
 -------------------------------------------------------------------------------
 -- | Errors related to this library.
