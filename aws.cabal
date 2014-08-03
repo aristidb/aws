@@ -56,6 +56,7 @@ Library
                        Aws.S3,
                        Aws.S3.Commands,
                        Aws.S3.Commands.CopyObject,
+                       Aws.S3.Commands.DeleteBucket,
                        Aws.S3.Commands.DeleteObject,
                        Aws.S3.Commands.DeleteObjects,
                        Aws.S3.Commands.GetBucket,
@@ -166,6 +167,25 @@ Executable GetObject
                        http-conduit,
                        conduit,
                        conduit-extra
+
+  Default-Language: Haskell2010
+
+Executable NukeBucket
+  Main-is: NukeBucket.hs
+  Hs-source-dirs: Examples
+
+  if !flag(Examples)
+    Buildable: False
+  else
+    Buildable: True
+    Build-depends:
+                       base == 4.*,
+                       aws,
+                       http-conduit,
+                       conduit,
+                       conduit-extra,
+                       text >=0.1,
+                       transformers
 
   Default-Language: Haskell2010
 
