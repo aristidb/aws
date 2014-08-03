@@ -99,7 +99,7 @@ Library
                        Aws.Network
 
   Build-depends:
-                       aeson                >= 0.6     && < 0.8,
+                       aeson                >= 0.6,
                        base                 == 4.*,
                        base16-bytestring    == 0.1.*,
                        base64-bytestring    == 1.0.*,
