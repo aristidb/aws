@@ -63,6 +63,7 @@ module Aws.DynamoDb.Core
     -- * Working with objects (attribute collections)
     , Item
     , item
+    , attributes
 
     -- * Common types used by operations
     , Conditions (..)
@@ -84,6 +85,10 @@ module Aws.DynamoDb.Core
     -- * Pagination helpers
     , Page (..)
     , pageSource
+
+    -- * Size estimation
+    , DynSize (..)
+    , nullAttr
 
     -- * Responses & Errors
     , DdbResponse (..)
@@ -489,6 +494,12 @@ type Item = M.Map T.Text DValue
 -- | Pack a list of attributes into an Item.
 item :: [Attribute] -> Item
 item = M.fromList . map attrTuple
+
+
+-------------------------------------------------------------------------------
+-- | Unpack an 'Item' into a list of attributes.
+attributes :: M.Map T.Text DValue -> [Attribute]
+attributes = map (\ (k, v) -> Attribute k v) . M.toList
 
 
 showT :: Show a => a -> T.Text
@@ -1051,5 +1062,44 @@ pageSource p0 = lift p0 >>= go
             Nothing -> return ()
             Just run -> lift run >>= go
 
+
+-------------------------------------------------------------------------------
+-- | A class to help predict DynamoDb size of values, attributes and
+-- entire items. The result is given in number of bytes.
+class DynSize a where
+    dynSize :: a -> Int
+
+instance DynSize DValue where
+    dynSize (DNum _) = 8
+    dynSize (DString a) = T.length a
+    dynSize (DBinary bs) = T.length . T.decodeUtf8 $ Base64.encode bs
+    dynSize (DNumSet s) = 8 * S.size s
+    dynSize (DStringSet s) = sum $ map (dynSize . DString) $ S.toList s
+    dynSize (DBinSet s) = sum $ map (dynSize . DBinary) $ S.toList s
+
+instance DynSize Attribute where
+    dynSize (Attribute k v) = T.length k + dynSize v
+
+instance DynSize Item where
+    dynSize m = sum $ map dynSize $ attributes m
+
+instance DynSize a => DynSize [a] where
+    dynSize as = sum $ map dynSize as
+
+
+-------------------------------------------------------------------------------
+-- | Will an attribute be considered empty by DynamoDb?
+--
+-- A 'PutItem' (or similar) with empty attributes will be rejection
+-- with a 'ValidationException'.
+nullAttr :: Attribute -> Bool
+nullAttr (Attribute k val) =
+    case val of
+      DString "" -> True
+      DBinary "" -> True
+      DNumSet s | S.null s -> True
+      DStringSet s | S.null s -> True
+      DBinSet s | S.null s -> True
+      _ -> False
 
 
