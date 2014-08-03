@@ -70,6 +70,7 @@ module Aws.Core
 , IteratedTransaction(..)
   -- * Credentials
 , Credentials(..)
+, makeCredentials
 , credentialsDefaultFile
 , credentialsDefaultKey
 , loadCredentialsFromFile
@@ -121,6 +122,7 @@ import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
 import qualified Data.Text.IO             as T
 import           Data.Time
+import qualified Data.Traversable         as Traversable
 import           Data.Typeable
 import           Data.Word
 import qualified Network.HTTP.Conduit     as HTTP
@@ -245,6 +247,15 @@ data Credentials
 instance Show Credentials where
     show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ ",iamToken=" ++ show (iamToken c) ++ "}"
 
+makeCredentials :: MonadIO io
+                => B.ByteString -- ^ AWS Access Key ID
+                -> B.ByteString -- ^ AWS Secret Access Key
+                -> io Credentials
+makeCredentials accessKeyID secretAccessKey = liftIO $ do
+    v4SigningKeys <- newIORef []
+    let iamToken = Nothing
+    return Credentials { .. }
+
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
 --
 -- Value: /<user directory>/@/.aws-keys@
@@ -265,14 +276,9 @@ credentialsDefaultKey = "default"
 loadCredentialsFromFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromFile file key = liftIO $ do
   contents <- map T.words . T.lines <$> T.readFile file
-  ref <- newIORef []
-  return $ do
+  Traversable.sequence $ do
     [_key, keyID, secret] <- find (hasKey key) contents
-    return Credentials { accessKeyID = T.encodeUtf8 keyID
-                       , secretAccessKey = T.encodeUtf8 secret
-                       , v4SigningKeys = ref
-                       , iamToken = Nothing
-                       }
+    return (makeCredentials (T.encodeUtf8 keyID) (T.encodeUtf8 secret))
       where
         hasKey _ [] = False
         hasKey k (k2 : _) = k == k2
@@ -282,14 +288,12 @@ loadCredentialsFromFile file key = liftIO $ do
 loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromEnv = liftIO $ do
   env <- getEnvironment
-  ref <- newIORef []
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
-  return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) 
-                      <*> (T.encodeUtf8 . T.pack <$> secret)
-                      <*> return ref
-                      <*> return Nothing)
+  Traversable.sequence
+      (makeCredentials <$> (T.encodeUtf8 . T.pack <$> keyID)
+                       <*> (T.encodeUtf8 . T.pack <$> secret))
 
 loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->

@@ -49,6 +49,7 @@ module Aws
 , IteratedTransaction
   -- * Credentials
 , Credentials(..)
+, makeCredentials
 , credentialsDefaultFile
 , credentialsDefaultKey
 , loadCredentialsFromFile
