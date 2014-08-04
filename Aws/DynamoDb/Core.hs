@@ -24,6 +24,7 @@ module Aws.DynamoDb.Core
     (
     -- * Configuration and Regions
       Region (..)
+    , ddbLocal
     , ddbUsEast1
     , ddbUsWest1
     , ddbUsWest2
@@ -342,10 +343,53 @@ instance DynVal Double where
     toRep i = DynNumber (fromFloatDigits i)
 
 
+-------------------------------------------------------------------------------
+-- | Encoded as number of days
 instance DynVal Day where
     type DynRep Day = DynNumber
     fromRep (DynNumber i) = ModifiedJulianDay <$> (toIntegral i)
     toRep (ModifiedJulianDay i) = DynNumber (fromIntegral i)
+
+
+-------------------------------------------------------------------------------
+-- | Losslessly encoded via 'Integer' picoseconds
+instance DynVal UTCTime where
+    type DynRep UTCTime = DynNumber
+    fromRep num = fromTS <$> fromRep num
+    toRep x = toRep (toTS x)
+
+
+-------------------------------------------------------------------------------
+pico :: Integer
+pico = 10 ^ (12 :: Integer)
+
+
+-------------------------------------------------------------------------------
+dayPico :: Integer
+dayPico = 86400 * pico
+
+
+-------------------------------------------------------------------------------
+-- | Convert UTCTime to picoseconds
+--
+-- TODO: Optimize performance?
+toTS :: UTCTime -> Integer
+toTS (UTCTime (ModifiedJulianDay i) diff) = i' + diff'
+    where
+      diff' = floor (toRational diff * pico')
+      pico' = toRational pico
+      i' = i * dayPico
+
+
+-------------------------------------------------------------------------------
+-- | Convert picoseconds to UTCTime
+--
+-- TODO: Optimize performance?
+fromTS :: Integer -> UTCTime
+fromTS i = UTCTime (ModifiedJulianDay days) diff
+    where
+      (days, secs) = i `divMod` dayPico
+      diff = fromRational ((toRational secs) / toRational pico)
 
 
 -- | Encoded as 0 and 1.
@@ -657,14 +701,23 @@ data DdbConfiguration qt = DdbConfiguration {
       ddbcRegion   :: Region
     -- ^ The regional endpoint. Ex: 'ddbUsEast'
     , ddbcProtocol :: Protocol
-    -- ^ 'HTTP' o  r 'HTTPS'
+    -- ^ 'HTTP' or 'HTTPS'
+    , ddbcPort     :: Maybe Int
+    -- ^ Port override (mostly for local dev connection)
     } deriving (Show,Typeable)
 
+instance Default (DdbConfiguration NormalQuery) where
+    def = DdbConfiguration ddbUsEast1 HTTPS Nothing
 
 instance DefaultServiceConfiguration (DdbConfiguration NormalQuery) where
   defServiceConfig = ddbHttps ddbUsEast1
   debugServiceConfig = ddbHttp ddbUsEast1
 
+
+-------------------------------------------------------------------------------
+-- | DynamoDb local connection (for development)
+ddbLocal :: Region
+ddbLocal = Region "127.0.0.1" "local"
 
 ddbUsEast1 :: Region
 ddbUsEast1 = Region "dynamodb.us-east-1.amazonaws.com" "us-east-1"
@@ -691,10 +744,10 @@ ddbSaEast1 :: Region
 ddbSaEast1 = Region "dynamodb.sa-east-1.amazonaws.com" "sa-east-1"
 
 ddbHttp :: Region -> DdbConfiguration NormalQuery
-ddbHttp endpoint = DdbConfiguration endpoint HTTP
+ddbHttp endpoint = DdbConfiguration endpoint HTTP Nothing
 
 ddbHttps :: Region -> DdbConfiguration NormalQuery
-ddbHttps endpoint = DdbConfiguration endpoint HTTPS
+ddbHttps endpoint = DdbConfiguration endpoint HTTPS Nothing
 
 
 ddbSignQuery
@@ -709,7 +762,7 @@ ddbSignQuery target body di sd
         sqMethod = Post
       , sqProtocol = ddbcProtocol di
       , sqHost = host
-      , sqPort = defaultPort (ddbcProtocol di)
+      , sqPort = fromMaybe (defaultPort (ddbcProtocol di)) (ddbcPort di)
       , sqPath = "/"
       , sqQuery = []
       , sqDate = Just $ signatureTime sd
@@ -1086,6 +1139,12 @@ instance DynSize Item where
 instance DynSize a => DynSize [a] where
     dynSize as = sum $ map dynSize as
 
+instance DynSize a => DynSize (Maybe a) where
+    dynSize = maybe 0 dynSize
+
+instance (DynSize a, DynSize b) => DynSize (Either a b) where
+    dynSize = either dynSize dynSize
+
 
 -------------------------------------------------------------------------------
 -- | Will an attribute be considered empty by DynamoDb?
@@ -1093,7 +1152,7 @@ instance DynSize a => DynSize [a] where
 -- A 'PutItem' (or similar) with empty attributes will be rejection
 -- with a 'ValidationException'.
 nullAttr :: Attribute -> Bool
-nullAttr (Attribute k val) =
+nullAttr (Attribute _ val) =
     case val of
       DString "" -> True
       DBinary "" -> True

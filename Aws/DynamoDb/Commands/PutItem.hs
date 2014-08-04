@@ -16,7 +16,7 @@
 -- Maintainer  :  Ozgun Ataman <ozgun.ataman@soostone.com>
 -- Stability   :  experimental
 --
---
+-- @http:\/\/docs.aws.amazon.com\/amazondynamodb\/latest\/APIReference\/API_PutItem.html@
 ----------------------------------------------------------------------------
 
 module Aws.DynamoDb.Commands.PutItem where

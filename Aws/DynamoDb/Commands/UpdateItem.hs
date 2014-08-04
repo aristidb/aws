@@ -66,6 +66,9 @@ data AttributeUpdate = AttributeUpdate {
     } deriving (Eq,Show,Read,Ord)
 
 
+instance DynSize AttributeUpdate where
+    dynSize (AttributeUpdate a _) = dynSize a
+
 -------------------------------------------------------------------------------
 -- | Shorthand for the 'AttributeUpdate' constructor. Defaults to PUT
 -- for the update action.
