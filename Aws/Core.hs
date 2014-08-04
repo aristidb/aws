@@ -275,13 +275,17 @@ credentialsDefaultKey = "default"
 -- @keyName awsKeyID awsKeySecret@
 loadCredentialsFromFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromFile file key = liftIO $ do
-  contents <- map T.words . T.lines <$> T.readFile file
-  Traversable.sequence $ do
-    [_key, keyID, secret] <- find (hasKey key) contents
-    return (makeCredentials (T.encodeUtf8 keyID) (T.encodeUtf8 secret))
-      where
-        hasKey _ [] = False
-        hasKey k (k2 : _) = k == k2
+  exists <- doesFileExist file
+  if exists
+    then do
+      contents <- map T.words . T.lines <$> T.readFile file
+      Traversable.sequence $ do
+        [_key, keyID, secret] <- find (hasKey key) contents
+        return (makeCredentials (T.encodeUtf8 keyID) (T.encodeUtf8 secret))
+    else return Nothing
+  where
+    hasKey _ [] = False
+    hasKey k (k2 : _) = k == k2
 
 -- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@
 --   (or @AWS_SECRET_ACCESS_KEY@), if possible.
@@ -345,10 +349,10 @@ loadCredentialsFromEnvOrFileOrInstanceMetadata file key =
       Just cr -> return (Just cr)
       Nothing ->
         do
-          instcr <- loadCredentialsFromInstanceMetadata
-          case instcr of
+          filecr <- loadCredentialsFromFile file key
+          case filecr of
             Just cr -> return (Just cr)
-            Nothing -> loadCredentialsFromFile file key
+            Nothing -> loadCredentialsFromInstanceMetadata
 
 -- | Load credentials from environment variables if possible, or alternative from the default file with the default
 -- key name.
