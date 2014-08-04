@@ -314,7 +314,7 @@ loadCredentialsDefault = do
 data Protocol
     = HTTP
     | HTTPS
-    deriving (Show)
+    deriving (Eq,Read,Show,Ord,Typeable)
 
 -- | The default port to be used for a protocol if no specific port is specified.
 defaultPort :: Protocol -> Int
