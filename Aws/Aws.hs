@@ -213,7 +213,7 @@ unsafeAwsRef cfg info manager metadataRef request = do
   httpRequest <- liftIO $ queryToHttpRequest q
   liftIO $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
   hresp <- HTTP.http httpRequest manager
-  forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $ do
+  forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
     logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
   responseConsumer request metadataRef hresp
 
