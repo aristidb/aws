@@ -274,10 +274,17 @@ data QueueAttribute
 
 data MessageAttribute
     = MessageAll
+    -- ^ all values
     | SenderId
+    -- ^ the AWS account number (or the IP address, if anonymous access is
+    -- allowed) of the sender
     | SentTimestamp
+    -- ^ the time when the message was sent (epoch time in milliseconds)
     | ApproximateReceiveCount
+    -- ^ the number of times a message has been received but not deleted
     | ApproximateFirstReceiveTimestamp
+    -- ^ the time when the message was first received (epoch time in
+    -- milliseconds)
     deriving(Show,Eq,Enum)
 
 data SqsPermission
