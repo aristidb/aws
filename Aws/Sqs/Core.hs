@@ -254,7 +254,7 @@ sqsErrorResponseConsumer resp
 data QueueName = QueueName{
   qName :: T.Text,
   qAccountNumber :: T.Text
-} deriving(Show)
+} deriving(Show, Read, Eq, Ord)
 
 printQueueName :: QueueName -> T.Text
 printQueueName queue = T.concat ["/", (qAccountNumber queue), "/", (qName queue), "/"]
@@ -285,7 +285,7 @@ data MessageAttribute
     | ApproximateFirstReceiveTimestamp
     -- ^ the time when the message was first received (epoch time in
     -- milliseconds)
-    deriving(Show,Eq,Enum)
+    deriving(Show,Read,Eq,Ord,Enum,Bounded)
 
 data SqsPermission
     = PermissionAll
@@ -342,8 +342,8 @@ printPermission PermissionDeleteMessage = "DeleteMessage"
 printPermission PermissionChangeMessageVisibility = "ChangeMessageVisibility"
 printPermission PermissionGetQueueAttributes = "GetQueueAttributes"
 
-newtype ReceiptHandle = ReceiptHandle T.Text deriving(Show,Eq)
-newtype MessageId = MessageId T.Text deriving(Show,Eq)
+newtype ReceiptHandle = ReceiptHandle T.Text deriving(Show, Read, Eq, Ord)
+newtype MessageId = MessageId T.Text deriving(Show, Read, Eq, Ord)
 
 printReceiptHandle :: ReceiptHandle -> T.Text
 printReceiptHandle (ReceiptHandle handle) = handle 
