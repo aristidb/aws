@@ -97,7 +97,7 @@ sesSignQuery query si sd
       , sqAuthorization = Nothing
       , sqContentType   = Nothing
       , sqContentMd5    = Nothing
-      , sqAmzHeaders    = [("X-Amzn-Authorization", authorization)]
+      , sqAmzHeaders    = amzHeaders
       , sqOtherHeaders  = []
       , sqBody          = Nothing
       , sqStringToSign  = stringToSign
@@ -106,11 +106,16 @@ sesSignQuery query si sd
       stringToSign  = fmtRfc822Time (signatureTime sd)
       credentials   = signatureCredentials sd
       accessKeyId   = accessKeyID credentials
-      authorization = B.concat [ "AWS3-HTTPS AWSAccessKeyId="
-                               , accessKeyId
-                               , ", Algorithm=HmacSHA256, Signature="
-                               , signature credentials HmacSHA256 stringToSign
-                               ]
+      amzHeaders    = catMaybes
+                    [ Just ("X-Amzn-Authorization", authorization)
+                    , ("x-amz-security-token",) `fmap` iamToken credentials
+                    ]
+      authorization = B.concat
+                    [ "AWS3-HTTPS AWSAccessKeyId="
+                    , accessKeyId
+                    , ", Algorithm=HmacSHA256, Signature="
+                    , signature credentials HmacSHA256 stringToSign
+                    ]
       query' = ("AWSAccessKeyId", accessKeyId) : query
 
 sesResponseConsumer :: (Cu.Cursor -> Response SesMetadata a)
