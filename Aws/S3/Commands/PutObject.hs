@@ -33,7 +33,8 @@ data PutObject = PutObject {
 #else
   poRequestBody  :: HTTP.RequestBody (C.ResourceT IO),
 #endif
-  poMetadata :: [(T.Text,T.Text)]
+  poMetadata :: [(T.Text,T.Text)],
+  poOtherHeaders :: [(T.Text,T.Text)]
 }
 
 #if MIN_VERSION_http_conduit(2, 0, 0)
@@ -41,7 +42,7 @@ putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
 #else
 putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
 #endif
-putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] []
 
 data PutObjectResponse
   = PutObjectResponse {
@@ -65,6 +66,7 @@ instance SignQuery PutObject where
                                             , ("x-amz-website-redirect-location",) <$> poWebsiteRedirectLocation
                                             , ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> poServerSideEncryption
                                             ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
+					      ++ map( \x -> (CI.mk . T.encodeUtf8 $ fst x, snd x)) poOtherHeaders
                                , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires
                                             , ("Cache-Control",) <$> poCacheControl
