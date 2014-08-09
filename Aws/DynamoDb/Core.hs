@@ -118,6 +118,7 @@ import           Data.Aeson
 import qualified Data.Aeson                   as A
 import           Data.Aeson.Types             (Pair, parseEither)
 import qualified Data.Aeson.Types             as A
+import qualified Data.Attoparsec.Text         as Atto
 import           Data.Byteable
 import qualified Data.ByteString.Base16       as Base16
 import qualified Data.ByteString.Base64       as Base64
@@ -138,7 +139,6 @@ import qualified Data.Set                     as S
 import           Data.String
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
-import qualified Data.Text.Read               as T
 import           Data.Time
 import           Data.Typeable
 import           Data.Word
@@ -579,11 +579,12 @@ instance FromJSON DValue where
         x -> fail $ "aws: unknown dynamodb value: " ++ show x
 
       where
-        parseScientific (String str) = do
-            case T.rational str of
-              Right (i, _) -> return $ fromFloatDigits (i :: Double)
-              Left e -> fail $ "parseScientific failed: " ++ e
-        parseScientific _ = fail "Unexpected JSON in parseScientific"
+        parseScientific (String str) =
+            case Atto.parseOnly Atto.scientific str of
+              Left e -> fail ("parseScientific failed: " ++ e)
+              Right a -> return a
+        parseScientific (Number n) = return n
+        parseScientific _ = fail "Unexpected JSON type in parseScientific"
 
 
 instance ToJSON Attribute where
