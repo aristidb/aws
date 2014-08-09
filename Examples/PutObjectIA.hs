@@ -29,15 +29,15 @@ main = do
     let streamer sink = withFile file ReadMode $ \h -> sink $ S.hGet h 10240
     b <- liftIO $ L.readFile file
     size <- liftIO $ (fromIntegral . fileSize <$> getFileStatus file :: IO Integer)
-    let body = RequestBodyStream (fromInteger size) streamer)
+    let body = RequestBodyStream (fromInteger size) streamer
     rsp <- Aws.pureAws cfg s3cfg mgr $
-        (S3.putObject "joeyh-test" (T.pack file) body)
+        (S3.putObject "joeyh-test-item" (T.pack file) body)
 		{ S3.poMetadata =
 			[ ("mediatype", "texts")
 			, ("meta-description", "test Internet Archive item made via haskell aws library")
 			]
-		, S3.poOtherHeaders = 
-			[ ("x-amz-auto-make-bucket", "1")
-			]
+		-- Automatically creates bucket on IA if it does not exist,
+		-- and uses the above metadata as the bucket's metadata.
+		, S3.poAutoMakeBucket = True
 		}
     liftIO $ print rsp
