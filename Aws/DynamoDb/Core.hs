@@ -253,7 +253,7 @@ instance (DynData (DynRep [a]), DynVal a) => DynVal [a] where
 
 -------------------------------------------------------------------------------
 -- | Any singular 'DynVal' can be upgraded to a 'Set'.
-instance (DynData (DynRep [a]), DynVal a, Ord a) => DynVal (S.Set a) where
+instance (DynData (DynRep (S.Set a)), DynVal a, Ord a) => DynVal (S.Set a) where
     type DynRep (S.Set a) = S.Set (DynRep a)
     fromRep set = fmap S.fromList . mapM fromRep $ S.toList set
     toRep as = S.map toRep as
