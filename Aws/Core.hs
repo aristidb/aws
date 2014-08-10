@@ -21,6 +21,7 @@ module Aws.Core
 , XmlException(..)
 , HeaderException(..)
 , FormException(..)
+, NoCredentialsException(..)
   -- ** Response deconstruction helpers
 , readHex2
   -- *** XML
@@ -69,11 +70,14 @@ module Aws.Core
 , IteratedTransaction(..)
   -- * Credentials
 , Credentials(..)
+, makeCredentials
 , credentialsDefaultFile
 , credentialsDefaultKey
 , loadCredentialsFromFile
 , loadCredentialsFromEnv
+, loadCredentialsFromInstanceMetadata
 , loadCredentialsFromEnvOrFile
+, loadCredentialsFromEnvOrFileOrInstanceMetadata
 , loadCredentialsDefault
   -- * Service configuration
 , DefaultServiceConfiguration(..)
@@ -85,6 +89,8 @@ module Aws.Core
 )
 where
 
+import           Aws.Ec2.InstanceMetadata
+import           Aws.Network
 import qualified Blaze.ByteString.Builder as Blaze
 import           Control.Applicative
 import           Control.Arrow
@@ -93,6 +99,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource (ResourceT, MonadThrow (throwM))
 import           Crypto.Hash
+import qualified Data.Aeson               as A
 import           Data.Byteable
 import           Data.ByteString          (ByteString)
 import qualified Data.ByteString          as B
@@ -108,12 +115,14 @@ import qualified Data.Conduit.List        as CL
 import           Data.Default             (def)
 import           Data.IORef
 import           Data.List
+import qualified Data.Map                 as M
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as T
 import qualified Data.Text.IO             as T
 import           Data.Time
+import qualified Data.Traversable         as Traversable
 import           Data.Typeable
 import           Data.Word
 import qualified Network.HTTP.Conduit     as HTTP
@@ -239,9 +248,20 @@ data Credentials
       , secretAccessKey :: B.ByteString
         -- | Signing keys for signature version 4
       , v4SigningKeys :: IORef [V4Key]
+        -- | Signed IAM token
+      , iamToken :: Maybe B.ByteString
       }
 instance Show Credentials where
-    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ "}"
+    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ ",iamToken=" ++ show (iamToken c) ++ "}"
+
+makeCredentials :: MonadIO io
+                => B.ByteString -- ^ AWS Access Key ID
+                -> B.ByteString -- ^ AWS Secret Access Key
+                -> io Credentials
+makeCredentials accessKeyID secretAccessKey = liftIO $ do
+    v4SigningKeys <- newIORef []
+    let iamToken = Nothing
+    return Credentials { .. }
 
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
 --
@@ -262,30 +282,57 @@ credentialsDefaultKey = "default"
 -- @keyName awsKeyID awsKeySecret@
 loadCredentialsFromFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromFile file key = liftIO $ do
-  contents <- map T.words . T.lines <$> T.readFile file
-  ref <- newIORef []
-  return $ do
-    [_key, keyID, secret] <- find (hasKey key) contents
-    return Credentials { accessKeyID = T.encodeUtf8 keyID
-                       , secretAccessKey = T.encodeUtf8 secret
-                       , v4SigningKeys = ref
-                       }
-      where
-        hasKey _ [] = False
-        hasKey k (k2 : _) = k == k2
+  exists <- doesFileExist file
+  if exists
+    then do
+      contents <- map T.words . T.lines <$> T.readFile file
+      Traversable.sequence $ do
+        [_key, keyID, secret] <- find (hasKey key) contents
+        return (makeCredentials (T.encodeUtf8 keyID) (T.encodeUtf8 secret))
+    else return Nothing
+  where
+    hasKey _ [] = False
+    hasKey k (k2 : _) = k == k2
 
 -- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@
 --   (or @AWS_SECRET_ACCESS_KEY@), if possible.
 loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromEnv = liftIO $ do
   env <- getEnvironment
-  ref <- newIORef []
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
-  return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID) 
-                      <*> (T.encodeUtf8 . T.pack <$> secret)
-                      <*> return ref)
+  Traversable.sequence
+      (makeCredentials <$> (T.encodeUtf8 . T.pack <$> keyID)
+                       <*> (T.encodeUtf8 . T.pack <$> secret))
+
+loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
+loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
+  do
+    -- check if the path is routable
+    avail <- liftIO $ hostAvailable "169.254.169.254"
+    if not avail
+      then return Nothing
+      else do
+        info <- liftIO $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam" "info" >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
+        let infodict = info >>= A.decode :: Maybe (M.Map String String)
+            info'    = infodict >>= M.lookup "InstanceProfileArn"
+        case info' of
+          Just name ->
+            do
+              let name' = drop 1 $ dropWhile (/= '/') $ name
+              creds <- liftIO $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam/security-credentials" name' >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
+              -- this token lasts ~6 hours
+              let dict   = creds >>= A.decode :: Maybe (M.Map String String)
+                  keyID  = dict  >>= M.lookup "AccessKeyId"
+                  secret = dict  >>= M.lookup "SecretAccessKey"
+                  token  = dict  >>= M.lookup "Token"
+              ref <- liftIO $ newIORef []
+              return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID)
+                                  <*> (T.encodeUtf8 . T.pack <$> secret)
+                                  <*> return ref
+                                  <*> (Just . T.encodeUtf8 . T.pack <$> token))
+          Nothing -> return Nothing
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
 --
@@ -298,6 +345,22 @@ loadCredentialsFromEnvOrFile file key =
       Just cr -> return (Just cr)
       Nothing -> loadCredentialsFromFile file key
 
+-- | Load credentials from environment variables if possible, or alternatively from the instance metadata store, or alternatively from a file with a given key name.
+--
+-- See 'loadCredentialsFromEnv', 'loadCredentialsFromFile' and 'loadCredentialsFromInstanceMetadata' for details.
+loadCredentialsFromEnvOrFileOrInstanceMetadata :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
+loadCredentialsFromEnvOrFileOrInstanceMetadata file key =
+  do
+    envcr <- loadCredentialsFromEnv
+    case envcr of
+      Just cr -> return (Just cr)
+      Nothing ->
+        do
+          filecr <- loadCredentialsFromFile file key
+          case filecr of
+            Just cr -> return (Just cr)
+            Nothing -> loadCredentialsFromInstanceMetadata
+
 -- | Load credentials from environment variables if possible, or alternative from the default file with the default
 -- key name.
 --
@@ -308,7 +371,7 @@ loadCredentialsFromEnvOrFile file key =
 loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
 loadCredentialsDefault = do
   file <- credentialsDefaultFile
-  loadCredentialsFromEnvOrFile file credentialsDefaultKey
+  loadCredentialsFromEnvOrFileOrInstanceMetadata file credentialsDefaultKey
 
 -- | Protocols supported by AWS. Currently, all AWS services use the HTTP or HTTPS protocols.
 data Protocol
@@ -700,10 +763,16 @@ newtype HeaderException = HeaderException { headerErrorMessage :: String }
 instance E.Exception HeaderException
 
 -- | An error that occurred during form parsing / validation.
-newtype FormException  = FormException { formErrorMesage :: String }
+newtype FormException = FormException { formErrorMesage :: String }
     deriving (Show, Typeable)
 
 instance E.Exception FormException
+
+-- | No credentials were found and an invariant was violated.
+newtype NoCredentialsException = NoCredentialsException { noCredentialsErrorMessage :: String }
+    deriving (Show, Typeable)
+
+instance E.Exception NoCredentialsException
 
 
 -- | A specific element (case-insensitive, ignoring namespace - sadly necessary), extracting only the textual contents.

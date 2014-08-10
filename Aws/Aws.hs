@@ -79,13 +79,14 @@ data Configuration
 -- (see 'loadCredentialsDefault').
 baseConfiguration :: MonadIO io => io Configuration
 baseConfiguration = liftIO $ do
-  Just cr <- loadCredentialsDefault
-  return Configuration {
+  cr <- loadCredentialsDefault
+  case cr of
+    Nothing -> E.throw $ NoCredentialsException "could not locate aws credentials"
+    Just cr' -> return Configuration {
                       timeInfo = Timestamp
-                    , credentials = cr
+                    , credentials = cr'
                     , logger = defaultLog Warning
                     }
--- TODO: better error handling when credentials cannot be loaded
 
 -- | Debug configuration, which logs much more verbosely.
 dbgConfiguration :: MonadIO io => io Configuration
@@ -211,12 +212,10 @@ unsafeAwsRef cfg info manager metadataRef request = do
   liftIO $ logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   httpRequest <- liftIO $ queryToHttpRequest q
   liftIO $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
-  resp <- do
-      hresp <- HTTP.http httpRequest manager
-      forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $ do
-        logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
-      responseConsumer request metadataRef hresp
-  return resp
+  hresp <- HTTP.http httpRequest manager
+  forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
+    logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
+  responseConsumer request metadataRef hresp
 
 -- | Run a URI-only AWS transaction. Returns a URI that can be sent anywhere. Does not work with all requests.
 -- 

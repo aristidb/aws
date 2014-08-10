@@ -49,11 +49,14 @@ module Aws
 , IteratedTransaction
   -- * Credentials
 , Credentials(..)
+, makeCredentials
 , credentialsDefaultFile
 , credentialsDefaultKey
 , loadCredentialsFromFile
 , loadCredentialsFromEnv
+, loadCredentialsFromInstanceMetadata
 , loadCredentialsFromEnvOrFile
+, loadCredentialsFromEnvOrFileOrInstanceMetadata
 , loadCredentialsDefault
 )
 where

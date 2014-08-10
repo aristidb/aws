@@ -1,6 +1,7 @@
 module Aws.S3.Commands
 (
   module Aws.S3.Commands.CopyObject
+, module Aws.S3.Commands.DeleteBucket
 , module Aws.S3.Commands.DeleteObject
 , module Aws.S3.Commands.DeleteObjects
 , module Aws.S3.Commands.GetBucket
@@ -13,6 +14,7 @@ module Aws.S3.Commands
 where
 
 import Aws.S3.Commands.CopyObject
+import Aws.S3.Commands.DeleteBucket
 import Aws.S3.Commands.DeleteObject
 import Aws.S3.Commands.DeleteObjects
 import Aws.S3.Commands.GetBucket

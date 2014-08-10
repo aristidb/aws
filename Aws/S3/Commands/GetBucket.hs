@@ -104,6 +104,9 @@ instance IteratedTransaction GetBucket GetBucketResponse where
             (True, Nothing,     contents@(_:_)) -> Just $ request { gbMarker = Just $ objectKey $ last contents }
             (_,    _,           _             ) -> Nothing
 
+instance ListResponse GetBucketResponse ObjectInfo where
+    listResponse = gbrContents
+
 instance AsMemoryResponse GetBucketResponse where
     type MemoryResponse GetBucketResponse = GetBucketResponse
     loadToMemory = return

@@ -90,6 +90,17 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.9 series
 
+- 0.9.3
+  - fix performance regression for loadCredentialsDefault
+  - add generic makeCredentials function
+  - add S3 DeleteBucket operation
+  - add S3 NukeBucket example
+  - SES: use security token if enabled (should allow using it with IAM roles on EC2 instances)
+
+- 0.9.2
+  - Support for credentials from EC2 instance metadata (only S3 for now)
+  - aeson 0.8 compatibility
+
 - 0.9.1
   - Support for multi-page S3 GetBucket requests
   - S3 GLACIER support
