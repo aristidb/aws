@@ -188,7 +188,7 @@ sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
       expandedQuery = sortBy (comparing fst) 
                        ( sqsQuery ++ [ ("AWSAccessKeyId", Just(accessKeyID signatureCredentials)), 
                        ("Expires", Just(BC.pack expiresString)), 
-                       ("SignatureMethod", Just("HmacSHA256")), ("SignatureVersion",Just("2")), ("Version",Just("2009-02-01"))
+                       ("SignatureMethod", Just("HmacSHA256")), ("SignatureVersion",Just("2")), ("Version",Just("2012-11-05"))
 
                        ])
       
@@ -254,7 +254,7 @@ sqsErrorResponseConsumer resp
 data QueueName = QueueName{
   qName :: T.Text,
   qAccountNumber :: T.Text
-} deriving(Show)
+} deriving(Show, Read, Eq, Ord)
 
 printQueueName :: QueueName -> T.Text
 printQueueName queue = T.concat ["/", (qAccountNumber queue), "/", (qName queue), "/"]
@@ -274,11 +274,18 @@ data QueueAttribute
 
 data MessageAttribute
     = MessageAll
+    -- ^ all values
     | SenderId
+    -- ^ the AWS account number (or the IP address, if anonymous access is
+    -- allowed) of the sender
     | SentTimestamp
+    -- ^ the time when the message was sent (epoch time in milliseconds)
     | ApproximateReceiveCount
+    -- ^ the number of times a message has been received but not deleted
     | ApproximateFirstReceiveTimestamp
-    deriving(Show,Eq,Enum)
+    -- ^ the time when the message was first received (epoch time in
+    -- milliseconds)
+    deriving(Show,Read,Eq,Ord,Enum,Bounded)
 
 data SqsPermission
     = PermissionAll
@@ -335,8 +342,8 @@ printPermission PermissionDeleteMessage = "DeleteMessage"
 printPermission PermissionChangeMessageVisibility = "ChangeMessageVisibility"
 printPermission PermissionGetQueueAttributes = "GetQueueAttributes"
 
-newtype ReceiptHandle = ReceiptHandle T.Text deriving(Show,Eq)
-newtype MessageId = MessageId T.Text deriving(Show,Eq)
+newtype ReceiptHandle = ReceiptHandle T.Text deriving(Show, Read, Eq, Ord)
+newtype MessageId = MessageId T.Text deriving(Show, Read, Eq, Ord)
 
 printReceiptHandle :: ReceiptHandle -> T.Text
 printReceiptHandle (ReceiptHandle handle) = handle 
