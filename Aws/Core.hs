@@ -751,7 +751,7 @@ newtype FormException = FormException { formErrorMesage :: String }
 instance E.Exception FormException
 
 -- | No credentials were found and an invariant was violated.
-newtype NoCredentialsException = NoCredentialsException { noCredentialsErrorMesage :: String }
+newtype NoCredentialsException = NoCredentialsException { noCredentialsErrorMessage :: String }
     deriving (Show, Typeable)
 
 instance E.Exception NoCredentialsException

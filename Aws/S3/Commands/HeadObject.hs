@@ -4,6 +4,7 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
+import           Control.Monad.Trans.Resource (throwM)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text             as T
@@ -24,11 +25,11 @@ headObject b o = HeadObject b o Nothing
 
 data HeadObjectResponse
     = HeadObjectResponse {
-        horMetadata :: ObjectMetadata
+        horMetadata :: Maybe ObjectMetadata
       }
 
 data HeadObjectMemoryResponse
-    = HeadObjectMemoryResponse ObjectMetadata
+    = HeadObjectMemoryResponse (Maybe ObjectMetadata)
     deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
@@ -52,7 +53,13 @@ instance SignQuery HeadObject where
 instance ResponseConsumer HeadObject HeadObjectResponse where
     type ResponseMetadata HeadObjectResponse = S3Metadata
     responseConsumer HeadObject{..} _ resp
-        = HeadObjectResponse <$> parseObjectMetadata (HTTP.responseHeaders resp)
+        | status == HTTP.status200 = HeadObjectResponse . Just <$> parseObjectMetadata headers
+        | status == HTTP.status404 = return $ HeadObjectResponse Nothing
+        | otherwise = throwM $ HTTP.StatusCodeException status headers cookies
+      where
+        status  = HTTP.responseStatus    resp
+        headers = HTTP.responseHeaders   resp
+        cookies = HTTP.responseCookieJar resp
 
 instance Transaction HeadObject HeadObjectResponse
 
