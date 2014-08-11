@@ -33,7 +33,8 @@ data PutObject = PutObject {
 #else
   poRequestBody  :: HTTP.RequestBody (C.ResourceT IO),
 #endif
-  poMetadata :: [(T.Text,T.Text)]
+  poMetadata :: [(T.Text,T.Text)],
+  poAutoMakeBucket :: Bool -- ^ Internet Archive S3 nonstandard extension
 }
 
 #if MIN_VERSION_http_conduit(2, 0, 0)
@@ -41,7 +42,7 @@ putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
 #else
 putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
 #endif
-putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body []
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False
 
 data PutObjectResponse
   = PutObjectResponse {
@@ -64,6 +65,7 @@ instance SignQuery PutObject where
                                             , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
                                             , ("x-amz-website-redirect-location",) <$> poWebsiteRedirectLocation
                                             , ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> poServerSideEncryption
+					    , if poAutoMakeBucket then Just ("x-amz-auto-make-bucket", "1")  else Nothing
                                             ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
                                , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires
