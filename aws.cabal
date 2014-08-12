@@ -60,6 +60,7 @@ Library
                        Aws.S3.Commands.DeleteObject,
                        Aws.S3.Commands.DeleteObjects,
                        Aws.S3.Commands.GetBucket,
+                       Aws.S3.Commands.GetBucketLocation,
                        Aws.S3.Commands.GetObject,
                        Aws.S3.Commands.GetService,
                        Aws.S3.Commands.HeadObject,
