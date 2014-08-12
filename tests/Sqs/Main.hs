@@ -10,7 +10,7 @@
 -- |
 -- Module: Main
 -- Copyright: Copyright © 2014 AlephCloud Systems, Inc.
--- License: MIT
+-- License: BSD3
 -- Maintainer: Lars Kuhtz <lars@alephcloud.com>
 -- Stability: experimental
 --
