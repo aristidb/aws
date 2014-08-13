@@ -6,6 +6,7 @@ import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow (second)
 import           Control.Monad.Trans.Resource (throwM)
+import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import           Data.Maybe
 import qualified Data.Text as T
@@ -28,13 +29,14 @@ data CopyObject = CopyObject { coObjectName :: T.Text
                              , coIfModifiedSince :: Maybe UTCTime
                              , coStorageClass :: Maybe StorageClass
                              , coAcl :: Maybe CannedAcl
+                             , coContentType :: Maybe B.ByteString
                              }
   deriving (Show)
 
 copyObject :: Bucket -> T.Text -> ObjectId -> CopyMetadataDirective -> CopyObject
-copyObject bucket obj src meta = CopyObject obj bucket src meta Nothing Nothing Nothing Nothing Nothing Nothing
+copyObject bucket obj src meta = CopyObject obj bucket src meta Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
-data CopyObjectResponse 
+data CopyObjectResponse
   = CopyObjectResponse {
       corVersionId :: Maybe T.Text
     , corLastModified :: UTCTime
@@ -51,7 +53,7 @@ instance SignQuery CopyObject where
                                , s3QObject = Just $ T.encodeUtf8 coObjectName
                                , s3QSubresources = []
                                , s3QQuery = []
-                               , s3QContentType = Nothing
+                               , s3QContentType = coContentType
                                , s3QContentMd5 = Nothing
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                    Just ("x-amz-copy-source",
@@ -98,7 +100,7 @@ instance ResponseConsumer CopyObject CopyObjectResponse where
               lastMod <- forceM "Missing Last-Modified" $ el $/ elContent "LastModified" &| (parseHttpDate' . T.unpack)
               etag <- force "Missing ETag" $ el $/ elContent "ETag"
               return (lastMod, etag)
-      
+
 
 instance Transaction CopyObject CopyObjectResponse
 
