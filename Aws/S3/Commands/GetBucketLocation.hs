@@ -47,7 +47,7 @@ instance ResponseConsumer r GetBucketLocationResponse where
   responseConsumer _ = s3XmlResponseConsumer parse
     where parse cursor = do
             locationConstraint <- force "Missing Location" $ cursor $.// elContent "LocationConstraint"
-            return GetBucketLocationResponse { gblrLocationConstraint = locationConstraint }
+            return GetBucketLocationResponse { gblrLocationConstraint = normaliseLocation locationConstraint }
 
 instance Transaction GetBucketLocation GetBucketLocationResponse
 
