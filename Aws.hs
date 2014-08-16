@@ -7,6 +7,12 @@ module Aws
 , Configuration(..)
 , baseConfiguration
 , dbgConfiguration
+, Environment(..)
+, closeEnvironment
+, newDefaultEnvironment
+, newDebugEnvironment
+, withDefaultEnvironment
+, withDebugEnvironment
   -- * Transaction runners
   -- ** Safe runners
 , aws
@@ -40,6 +46,8 @@ module Aws
   -- ** Service configuration
 , ServiceConfiguration
 , DefaultServiceConfiguration(..)
+, ServiceConfigurationMap
+, addServiceConfiguration
 , NormalQuery
 , UriOnlyQuery
   -- ** Expiration

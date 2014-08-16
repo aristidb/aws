@@ -8,6 +8,12 @@ module Aws.Aws
 , Configuration(..)
 , baseConfiguration
 , dbgConfiguration
+, Environment(..)
+, closeEnvironment
+, newDefaultEnvironment
+, newDebugEnvironment
+, withDefaultEnvironment
+, withDebugEnvironment
   -- * Transaction runners
   -- ** Safe runners
 , aws
@@ -30,8 +36,9 @@ import           Aws.Core
 import           Control.Applicative
 import qualified Control.Exception.Lifted as E
 import           Control.Monad
-import           Control.Monad.IO.Class
+import           Control.Monad.Base
 import           Control.Monad.Trans
+import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Resource
 import qualified Data.ByteString      as B
 import qualified Data.CaseInsensitive as CI
@@ -77,8 +84,8 @@ data Configuration
 
 -- | The default configuration, with credentials loaded from environment variable or configuration file
 -- (see 'loadCredentialsDefault').
-baseConfiguration :: MonadIO io => io Configuration
-baseConfiguration = liftIO $ do
+baseConfiguration :: MonadBase IO io => io Configuration
+baseConfiguration = liftBase $ do
   cr <- loadCredentialsDefault
   case cr of
     Nothing -> E.throw $ NoCredentialsException "could not locate aws credentials"
@@ -89,10 +96,41 @@ baseConfiguration = liftIO $ do
                     }
 
 -- | Debug configuration, which logs much more verbosely.
-dbgConfiguration :: MonadIO io => io Configuration
+dbgConfiguration :: MonadBase IO io => io Configuration
 dbgConfiguration = do
   c <- baseConfiguration
   return c { logger = defaultLog Debug }
+
+data Environment = Environment {
+        environmentConfiguration :: Configuration,
+        environmentServiceConfigurationMap :: ServiceConfigurationMap,
+        environmentDefaultServiceConfiguration :: (forall config. DefaultServiceConfiguration config => config),
+        environmentHTTPManager :: HTTP.Manager
+    }
+
+environmentServiceConfiguration :: DefaultServiceConfiguration config => Environment -> config
+environmentServiceConfiguration (Environment _ m d _) = getServiceConfiguration d m
+
+closeEnvironment :: MonadBase IO io => Environment -> io ()
+closeEnvironment = liftBase . HTTP.closeManager . environmentHTTPManager
+
+newDefaultEnvironment :: MonadBase IO m => m Environment
+newDefaultEnvironment = do
+    cfg <- baseConfiguration
+    mgr <- liftBase $ HTTP.newManager HTTP.conduitManagerSettings
+    return (Environment cfg mempty defServiceConfig mgr)
+
+newDebugEnvironment :: MonadBase IO m => m Environment
+newDebugEnvironment = do
+    cfg <- dbgConfiguration
+    mgr <- liftBase $ HTTP.newManager HTTP.conduitManagerSettings
+    return (Environment cfg mempty debugServiceConfig mgr)
+
+withDefaultEnvironment :: MonadBaseControl IO m => (Environment -> m a) -> m a
+withDefaultEnvironment = E.bracket newDefaultEnvironment closeEnvironment
+
+withDebugEnvironment :: (Environment -> IO a) -> IO a
+withDebugEnvironment = E.bracket newDebugEnvironment closeEnvironment
 
 -- | Run an AWS transaction, with HTTP manager and metadata wrapped in a 'Response'.
 -- 
@@ -100,17 +138,13 @@ dbgConfiguration = do
 -- 
 -- Metadata is logged at level 'Info'.
 -- 
--- Usage (with existing 'HTTP.Manager'):
+-- Usage (with existing 'Environment'):
 -- @
---     resp <- aws cfg serviceCfg manager request
+--     resp <- aws env request
 -- @
-aws :: (Transaction r a)
-      => Configuration 
-      -> ServiceConfiguration r NormalQuery 
-      -> HTTP.Manager 
-      -> r 
-      -> ResourceT IO (Response (ResponseMetadata a) a)
-aws = unsafeAws
+aws :: (Transaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
+     => Environment -> r -> ResourceT IO (Response (ResponseMetadata a) a)
+aws env req = unsafeAws (environmentConfiguration env) (environmentServiceConfiguration env) (environmentHTTPManager env) req
 
 -- | Run an AWS transaction, with HTTP manager and metadata returned in an 'IORef'.
 -- 
@@ -118,56 +152,50 @@ aws = unsafeAws
 -- 
 -- Metadata is not logged.
 -- 
--- Usage (with existing 'HTTP.Manager'):
+-- Usage (with existing 'Environment'):
 -- @
 --     ref <- newIORef mempty;
---     resp <- awsRef cfg serviceCfg manager request
+--     resp <- awsRef env request
 -- @
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
-awsRef :: (Transaction r a)
-      => Configuration 
-      -> ServiceConfiguration r NormalQuery 
-      -> HTTP.Manager 
+awsRef :: (Transaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
+      => Environment
       -> IORef (ResponseMetadata a) 
       -> r 
       -> ResourceT IO a
-awsRef = unsafeAwsRef
+awsRef env ref req = unsafeAwsRef (environmentConfiguration env) (environmentServiceConfiguration env) (environmentHTTPManager env) ref req
 
 -- | Run an AWS transaction, with HTTP manager and without metadata.
 -- 
 -- Metadata is logged at level 'Info'.
 -- 
--- Usage (with existing 'HTTP.Manager'):
+-- Usage (with existing 'Environment'):
 -- @
 --     resp <- aws cfg serviceCfg manager request
 -- @
-pureAws :: (Transaction r a)
-      => Configuration 
-      -> ServiceConfiguration r NormalQuery 
-      -> HTTP.Manager 
-      -> r 
+pureAws :: (Transaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
+      => Environment
+      -> r
       -> ResourceT IO a
-pureAws cfg scfg mgr req = readResponseIO =<< aws cfg scfg mgr req
+pureAws env req = readResponseIO =<< aws env req
 
 -- | Run an AWS transaction, /without/ HTTP manager and without metadata.
 -- 
 -- Metadata is logged at level 'Info'.
 -- 
--- Note that this is potentially less efficient than using 'aws', because HTTP connections cannot be re-used.
+-- The whole response will be copied into memory, which is possibly not desirable for streaming responses.
 -- 
 -- Usage:
 -- @
---     resp <- simpleAws cfg serviceCfg request
+--     resp <- simpleAws env request
 -- @
-simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
-            => Configuration 
-            -> ServiceConfiguration r NormalQuery
-            -> r 
+simpleAws :: (Transaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery), AsMemoryResponse a, MonadBase IO io)
+            => Environment
+            -> r
             -> io (MemoryResponse a)
-simpleAws cfg scfg request
-  = liftIO $ HTTP.withManager $ \manager ->
-      loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
+simpleAws env request
+  = liftBase $ runResourceT $ loadToMemory =<< readResponseIO =<< aws env request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
 -- 
@@ -223,9 +251,9 @@ unsafeAwsRef cfg info manager metadataRef request = do
 -- @
 --     uri <- awsUri cfg request
 -- @
-awsUri :: (SignQuery request, MonadIO io)
+awsUri :: (SignQuery request, MonadBase IO io)
          => Configuration -> ServiceConfiguration request UriOnlyQuery -> request -> io B.ByteString
-awsUri cfg info request = liftIO $ do
+awsUri cfg info request = liftBase $ do
   let ti = timeInfo cfg
       cr = credentials cfg
   sd <- signatureData ti cr
@@ -253,14 +281,12 @@ awsIteratedAll cfg scfg manager req_ = go req_ Nothing
                                          mapMetadata (meta:) `liftM` go nextRequest (Just resp)
 -}
 
-awsIteratedSource :: (IteratedTransaction r a)
-                     => Configuration
-                     -> ServiceConfiguration r NormalQuery
-                     -> HTTP.Manager
+awsIteratedSource :: (IteratedTransaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
+                     => Environment
                      -> r
                      -> C.Producer (ResourceT IO) (Response (ResponseMetadata a) a)
-awsIteratedSource cfg scfg manager req_ = go req_
-  where go request = do resp <- lift $ aws cfg scfg manager request
+awsIteratedSource env req_ = go req_
+  where go request = do resp <- lift $ aws env request
                         C.yield resp
                         case responseResult resp of
                           Left _  -> return ()
@@ -269,13 +295,11 @@ awsIteratedSource cfg scfg manager req_ = go req_
                               Nothing -> return ()
                               Just nextRequest -> go nextRequest
 
-awsIteratedList :: (IteratedTransaction r a, ListResponse a i)
-                     => Configuration
-                     -> ServiceConfiguration r NormalQuery
-                     -> HTTP.Manager
+awsIteratedList :: (IteratedTransaction r a, ListResponse a i, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
+                     => Environment
                      -> r
                      -> C.Producer (ResourceT IO) i
-awsIteratedList cfg scfg manager req
-  = awsIteratedSource cfg scfg manager req
+awsIteratedList env req
+  = awsIteratedSource env req
     C.=$=
     CL.concatMapM (fmap listResponse . readResponseIO)

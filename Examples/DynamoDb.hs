@@ -16,27 +16,27 @@ import qualified Data.Text             as T
 import           Network.HTTP.Conduit  (withManager)
 -------------------------------------------------------------------------------
 
-createTableAndWait :: IO ()
-createTableAndWait = do
+createTableAndWait :: Environment -> IO ()
+createTableAndWait env = do
   let req0 = createTable "devel-1"
         [AttributeDefinition "name" AttrString]
         (HashOnly "name")
         (ProvisionedThroughput 1 1)
-  resp0 <- runCommand req0
+  resp0 <- simpleAws env req0
   print resp0
 
-  print "Waiting for table to be created"
+  putStrLn "Waiting for table to be created"
   threadDelay (30 * 1000000)
 
   let req1 = DescribeTable "devel-1"
-  resp1 <- runCommand req1
+  resp1 <- simpleAws env req1
   print resp1
 
 main :: IO ()
-main = do
-  cfg <- Aws.baseConfiguration
+main = Aws.withDefaultEnvironment $ \env0 -> do
+  let env = env0 { environmentDefaultServiceConfiguration = debugServiceConfig }
 
-  createTableAndWait `catch` (\DdbError{} -> putStrLn "Table already exists")
+  createTableAndWait env `catch` (\DdbError{} -> putStrLn "Table already exists")
 
   putStrLn "Putting an item..."
 
@@ -49,60 +49,51 @@ main = do
                                     }
 
 
-  resp1 <- runCommand req1
+  resp1 <- simpleAws env req1
   print resp1
 
   putStrLn "Getting the item back..."
 
   let req2 = getItem "devel-1" (hk "name" "josh")
-  resp2 <- runCommand req2
+  resp2 <- simpleAws env req2
   print resp2
 
-  print =<< runCommand
+  print =<< simpleAws env
     (updateItem "devel-1" (hk "name" "josh") [au (Attribute "class" "awesome")])
 
-  echo "Updating with false conditional."
-  (print =<< runCommand
+  putStrLn "Updating with false conditional."
+  (print =<< simpleAws env
     (updateItem "devel-1" (hk "name" "josh") [au (Attribute "class" "awesomer")])
       { uiExpect = Conditions CondAnd [Condition "name" (DEq "john")] })
-    `catch` (\ (e :: DdbError) -> echo ("Eating exception: " ++ show e))
+    `catch` (\ (e :: DdbError) -> putStrLn ("Eating exception: " ++ show e))
 
-  echo "Getting the item back..."
-  print =<< runCommand req2
+  putStrLn "Getting the item back..."
+  print =<< simpleAws env req2
 
 
-  echo "Updating with true conditional"
-  print =<< runCommand
+  putStrLn "Updating with true conditional"
+  print =<< simpleAws env
     (updateItem "devel-1" (hk "name" "josh") [au (Attribute "class" "awesomer")])
       { uiExpect = Conditions CondAnd [Condition "name" (DEq "josh")] }
 
-  echo "Getting the item back..."
-  print =<< runCommand req2
+  putStrLn "Getting the item back..."
+  print =<< simpleAws env req2
 
-  echo "Running a Query command..."
-  print =<< runCommand (query "devel-1" (Slice (Attribute "name" "josh") Nothing))
+  putStrLn "Running a Query command..."
+  print =<< simpleAws env (query "devel-1" (Slice (Attribute "name" "josh") Nothing))
 
-  echo "Running a Scan command..."
-  print =<< runCommand (scan "devel-1")
+  putStrLn "Running a Scan command..."
+  print =<< simpleAws env (scan "devel-1")
 
-  echo "Filling table with several items..."
+  putStrLn "Filling table with several items..."
   forM_ [0..30] $ \ i -> do
     threadDelay 50000
-    runCommand $ putItem "devel-1" $
+    simpleAws env $ putItem "devel-1" $
       item [Attribute "name" (toValue $ T.pack ("lots-" ++ show i)), attrAs int "val" i]
 
-  echo "Now paginating in increments of 5..."
+  putStrLn "Now paginating in increments of 5..."
   let q0 = (scan "devel-1") { sLimit = Just 5 }
 
   xs <- withManager $ \mgr -> do
-    awsIteratedList cfg debugServiceConfig mgr q0 $$ C.consume
-  echo ("Pagination returned " ++ show (length xs) ++ " items")
-
-
-runCommand r = do
-    cfg <- Aws.baseConfiguration
-    Aws.simpleAws cfg debugServiceConfig r
-
-echo = putStrLn
-
-
+    awsIteratedList env q0 $$ C.consume
+  putStrLn ("Pagination returned " ++ show (length xs) ++ " items")

@@ -6,29 +6,24 @@ import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
 import           Data.Text (pack)
 import           Control.Monad ((<=<))
+import           Control.Monad.Trans.Resource (runResourceT)
 import           Control.Monad.IO.Class (liftIO)
 import           Network.HTTP.Conduit (withManager, responseBody)
 import           System.Environment (getArgs)
 
 main :: IO ()
-main = do
-  [bucket] <- fmap (map pack) getArgs
+main = Aws.withDefaultEnvironment $ \env -> runResourceT $ do
+  [bucket] <- liftIO $ fmap (map pack) getArgs
 
-  {- Set up AWS credentials and the default configuration. -}
-  cfg <- Aws.baseConfiguration
-  let s3cfg = Aws.defServiceConfig :: S3.S3Configuration Aws.NormalQuery
-
-  {- Set up a ResourceT region with an available HTTP manager. -}
-  withManager $ \mgr -> do
-    let src = Aws.awsIteratedSource cfg s3cfg mgr (S3.getBucket bucket)
-    let deleteObjects [] = return ()
-        deleteObjects os =
-          do
-            let keys = map S3.objectKey os
-            liftIO $ putStrLn ("Deleting objects: " ++ show keys)
-            _ <- Aws.pureAws cfg s3cfg mgr (S3.deleteObjects bucket (map S3.objectKey os))
-            return ()
-    src C.$$ CL.mapM_ (deleteObjects . S3.gbrContents <=< Aws.readResponseIO)
-    liftIO $ putStrLn ("Deleting bucket: " ++ show bucket)
-    _ <- Aws.pureAws cfg s3cfg mgr (S3.DeleteBucket bucket)
-    return ()
+  let src = Aws.awsIteratedSource env (S3.getBucket bucket)
+  let deleteObjects [] = return ()
+      deleteObjects os =
+        do
+          let keys = map S3.objectKey os
+          liftIO $ putStrLn ("Deleting objects: " ++ show keys)
+          _ <- Aws.pureAws env (S3.deleteObjects bucket (map S3.objectKey os))
+          return ()
+  src C.$$ CL.mapM_ (deleteObjects . S3.gbrContents <=< Aws.readResponseIO)
+  liftIO $ putStrLn ("Deleting bucket: " ++ show bucket)
+  _ <- Aws.pureAws env (S3.DeleteBucket bucket)
+  return ()

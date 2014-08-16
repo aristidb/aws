@@ -139,6 +139,7 @@ Library
                        text                 >= 0.11,
                        time                 >= 1.1.4   && < 1.5,
                        transformers         >= 0.2.2   && < 0.5,
+                       transformers-base    >= 0.4.2   && < 0.5,
                        unordered-containers >= 0.2,
                        utf8-string          == 0.3.*,
                        vector               >= 0.10,
@@ -173,12 +174,7 @@ Executable GetObject
     Buildable: False
   else
     Buildable: True
-    Build-depends:
-                       base == 4.*,
-                       aws,
-                       http-conduit,
-                       conduit,
-                       conduit-extra
+    Build-depends: base == 4.*, aws, http-conduit, conduit, conduit-extra, resourcet
 
   Default-Language: Haskell2010
 
@@ -190,14 +186,7 @@ Executable NukeBucket
     Buildable: False
   else
     Buildable: True
-    Build-depends:
-                       base == 4.*,
-                       aws,
-                       http-conduit,
-                       conduit,
-                       conduit-extra,
-                       text >=0.1,
-                       transformers
+    Build-depends: base == 4.*, aws, http-conduit, conduit, conduit-extra, text >=0.11, transformers, resourcet
 
   Default-Language: Haskell2010
 
@@ -209,10 +198,7 @@ Executable SimpleDb
     Buildable: False
   else
     Buildable: True
-    Build-depends:
-                       base == 4.*,
-                       aws,
-                       text >=0.11
+    Build-depends: base == 4.*, aws, text >=0.11
 
   Default-Language: Haskell2010
 
@@ -224,14 +210,7 @@ Executable DynamoDb
     Buildable: False
   else
     Buildable: True
-    Build-depends:
-                       aws,
-                       base == 4.*,
-                       data-default,
-                       exceptions,
-                       http-conduit,
-                       text,
-                       conduit
+    Build-depends: aws, base == 4.*, data-default, exceptions, http-conduit, text, conduit
 
   Default-Language: Haskell2010
 
@@ -244,12 +223,7 @@ Executable Sqs
     Buildable: False
   else
     Buildable: True
-    Build-depends:
-                       base == 4.*,
-                       aws,
-                       errors >= 1.4,
-                       text >=0.11,
-                       transformers >= 0.3
+    Build-depends: base == 4.*, aws, errors >= 1.4, text >=0.11, transformers >= 0.3, transformers-base
 
   Default-Language: Haskell2010
 
@@ -275,7 +249,8 @@ test-suite sqs-tests
         tasty >= 0.8,
         tasty-quickcheck >= 0.8,
         text >= 1.1,
-        transformers >= 0.3
+        transformers >= 0.3,
+        transformers-base >= 0.4.2
 
     ghc-options: -Wall -threaded
 

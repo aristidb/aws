@@ -1,11 +1,11 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, FlexibleContexts #-}
 
 import qualified Aws
 import qualified Aws.Core
 import qualified Aws.Sqs as Sqs
 import Control.Concurrent
 import Control.Error
-import Control.Monad.IO.Class
+import Control.Monad.Base
 import Data.Monoid
 import Data.String
 import qualified Data.Text.IO as T
@@ -28,13 +28,12 @@ import Control.Monad (forM_, forM, replicateM)
   |       - Deleting the queue.
   | -}
 main :: IO ()
-main = do
-  {- Set up AWS credentials and the default configuration. -}
-  cfg <- Aws.baseConfiguration
+main = Aws.withDefaultEnvironment $ \env0 -> do
   let sqscfg = Sqs.sqs Aws.Core.HTTP Sqs.sqsEndpointUsWest2 False :: Sqs.SqsConfiguration Aws.NormalQuery
+  let env = env0 { Aws.environmentServiceConfigurationMap = Aws.addServiceConfiguration sqscfg mempty }
 
   {- List any Queues you have already created in your SQS account -}
-  Sqs.ListQueuesResponse qUrls <- Aws.simpleAws cfg sqscfg $ Sqs.ListQueues Nothing
+  Sqs.ListQueuesResponse qUrls <- Aws.simpleAws env $ Sqs.ListQueues Nothing
   let origQUrlCount = length qUrls
   putStrLn $ "originally had " ++ show origQUrlCount ++ " queue urls"
   mapM_ print qUrls
@@ -42,7 +41,7 @@ main = do
   {- Create a request object to create a queue and then print out the Queue URL -}
   let qName = "scaledsoftwaretest1"
   let createQReq = Sqs.CreateQueue (Just 8400) qName
-  Sqs.CreateQueueResponse qUrl <- Aws.simpleAws cfg sqscfg createQReq
+  Sqs.CreateQueueResponse qUrl <- Aws.simpleAws env createQReq
   T.putStrLn $ T.concat ["queue was created with Url: ", qUrl]
 
   {- Create a QueueName object, sqsQName, to hold the name of this queue for the duration -}
@@ -51,7 +50,7 @@ main = do
 
   {- list queue attributes -- for this example we will only list the approximateNumberOfMessages in this queue. -}
   let qAttReq = Sqs.GetQueueAttributes sqsQName [Sqs.ApproximateNumberOfMessages]
-  Sqs.GetQueueAttributesResponse attPairs <- Aws.simpleAws cfg sqscfg qAttReq
+  Sqs.GetQueueAttributesResponse attPairs <- Aws.simpleAws env qAttReq
   mapM_ (\(attName, attText) -> T.putStrLn $ T.concat ["     ", Sqs.printQueueAttribute attName, " ", attText]) attPairs
 
   {- Here we add some messages to the queue -}
@@ -60,7 +59,7 @@ main = do
   forM_ messages $ \mText -> do
       T.putStrLn $ "   Adding: " <> mText
       let sqsSendMessage = Sqs.SendMessage mText sqsQName [] (Just 0)
-      Sqs.SendMessageResponse _ mid _ <- Aws.simpleAws cfg sqscfg sqsSendMessage
+      Sqs.SendMessageResponse _ mid _ <- Aws.simpleAws env sqsSendMessage
       T.putStrLn $ "      message id: " <> sshow mid
 
   {- Here we remove messages from the queue one at a time. -}
@@ -68,7 +67,7 @@ main = do
   let numMessages = length messages
   removedMsgs <- replicateM numMessages $ do
       msgs <- eitherT (const $ return []) return . retryT 2 $ do
-        Sqs.ReceiveMessageResponse r <- liftIO $ Aws.simpleAws cfg sqscfg receiveMessageReq
+        Sqs.ReceiveMessageResponse r <- liftBase $ Aws.simpleAws env receiveMessageReq
         case r of
           [] -> left "no message received"
           _ -> right r
@@ -77,21 +76,21 @@ main = do
                      -- here we remove a message, delete it from the queue, and then return the
                      -- text sent in the body of the message
                      putStrLn $ "   Received " ++ show (Sqs.mBody msg)
-                     Aws.simpleAws cfg sqscfg $ Sqs.DeleteMessage (Sqs.mReceiptHandle msg) sqsQName
+                     Aws.simpleAws env $ Sqs.DeleteMessage (Sqs.mReceiptHandle msg) sqsQName
                      return $ Sqs.mBody msg)
 
   {- Now we'll delete the queue we created at the start of this program -}
   putStrLn $ "Deleting the queue: " ++ show (Sqs.qName sqsQName)
   let dQReq = Sqs.DeleteQueue sqsQName
-  _ <- Aws.simpleAws cfg sqscfg dQReq
+  _ <- Aws.simpleAws env dQReq
 
   {- | Let's make sure the queue was actually deleted and that the same number of queues exist at when
      | the program ends as when it started.
   -}
   eitherT T.putStrLn T.putStrLn . retryT 4 $ do
-    qUrls <- liftIO $ do
+    qUrls <- liftBase $ do
       putStrLn $ "Listing all queueus to check to see if " ++ show (Sqs.qName sqsQName) ++ " is gone"
-      Sqs.ListQueuesResponse qUrls_ <- Aws.simpleAws cfg sqscfg $ Sqs.ListQueues Nothing
+      Sqs.ListQueuesResponse qUrls_ <- Aws.simpleAws env $ Sqs.ListQueues Nothing
       mapM_ T.putStrLn qUrls_
       return qUrls_
 
@@ -100,13 +99,13 @@ main = do
                     <> " * This is probably just a race condition."
         else right $ "     The queue '" <> sshow qName <> "' was correctly deleted"
 
-retryT :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m a
+retryT :: MonadBase IO m => Int -> EitherT T.Text m a -> EitherT T.Text m a
 retryT i f = go 1
   where
     go x
         | x >= i = fmapLT (\e -> "error after " <> sshow x <> " retries: " <> e) f
         | otherwise = f `catchT` \_ -> do
-            liftIO $ threadDelay (1000000 * min 60 (2^(x-1)))
+            liftBase $ threadDelay (1000000 * min 60 (2^(x-1)))
             go (succ x)
 
 sshow :: (Show a, IsString b) => a -> b

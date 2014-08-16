@@ -120,7 +120,7 @@ sqsQueueNameText url = T.split (== '/') url !! 4
 sqsAccountIdText :: T.Text -> T.Text
 sqsAccountIdText url = T.split (== '/') url !! 3
 
-sqsConfiguration :: SQS.SqsConfiguration qt
+sqsConfiguration :: SQS.SqsConfiguration NormalQuery
 sqsConfiguration = SQS.SqsConfiguration
     { SQS.sqsProtocol = testProtocol
     , SQS.sqsEndpoint = testSqsEndpoint
@@ -133,9 +133,10 @@ simpleSqs
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
     => r
     -> m (MemoryResponse a)
-simpleSqs command = do
-    c <- baseConfiguration
-    simpleAws c sqsConfiguration command
+simpleSqs command = liftIO $ do
+    withDefaultEnvironment $ \env0 -> do
+        let env = env0 { Aws.environmentServiceConfigurationMap = Aws.addServiceConfiguration sqsConfiguration mempty }
+        simpleAws env command
 
 simpleSqsT
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)

@@ -99,7 +99,7 @@ import           Control.Applicative
 import           Control.Arrow
 import qualified Control.Exception        as E
 import           Control.Monad
-import           Control.Monad.IO.Class
+import           Control.Monad.Base
 import           Control.Monad.Trans.Resource (ResourceT, MonadThrow (throwM))
 import           Crypto.Hash
 import qualified Data.Aeson               as A
@@ -156,9 +156,9 @@ data Response m a = Response { responseMetadata :: m
 readResponse :: MonadThrow n => Response m a -> n a
 readResponse = either throwM return . responseResult
 
--- | Read a response result (if it's a success response, fail otherwise). In MonadIO.
-readResponseIO :: MonadIO io => Response m a -> io a
-readResponseIO = liftIO . readResponse
+-- | Read a response result (if it's a success response, fail otherwise). In MonadBase IO.
+readResponseIO :: MonadBase IO io => Response m a -> io a
+readResponseIO = liftBase . readResponse
 
 -- | An empty response with some metadata.
 tellMetadata :: m -> Response m ()
@@ -257,11 +257,11 @@ data Credentials
 instance Show Credentials where
     show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ ",iamToken=" ++ show (iamToken c) ++ "}"
 
-makeCredentials :: MonadIO io
+makeCredentials :: MonadBase IO io
                 => B.ByteString -- ^ AWS Access Key ID
                 -> B.ByteString -- ^ AWS Secret Access Key
                 -> io Credentials
-makeCredentials accessKeyID secretAccessKey = liftIO $ do
+makeCredentials accessKeyID secretAccessKey = liftBase $ do
     v4SigningKeys <- newIORef []
     let iamToken = Nothing
     return Credentials { .. }
@@ -269,8 +269,8 @@ makeCredentials accessKeyID secretAccessKey = liftIO $ do
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
 --
 -- Value: /<user directory>/@/.aws-keys@
-credentialsDefaultFile :: MonadIO io => io FilePath
-credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
+credentialsDefaultFile :: MonadBase IO io => io FilePath
+credentialsDefaultFile = liftBase $ (</> ".aws-keys") <$> getHomeDirectory
 
 -- | The key to be used in the access credential file that is loaded, when using 'loadCredentialsDefault'.
 --
@@ -283,8 +283,8 @@ credentialsDefaultKey = "default"
 -- The file consists of a sequence of lines, each in the following format:
 --
 -- @keyName awsKeyID awsKeySecret@
-loadCredentialsFromFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
-loadCredentialsFromFile file key = liftIO $ do
+loadCredentialsFromFile :: MonadBase IO io => FilePath -> T.Text -> io (Maybe Credentials)
+loadCredentialsFromFile file key = liftBase $ do
   exists <- doesFileExist file
   if exists
     then do
@@ -299,8 +299,8 @@ loadCredentialsFromFile file key = liftIO $ do
 
 -- | Load credentials from the environment variables @AWS_ACCESS_KEY_ID@ and @AWS_ACCESS_KEY_SECRET@
 --   (or @AWS_SECRET_ACCESS_KEY@), if possible.
-loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
-loadCredentialsFromEnv = liftIO $ do
+loadCredentialsFromEnv :: MonadBase IO io => io (Maybe Credentials)
+loadCredentialsFromEnv = liftBase $ do
   env <- getEnvironment
   let lk = flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
@@ -309,28 +309,28 @@ loadCredentialsFromEnv = liftIO $ do
       (makeCredentials <$> (T.encodeUtf8 . T.pack <$> keyID)
                        <*> (T.encodeUtf8 . T.pack <$> secret))
 
-loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
-loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
+loadCredentialsFromInstanceMetadata :: MonadBase IO io => io (Maybe Credentials)
+loadCredentialsFromInstanceMetadata = liftBase $ HTTP.withManager $ \mgr ->
   do
     -- check if the path is routable
-    avail <- liftIO $ hostAvailable "169.254.169.254"
+    avail <- liftBase $ hostAvailable "169.254.169.254"
     if not avail
       then return Nothing
       else do
-        info <- liftIO $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam" "info" >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
+        info <- liftBase $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam" "info" >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
         let infodict = info >>= A.decode :: Maybe (M.Map String String)
             info'    = infodict >>= M.lookup "InstanceProfileArn"
         case info' of
           Just name ->
             do
               let name' = drop 1 $ dropWhile (/= '/') $ name
-              creds <- liftIO $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam/security-credentials" name' >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
+              creds <- liftBase $ E.catch (getInstanceMetadata mgr "latest/meta-data/iam/security-credentials" name' >>= return . Just) (\(_ :: HTTP.HttpException) -> return Nothing)
               -- this token lasts ~6 hours
               let dict   = creds >>= A.decode :: Maybe (M.Map String String)
                   keyID  = dict  >>= M.lookup "AccessKeyId"
                   secret = dict  >>= M.lookup "SecretAccessKey"
                   token  = dict  >>= M.lookup "Token"
-              ref <- liftIO $ newIORef []
+              ref <- liftBase $ newIORef []
               return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID)
                                   <*> (T.encodeUtf8 . T.pack <$> secret)
                                   <*> return ref
@@ -340,7 +340,7 @@ loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
 --
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
-loadCredentialsFromEnvOrFile :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
+loadCredentialsFromEnvOrFile :: MonadBase IO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromEnvOrFile file key =
   do
     envcr <- loadCredentialsFromEnv
@@ -351,7 +351,7 @@ loadCredentialsFromEnvOrFile file key =
 -- | Load credentials from environment variables if possible, or alternatively from the instance metadata store, or alternatively from a file with a given key name.
 --
 -- See 'loadCredentialsFromEnv', 'loadCredentialsFromFile' and 'loadCredentialsFromInstanceMetadata' for details.
-loadCredentialsFromEnvOrFileOrInstanceMetadata :: MonadIO io => FilePath -> T.Text -> io (Maybe Credentials)
+loadCredentialsFromEnvOrFileOrInstanceMetadata :: MonadBase IO io => FilePath -> T.Text -> io (Maybe Credentials)
 loadCredentialsFromEnvOrFileOrInstanceMetadata file key =
   do
     envcr <- loadCredentialsFromEnv
@@ -371,7 +371,7 @@ loadCredentialsFromEnvOrFileOrInstanceMetadata file key =
 -- Default key name: @default@
 --
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
-loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
+loadCredentialsDefault :: MonadBase IO io => io (Maybe Credentials)
 loadCredentialsDefault = do
   file <- credentialsDefaultFile
   loadCredentialsFromEnvOrFileOrInstanceMetadata file credentialsDefaultKey
@@ -841,7 +841,7 @@ xmlCursorConsumer parse metadataRef res
     = do doc <- HTTP.responseBody res $$+- XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          let Response metadata x = parse cursor
-         liftIO $ tellMetadataRef metadataRef metadata
+         liftBase $ tellMetadataRef metadataRef metadata
          case x of
-           Left err -> liftIO $ throwM err
+           Left err -> liftBase $ throwM err
            Right v  -> return v
