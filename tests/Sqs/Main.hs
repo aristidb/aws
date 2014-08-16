@@ -52,9 +52,11 @@ main = do
   where
     runMain :: [String] -> [(String,String)] -> IO ()
     runMain args _argsMap
-        | any (`elem` helpArgs) args = defaultMain tests
+        | any (`elem` helpArgs) args = defaultMain (tests undefined)
         | "--run-with-aws-credentials" `elem` args =
-            withArgs (tastyArgs args) . defaultMain $ tests
+            Aws.withDefaultEnvironment $ \env0 -> do
+                let env = env0 { Aws.environmentServiceConfigurationMap = Aws.addServiceConfiguration sqsConfiguration mempty }
+                withArgs (tastyArgs args) . defaultMain $ tests env
         | otherwise = putStrLn help >> exitFailure
 
     helpArgs = ["--help", "-h"]
@@ -88,10 +90,10 @@ help = L.intercalate "\n"
     , ""
     ]
 
-tests :: TestTree
-tests = testGroup "SQS Tests"
-    [ test_queue
-    , test_message
+tests :: Environment -> TestTree
+tests env = testGroup "SQS Tests"
+    [ test_queue env
+    , test_message env
     ]
 
 -- -------------------------------------------------------------------------- --
@@ -103,7 +105,7 @@ testProtocol :: Protocol
 testProtocol = HTTP
 
 testSqsEndpoint :: SQS.Endpoint
-testSqsEndpoint = SQS.sqsEndpointUsWest2
+testSqsEndpoint = SQS.sqsEndpointEu
 
 defaultQueueName :: T.Text
 defaultQueueName = "test-queue"
@@ -131,83 +133,85 @@ sqsConfiguration = SQS.SqsConfiguration
 
 simpleSqs
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
-    => r
+    => Environment
+    -> r
     -> m (MemoryResponse a)
-simpleSqs command = liftIO $ do
-    withDefaultEnvironment $ \env0 -> do
-        let env = env0 { Aws.environmentServiceConfigurationMap = Aws.addServiceConfiguration sqsConfiguration mempty }
-        simpleAws env command
+simpleSqs env command = liftIO $ simpleAws env command
 
 simpleSqsT
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
-    => r
+    => Environment
+    -> r
     -> EitherT T.Text m (MemoryResponse a)
-simpleSqsT = tryT . simpleSqs
+simpleSqsT env = tryT . simpleSqs env
 
 withQueueTest
-    :: T.Text -- ^ Queue name
+    :: Environment
+    -> T.Text -- ^ Queue name
     -> (IO (T.Text, SQS.QueueName) -> TestTree) -- ^ test tree
     -> TestTree
-withQueueTest queueName f = withResource createQueue deleteQueue $ \getQueueUrl ->
+withQueueTest env queueName f = withResource createQueue deleteQueue $ \getQueueUrl ->
     f $ do
         url <- getQueueUrl
         return (url, sqsQueueName url)
   where
     createQueue = do
-        SQS.CreateQueueResponse url <- simpleSqs $ SQS.CreateQueue Nothing queueName
+        SQS.CreateQueueResponse url <- simpleSqs env $ SQS.CreateQueue Nothing queueName
         return url
-    deleteQueue url = void $ simpleSqs (SQS.DeleteQueue (sqsQueueName url))
+    deleteQueue url = void $ simpleSqs env (SQS.DeleteQueue (sqsQueueName url))
 
 -- -------------------------------------------------------------------------- --
 -- Queue Tests
 
-test_queue :: TestTree
-test_queue = testGroup "Queue Tests"
-    [ eitherTOnceTest1 "CreateListDeleteQueue" prop_createListDeleteQueue
+test_queue :: Environment -> TestTree
+test_queue env = testGroup "Queue Tests"
+    [ eitherTOnceTest1 "CreateListDeleteQueue" (prop_createListDeleteQueue env)
     ]
 
 -- |
 --
 prop_createListDeleteQueue
-    :: T.Text -- ^ queue name
+    :: Environment
+    -> T.Text -- ^ queue name
     -> EitherT T.Text IO ()
-prop_createListDeleteQueue queueName = do
-    SQS.CreateQueueResponse queueUrl <- simpleSqsT $ SQS.CreateQueue Nothing tQueueName
+prop_createListDeleteQueue env queueName = do
+    SQS.CreateQueueResponse queueUrl <- simpleSqsT env $ SQS.CreateQueue Nothing tQueueName
     let queue = sqsQueueName queueUrl
     handleT (\e -> deleteQueue queue >> left e) $ do
         retryT 6 $ do
-            SQS.ListQueuesResponse allQueueUrls <- simpleSqsT (SQS.ListQueues Nothing)
+            SQS.ListQueuesResponse allQueueUrls <- simpleSqsT env (SQS.ListQueues Nothing)
             unless (queueUrl `elem` allQueueUrls)
                 . left $ "queue " <> sshow queueUrl <> " not listed"
         deleteQueue queue
   where
     tQueueName = testData queueName
-    deleteQueue queueUrl = void $ simpleSqsT (SQS.DeleteQueue queueUrl)
+    deleteQueue queueUrl = void $ simpleSqsT env (SQS.DeleteQueue queueUrl)
 
 -- -------------------------------------------------------------------------- --
 -- Message Tests
 
-test_message :: TestTree
-test_message =
-    withQueueTest defaultQueueName $ \getQueueParams -> testGroup "Queue Tests"
+test_message :: Environment -> TestTree
+test_message env =
+    withQueueTest env defaultQueueName $ \getQueueParams -> testGroup "Queue Tests"
         [ eitherTOnceTest0 "SendReceiveDeleteMessage" $ do
             (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessage queue
+            prop_sendReceiveDeleteMessage env queue
         , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling" $ do
             (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessageLongPolling queue
+            prop_sendReceiveDeleteMessageLongPolling env queue
         , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling1" $ do
             (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessageLongPolling1 queue
+            prop_sendReceiveDeleteMessageLongPolling1 env queue
         ]
 
 -- | Simple send and short-polling receive. First sends all messages
 -- and receives messages thereafter one by one.
 --
 prop_sendReceiveDeleteMessage
-    :: SQS.QueueName
+    :: Environment
+    -> SQS.QueueName
     -> EitherT T.Text IO ()
-prop_sendReceiveDeleteMessage queue = do
+prop_sendReceiveDeleteMessage env queue = do
 
     -- a visibility timeout should be used only if either @receiveBatch == 1@
     -- or no retry is used so that all received messages are handled.
@@ -220,18 +224,18 @@ prop_sendReceiveDeleteMessage queue = do
     let messages = map (\i -> "message" <> sshow i) [1 .. msgNum]
 
     -- send messages
-    forM_ messages $ \msg -> void . simpleSqsT $ SQS.SendMessage msg queue [] delay
+    forM_ messages $ \msg -> void . simpleSqsT env $ SQS.SendMessage msg queue [] delay
 
     recMsgs <- fmap concat . replicateM msgNum $ do
         msgs <- retryT 5 $ do
-            r <- simpleSqsT $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
+            r <- simpleSqsT env $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
             case r of
                 SQS.ReceiveMessageResponse [] -> left "no message received"
                 SQS.ReceiveMessageResponse t
                     | length t <= receiveBatch -> right t
                     | otherwise -> left $ "unexpected number of messages received: " <> sshow (length t)
         forM_ msgs $ \msg -> retryT 5 $
-            simpleSqsT $ SQS.DeleteMessage (SQS.mReceiptHandle msg) queue
+            simpleSqsT env $ SQS.DeleteMessage (SQS.mReceiptHandle msg) queue
         return (map SQS.mBody msgs)
 
     let recv = L.sort recMsgs
@@ -245,9 +249,10 @@ prop_sendReceiveDeleteMessage queue = do
 -- (with value 0) we force SQS to do a consistent receive.
 --
 prop_sendReceiveDeleteMessageLongPolling
-    :: SQS.QueueName
+    :: Environment
+    -> SQS.QueueName
     -> EitherT T.Text IO ()
-prop_sendReceiveDeleteMessageLongPolling queue = do
+prop_sendReceiveDeleteMessageLongPolling env queue = do
 
     let delay = Nothing
     let visTimeout = Just 60
@@ -258,18 +263,18 @@ prop_sendReceiveDeleteMessageLongPolling queue = do
     let messages = map (\i -> "message" <> sshow i) [1 .. msgNum]
 
     -- send messages
-    forM_ messages $ \msg -> void . simpleSqsT $ SQS.SendMessage msg queue [] delay
+    forM_ messages $ \msg -> void . simpleSqsT env $ SQS.SendMessage msg queue [] delay
 
     recMsgs <- fmap concat . replicateM (msgNum `div` receiveBatch) $ do
         msgs <- do
-            r <- simpleSqsT $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
+            r <- simpleSqsT env $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
             case r of
                 SQS.ReceiveMessageResponse [] -> left "no messages received"
                 SQS.ReceiveMessageResponse t
                     | length t == receiveBatch -> right t
                     | otherwise -> left $ "unexpected number of messages received: " <> sshow (length t)
         forM_ msgs $ \msg -> retryT 5 $
-            simpleSqsT $ SQS.DeleteMessage (SQS.mReceiptHandle msg) queue
+            simpleSqsT env $ SQS.DeleteMessage (SQS.mReceiptHandle msg) queue
         return (map SQS.mBody msgs)
 
     let recv = L.sort recMsgs
@@ -285,9 +290,10 @@ prop_sendReceiveDeleteMessageLongPolling queue = do
 -- message at a time.
 --
 prop_sendReceiveDeleteMessageLongPolling1
-    :: SQS.QueueName
+    :: Environment
+    -> SQS.QueueName
     -> EitherT T.Text IO ()
-prop_sendReceiveDeleteMessageLongPolling1 queue = do
+prop_sendReceiveDeleteMessageLongPolling1 env queue = do
 
     let delay = Just 2
     let visTimeout = Just 60
@@ -298,16 +304,16 @@ prop_sendReceiveDeleteMessageLongPolling1 queue = do
     let messages = map (\i -> "message" <> sshow i) [1 :: Int .. msgNum]
 
     recMsgs <- fmap concat . forM messages $ \msg -> do
-        void . simpleSqsT $ SQS.SendMessage msg queue [] delay
+        void . simpleSqsT env $ SQS.SendMessage msg queue [] delay
         msgs <- do
-            r <- simpleSqsT $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
+            r <- simpleSqsT env $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
             case r of
                 SQS.ReceiveMessageResponse [] -> left "no messages received"
                 SQS.ReceiveMessageResponse t
                     | length t == receiveBatch -> right t
                     | otherwise -> left $ "unexpected number of messages received: " <> sshow (length t)
         forM_ msgs $ \m -> retryT 5 $
-            simpleSqsT $ SQS.DeleteMessage (SQS.mReceiptHandle m) queue
+            simpleSqsT env $ SQS.DeleteMessage (SQS.mReceiptHandle m) queue
         return (map SQS.mBody msgs)
 
     let recv = L.sort recMsgs
