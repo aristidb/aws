@@ -1,4 +1,7 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Aws.Aws
 ( -- * Logging
   LogLevel(..)
@@ -22,28 +25,30 @@ module Aws.Aws
   -- * Iterated runners
 --, awsIteratedAll
 , awsIteratedSource
+, awsIteratedSource'
 , awsIteratedList
+, awsIteratedList'
 )
 where
 
 import           Aws.Core
 import           Control.Applicative
-import qualified Control.Exception.Lifted as E
+import qualified Control.Exception.Lifted     as E
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
-import qualified Data.ByteString      as B
-import qualified Data.CaseInsensitive as CI
-import qualified Data.Conduit         as C
-import qualified Data.Conduit.List    as CL
+import qualified Data.ByteString              as B
+import qualified Data.CaseInsensitive         as CI
+import qualified Data.Conduit                 as C
+import qualified Data.Conduit.List            as CL
 import           Data.IORef
 import           Data.Monoid
-import qualified Data.Text            as T
-import qualified Data.Text.Encoding   as T
-import qualified Data.Text.IO         as T
-import qualified Network.HTTP.Conduit as HTTP
-import           System.IO            (stderr)
+import qualified Data.Text                    as T
+import qualified Data.Text.Encoding           as T
+import qualified Data.Text.IO                 as T
+import qualified Network.HTTP.Conduit         as HTTP
+import           System.IO                    (stderr)
 
 -- | The severity of a log message, in rising order.
 data LogLevel
@@ -68,11 +73,11 @@ data Configuration
     = Configuration {
         -- | Whether to restrict the signature validity with a plain timestamp, or with explicit expiration
         -- (absolute or relative).
-        timeInfo :: TimeInfo
+        timeInfo    :: TimeInfo
         -- | AWS access credentials.
       , credentials :: Credentials
         -- | The error / message logger.
-      , logger :: Logger
+      , logger      :: Logger
       }
 
 -- | The default configuration, with credentials loaded from environment variable or configuration file
@@ -95,29 +100,29 @@ dbgConfiguration = do
   return c { logger = defaultLog Debug }
 
 -- | Run an AWS transaction, with HTTP manager and metadata wrapped in a 'Response'.
--- 
+--
 -- All errors are caught and wrapped in the 'Response' value.
--- 
+--
 -- Metadata is logged at level 'Info'.
--- 
+--
 -- Usage (with existing 'HTTP.Manager'):
 -- @
 --     resp <- aws cfg serviceCfg manager request
 -- @
 aws :: (Transaction r a)
-      => Configuration 
-      -> ServiceConfiguration r NormalQuery 
-      -> HTTP.Manager 
-      -> r 
+      => Configuration
+      -> ServiceConfiguration r NormalQuery
+      -> HTTP.Manager
+      -> r
       -> ResourceT IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
 -- | Run an AWS transaction, with HTTP manager and metadata returned in an 'IORef'.
--- 
+--
 -- Errors are not caught, and need to be handled with exception handlers.
--- 
+--
 -- Metadata is not logged.
--- 
+--
 -- Usage (with existing 'HTTP.Manager'):
 -- @
 --     ref <- newIORef mempty;
@@ -126,55 +131,55 @@ aws = unsafeAws
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
 awsRef :: (Transaction r a)
-      => Configuration 
-      -> ServiceConfiguration r NormalQuery 
-      -> HTTP.Manager 
-      -> IORef (ResponseMetadata a) 
-      -> r 
+      => Configuration
+      -> ServiceConfiguration r NormalQuery
+      -> HTTP.Manager
+      -> IORef (ResponseMetadata a)
+      -> r
       -> ResourceT IO a
 awsRef = unsafeAwsRef
 
 -- | Run an AWS transaction, with HTTP manager and without metadata.
--- 
+--
 -- Metadata is logged at level 'Info'.
--- 
+--
 -- Usage (with existing 'HTTP.Manager'):
 -- @
 --     resp <- aws cfg serviceCfg manager request
 -- @
 pureAws :: (Transaction r a)
-      => Configuration 
-      -> ServiceConfiguration r NormalQuery 
-      -> HTTP.Manager 
-      -> r 
+      => Configuration
+      -> ServiceConfiguration r NormalQuery
+      -> HTTP.Manager
+      -> r
       -> ResourceT IO a
 pureAws cfg scfg mgr req = readResponseIO =<< aws cfg scfg mgr req
 
 -- | Run an AWS transaction, /without/ HTTP manager and without metadata.
--- 
+--
 -- Metadata is logged at level 'Info'.
--- 
+--
 -- Note that this is potentially less efficient than using 'aws', because HTTP connections cannot be re-used.
--- 
+--
 -- Usage:
 -- @
 --     resp <- simpleAws cfg serviceCfg request
 -- @
 simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
-            => Configuration 
+            => Configuration
             -> ServiceConfiguration r NormalQuery
-            -> r 
+            -> r
             -> io (MemoryResponse a)
 simpleAws cfg scfg request
   = liftIO $ HTTP.withManager $ \manager ->
       loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
--- 
+--
 -- This is especially useful for debugging and development, you should not have to use it in production.
--- 
+--
 -- All errors are caught and wrapped in the 'Response' value.
--- 
+--
 -- Metadata is wrapped in the Response, and also logged at level 'Info'.
 unsafeAws
   :: (ResponseConsumer r a,
@@ -195,11 +200,11 @@ unsafeAws cfg scfg manager request = do
   return $ Response metadata resp
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
--- 
+--
 -- This is especially useful for debugging and development, you should not have to use it in production.
--- 
+--
 -- Errors are not caught, and need to be handled with exception handlers.
--- 
+--
 -- Metadata is put in the 'IORef', but not logged.
 unsafeAwsRef
   :: (ResponseConsumer r a,
@@ -218,7 +223,7 @@ unsafeAwsRef cfg info manager metadataRef request = do
   responseConsumer request metadataRef hresp
 
 -- | Run a URI-only AWS transaction. Returns a URI that can be sent anywhere. Does not work with all requests.
--- 
+--
 -- Usage:
 -- @
 --     uri <- awsUri cfg request
@@ -245,11 +250,11 @@ awsIteratedAll cfg scfg manager req_ = go req_ Nothing
   where go request prevResp = do Response meta respAttempt <- aws cfg scfg manager request
                                  case maybeCombineIteratedResponse prevResp <$> respAttempt of
                                    f@(Failure _) -> return (Response [meta] f)
-                                   s@(Success resp) -> 
+                                   s@(Success resp) ->
                                      case nextIteratedRequest request resp of
-                                       Nothing -> 
+                                       Nothing ->
                                          return (Response [meta] s)
-                                       Just nextRequest -> 
+                                       Just nextRequest ->
                                          mapMetadata (meta:) `liftM` go nextRequest (Just resp)
 -}
 
@@ -279,3 +284,38 @@ awsIteratedList cfg scfg manager req
   = awsIteratedSource cfg scfg manager req
     C.=$=
     CL.concatMapM (fmap listResponse . readResponseIO)
+
+
+-------------------------------------------------------------------------------
+-- | A more flexible version of 'awsIteratedSource' that uses a
+-- user-supplied run function. Useful for embedding AWS functionality
+-- within application specific monadic contexts.
+awsIteratedSource'
+    :: (Monad m, IteratedTransaction r a)
+    => (r -> m a)
+    -- ^ A runner function for executing transactions.
+    -> r
+    -- ^ An initial request
+    -> C.Producer m a
+awsIteratedSource' run r0 = go r0
+    where
+      go q = do
+          r <- lift $ run q
+          C.yield r
+          case nextIteratedRequest q r of
+            Nothing -> return ()
+            Just q' -> go q'
+
+
+-------------------------------------------------------------------------------
+-- | A more flexible version of 'awsIteratedList' that uses a
+-- user-supplied run function. Useful for embedding AWS functionality
+-- within application specific monadic contexts.
+awsIteratedList'
+    :: (Monad m, IteratedTransaction r b, ListResponse b c)
+    => (r -> m b)
+    -- ^ A runner function for executing transactions.
+    -> r
+    -- ^ An initial request
+    -> C.Producer m c
+awsIteratedList' run r0 = awsIteratedSource' run r0 C.=$= CL.concatMap (listResponse)
