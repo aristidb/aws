@@ -27,7 +27,6 @@ import qualified Aws.Sqs as SQS
 
 import Control.Arrow (second)
 import Control.Error
-import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 
@@ -143,21 +142,6 @@ simpleSqsT
     => r
     -> EitherT T.Text m (MemoryResponse a)
 simpleSqsT = tryT . simpleSqs
-
-withSqsQueue
-    :: T.Text
-    -- ^ queue name
-    -> (T.Text -> SQS.QueueName -> IO a)
-    -- ^ the first argument is the queue URL,
-    -- the second is the 'SQS.QueueName'
-    -> IO a
-withSqsQueue queueName f = bracket createQueue deleteQueue $ \url ->
-    f url (sqsQueueName url)
-  where
-    createQueue = do
-        SQS.CreateQueueResponse url <- simpleSqs $ SQS.CreateQueue Nothing queueName
-        return url
-    deleteQueue url = void $ simpleSqs (SQS.DeleteQueue (sqsQueueName url))
 
 withQueueTest
     :: T.Text -- ^ Queue name
