@@ -121,19 +121,20 @@ iamSignQuery q IamConfiguration{..} SignatureData{..}
       accessKey       = accessKeyID signatureCredentials
       timestampHeader =
           case signatureTimeInfo of
-            AbsoluteTimestamp time -> ("Timestamp", fmtAmzTime time)
-            AbsoluteExpires   time -> ("Expires"  , fmtAmzTime time)
+            AbsoluteTimestamp time -> ("Timestamp", Just $ fmtAmzTime time)
+            AbsoluteExpires   time -> ("Expires"  , Just $ fmtAmzTime time)
       newline         = Blaze8.fromChar '\n'
       stringToSign    = Blaze.toByteString . mconcat . intersperse newline $
                             map Blaze.copyByteString
                                 [httpMethod iamHttpMethod, iamEndpoint, "/"]
                             ++  [HTTP.renderQueryBuilder False expandedQuery]
-      expandedQuery   = HTTP.toQuery . sort $ (q ++) [
-                            ("AWSAccessKeyId"  , accessKey)
-                          , ("SignatureMethod" , amzHash HmacSHA256)
-                          , ("SignatureVersion", "2")
-                          , ("Version"         , "2010-05-08")
+      expandedQuery   = HTTP.toQuery . sort $ (map (\(a,b) -> (a, Just b)) q ++) [
+                            ("AWSAccessKeyId"  , Just accessKey)
+                          , ("SignatureMethod" , Just $ amzHash HmacSHA256)
+                          , ("SignatureVersion", Just "2")
+                          , ("Version"         , Just "2010-05-08")
                           , timestampHeader
+			  , ("SecurityToken", iamToken signatureCredentials)
                           ]
 
 -- | Reads the metadata from an IAM response and delegates parsing the rest of
