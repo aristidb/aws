@@ -91,6 +91,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 ** 0.10 series
 
 - 0.10
+  - [EXPERIMENTAL!] DynamoDB: support for creating/updating/querying and scanning items
   - SQS: complete overhaul to support 2012-11-05 features
   - SQS: test suite
   - S3: use Maybe for 404 HEAD requests on objects instead of throwing a misleading exception
