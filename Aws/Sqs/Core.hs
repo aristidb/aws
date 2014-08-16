@@ -188,9 +188,8 @@ sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
       expandedQuery = sortBy (comparing fst) 
                        ( sqsQuery ++ [ ("AWSAccessKeyId", Just(accessKeyID signatureCredentials)), 
                        ("Expires", Just(BC.pack expiresString)), 
-                       ("SignatureMethod", Just("HmacSHA256")), ("SignatureVersion",Just("2")), ("Version",Just("2012-11-05"))
-
-                       ])
+                       ("SignatureMethod", Just("HmacSHA256")), ("SignatureVersion",Just("2")), ("Version",Just("2012-11-05")),
+                       ("SecurityToken", iamToken signatureCredentials)])
 
       expires = AbsoluteExpires $ sqsDefaultExpiry `addUTCTime` signatureTime
 
