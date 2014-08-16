@@ -134,13 +134,16 @@ import           System.Locale
 import qualified Text.XML                 as XML
 import qualified Text.XML.Cursor          as Cu
 import           Text.XML.Cursor          hiding (force, forceM)
+-------------------------------------------------------------------------------
+
 
 -- | Types that can be logged (textually).
 class Loggable a where
     toLogText :: a -> T.Text
 
--- | A response with metadata. Can also contain an error response, or an internal error, via 'Attempt'.
---
+-- | A response with metadata. Can also contain an error response, or
+-- an internal error, via 'Attempt'.
+-- 
 -- Response forms a Writer-like monad.
 data Response m a = Response { responseMetadata :: m
                              , responseResult :: Either E.SomeException a }
@@ -191,10 +194,12 @@ type HTTPResponseConsumer a = HTTP.Response (C.ResumableSource (ResourceT IO) By
 --
 -- Note that for debugging, there is an instance for 'L.ByteString'.
 class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
-    -- | Metadata associated with a response. Typically there is one metadata type for each AWS service.
+    -- | Metadata associated with a response. Typically there is one
+    -- metadata type for each AWS service.
     type ResponseMetadata resp
 
-    -- | Response parser. Takes the corresponding request, an 'IORef' for metadata, and HTTP response data.
+    -- | Response parser. Takes the corresponding request, an 'IORef'
+    -- for metadata, and HTTP response data.
     responseConsumer :: req -> IORef (ResponseMetadata resp) -> HTTPResponseConsumer resp
 
 -- | Does not parse response. For debugging.
@@ -215,12 +220,14 @@ class AsMemoryResponse resp where
 class ListResponse resp item | resp -> item where
     listResponse :: resp -> [item]
 
+
 -- | Associates a request type and a response type in a bi-directional way.
---
--- This allows the type-checker to infer the response type when given the request type and vice versa.
---
--- Note that the actual request generation and response parsing resides in 'SignQuery' and 'ResponseConsumer'
--- respectively.
+-- 
+-- This allows the type-checker to infer the response type when given
+-- the request type and vice versa.
+-- 
+-- Note that the actual request generation and response parsing
+-- resides in 'SignQuery' and 'ResponseConsumer' respectively.
 class (SignQuery r, ResponseConsumer r a, Loggable (ResponseMetadata a))
       => Transaction r a
       | r -> a, a -> r
@@ -370,7 +377,7 @@ loadCredentialsDefault = do
 data Protocol
     = HTTP
     | HTTPS
-    deriving (Show)
+    deriving (Eq,Read,Show,Ord,Typeable)
 
 -- | The default port to be used for a protocol if no specific port is specified.
 defaultPort :: Protocol -> Int
@@ -458,18 +465,28 @@ queryToHttpRequest SignedQuery{..} =  do
                                         , fmap (\auth -> ("Authorization", auth)) mauth]
                               ++ sqAmzHeaders
                               ++ sqOtherHeaders
-      , HTTP.requestBody = case sqMethod of
-                             PostQuery -> HTTP.RequestBodyLBS . Blaze.toLazyByteString $ HTTP.renderQueryBuilder False sqQuery
-                             _         -> case sqBody of
-                                            Nothing -> HTTP.RequestBodyBuilder 0 mempty
-                                            Just x  -> x
+      , HTTP.requestBody = 
+
+        -- An explicityly defined body parameter should overwrite everything else.
+        case sqBody of
+          Just x -> x
+          Nothing -> 
+            -- a POST query should convert its query string into the body
+            case sqMethod of
+              PostQuery -> HTTP.RequestBodyLBS . Blaze.toLazyByteString $ 
+                           HTTP.renderQueryBuilder False sqQuery
+              _         -> HTTP.RequestBodyBuilder 0 mempty
+
       , HTTP.decompress = HTTP.alwaysDecompress
       , HTTP.checkStatus = \_ _ _ -> Nothing
       }
-    where contentType = case sqMethod of
-                           PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
-                           _ -> sqContentType
-          checkDate f mb = maybe (f <$> mb) (const Nothing) $ lookup "date" sqOtherHeaders
+    where 
+      checkDate f mb = maybe (f <$> mb) (const Nothing) $ lookup "date" sqOtherHeaders
+      -- An explicitly defined content-type should override everything else.
+      contentType = sqContentType `mplus` defContentType
+      defContentType = case sqMethod of
+                         PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
+                         _ -> Nothing
 
 -- | Create a URI fro a 'SignedQuery' object.
 --
@@ -651,9 +668,10 @@ class DefaultServiceConfiguration config where
     debugServiceConfig :: config
     debugServiceConfig = defServiceConfig
 
--- | @queryList f prefix xs@ constructs a query list from a list of elements @xs@, using a common prefix @prefix@,
--- and a transformer function @f@.
---
+-- | @queryList f prefix xs@ constructs a query list from a list of
+-- elements @xs@, using a common prefix @prefix@, and a transformer
+-- function @f@.
+-- 
 -- A dot (@.@) is interspersed between prefix and generated key.
 --
 -- Example:
