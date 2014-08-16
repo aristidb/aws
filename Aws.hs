@@ -9,8 +9,10 @@ module Aws
 , dbgConfiguration
 , Environment(..)
 , closeEnvironment
+, newEnvironment
 , newDefaultEnvironment
 , newDebugEnvironment
+, withEnvironment
 , withDefaultEnvironment
 , withDebugEnvironment
   -- * Transaction runners
@@ -46,8 +48,6 @@ module Aws
   -- ** Service configuration
 , ServiceConfiguration
 , DefaultServiceConfiguration(..)
-, ServiceConfigurationMap
-, addServiceConfiguration
 , NormalQuery
 , UriOnlyQuery
   -- ** Expiration

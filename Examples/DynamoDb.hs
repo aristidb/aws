@@ -16,7 +16,7 @@ import qualified Data.Text             as T
 import           Network.HTTP.Conduit  (withManager)
 -------------------------------------------------------------------------------
 
-createTableAndWait :: Environment -> IO ()
+createTableAndWait :: Environment (DdbConfiguration NormalQuery) -> IO ()
 createTableAndWait env = do
   let req0 = createTable "devel-1"
         [AttributeDefinition "name" AttrString]
@@ -33,9 +33,7 @@ createTableAndWait env = do
   print resp1
 
 main :: IO ()
-main = Aws.withDefaultEnvironment $ \env0 -> do
-  let env = env0 { environmentDefaultServiceConfiguration = debugServiceConfig }
-
+main = Aws.withEnvironment debugServiceConfig $ \env -> do
   createTableAndWait env `catch` (\DdbError{} -> putStrLn "Table already exists")
 
   putStrLn "Putting an item..."

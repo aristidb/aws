@@ -28,10 +28,7 @@ import Control.Monad (forM_, forM, replicateM)
   |       - Deleting the queue.
   | -}
 main :: IO ()
-main = Aws.withDefaultEnvironment $ \env0 -> do
-  let sqscfg = Sqs.sqs Aws.Core.HTTP Sqs.sqsEndpointUsWest2 False :: Sqs.SqsConfiguration Aws.NormalQuery
-  let env = env0 { Aws.environmentServiceConfigurationMap = Aws.addServiceConfiguration sqscfg mempty }
-
+main = Aws.withEnvironment (Sqs.sqs Aws.Core.HTTP Sqs.sqsEndpointUsWest2 False) $ \env -> do
   {- List any Queues you have already created in your SQS account -}
   Sqs.ListQueuesResponse qUrls <- Aws.simpleAws env $ Sqs.ListQueues Nothing
   let origQUrlCount = length qUrls

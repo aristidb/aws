@@ -10,8 +10,10 @@ module Aws.Aws
 , dbgConfiguration
 , Environment(..)
 , closeEnvironment
+, newEnvironment
 , newDefaultEnvironment
 , newDebugEnvironment
+, withEnvironment
 , withDefaultEnvironment
 , withDebugEnvironment
   -- * Transaction runners
@@ -101,36 +103,38 @@ dbgConfiguration = do
   c <- baseConfiguration
   return c { logger = defaultLog Debug }
 
-data Environment = Environment {
+data Environment cfg = Environment {
         environmentConfiguration :: Configuration,
-        environmentServiceConfigurationMap :: ServiceConfigurationMap,
-        environmentDefaultServiceConfiguration :: (forall config. DefaultServiceConfiguration config => config),
+        environmentServiceConfiguration :: cfg,
         environmentHTTPManager :: HTTP.Manager
     }
 
-environmentServiceConfiguration :: DefaultServiceConfiguration config => Environment -> config
-environmentServiceConfiguration (Environment _ m d _) = getServiceConfiguration d m
-
-closeEnvironment :: MonadBase IO io => Environment -> io ()
+closeEnvironment :: MonadBase IO io => Environment cfg -> io ()
 closeEnvironment = liftBase . HTTP.closeManager . environmentHTTPManager
 
-newDefaultEnvironment :: MonadBase IO m => m Environment
-newDefaultEnvironment = do
+newEnvironment :: (MonadBase IO m) => cfg -> m (Environment cfg)
+newEnvironment scfg = do
     cfg <- baseConfiguration
     mgr <- liftBase $ HTTP.newManager HTTP.conduitManagerSettings
-    return (Environment cfg mempty defServiceConfig mgr)
+    return (Environment cfg scfg mgr)
 
-newDebugEnvironment :: MonadBase IO m => m Environment
-newDebugEnvironment = do
+newDefaultEnvironment :: (MonadBase IO m, DefaultServiceConfiguration cfg) => m (Environment cfg)
+newDefaultEnvironment = newEnvironment defServiceConfig
+
+newDebugEnvironment :: (MonadBase IO m) => cfg -> m (Environment cfg)
+newDebugEnvironment scfg = do
     cfg <- dbgConfiguration
     mgr <- liftBase $ HTTP.newManager HTTP.conduitManagerSettings
-    return (Environment cfg mempty debugServiceConfig mgr)
+    return (Environment cfg scfg mgr)
 
-withDefaultEnvironment :: MonadBaseControl IO m => (Environment -> m a) -> m a
+withEnvironment :: (MonadBaseControl IO m) => cfg -> (Environment cfg -> m a) -> m a
+withEnvironment scfg = E.bracket (newEnvironment scfg) closeEnvironment
+
+withDefaultEnvironment :: (MonadBaseControl IO m, DefaultServiceConfiguration cfg) => (Environment cfg -> m a) -> m a
 withDefaultEnvironment = E.bracket newDefaultEnvironment closeEnvironment
 
-withDebugEnvironment :: (Environment -> IO a) -> IO a
-withDebugEnvironment = E.bracket newDebugEnvironment closeEnvironment
+withDebugEnvironment :: (MonadBaseControl IO m) => cfg -> (Environment cfg -> m a) -> m a
+withDebugEnvironment scfg = E.bracket (newDebugEnvironment scfg) closeEnvironment
 
 -- | Run an AWS transaction, with HTTP manager and metadata wrapped in a 'Response'.
 -- 
@@ -142,8 +146,8 @@ withDebugEnvironment = E.bracket newDebugEnvironment closeEnvironment
 -- @
 --     resp <- aws env request
 -- @
-aws :: (Transaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
-     => Environment -> r -> ResourceT IO (Response (ResponseMetadata a) a)
+aws :: (Transaction r a)
+     => Environment (ServiceConfiguration r NormalQuery) -> r -> ResourceT IO (Response (ResponseMetadata a) a)
 aws env req = unsafeAws (environmentConfiguration env) (environmentServiceConfiguration env) (environmentHTTPManager env) req
 
 -- | Run an AWS transaction, with HTTP manager and metadata returned in an 'IORef'.
@@ -159,8 +163,8 @@ aws env req = unsafeAws (environmentConfiguration env) (environmentServiceConfig
 -- @
 
 -- Unfortunately, the ";" above seems necessary, as haddock does not want to split lines for me.
-awsRef :: (Transaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
-      => Environment
+awsRef :: (Transaction r a)
+      => Environment (ServiceConfiguration r NormalQuery)
       -> IORef (ResponseMetadata a) 
       -> r 
       -> ResourceT IO a
@@ -174,8 +178,8 @@ awsRef env ref req = unsafeAwsRef (environmentConfiguration env) (environmentSer
 -- @
 --     resp <- aws cfg serviceCfg manager request
 -- @
-pureAws :: (Transaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
-      => Environment
+pureAws :: (Transaction r a)
+      => Environment (ServiceConfiguration r NormalQuery)
       -> r
       -> ResourceT IO a
 pureAws env req = readResponseIO =<< aws env req
@@ -190,8 +194,8 @@ pureAws env req = readResponseIO =<< aws env req
 -- @
 --     resp <- simpleAws env request
 -- @
-simpleAws :: (Transaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery), AsMemoryResponse a, MonadBase IO io)
-            => Environment
+simpleAws :: (Transaction r a, AsMemoryResponse a, MonadBase IO io)
+            => Environment (ServiceConfiguration r NormalQuery)
             -> r
             -> io (MemoryResponse a)
 simpleAws env request
@@ -281,8 +285,8 @@ awsIteratedAll cfg scfg manager req_ = go req_ Nothing
                                          mapMetadata (meta:) `liftM` go nextRequest (Just resp)
 -}
 
-awsIteratedSource :: (IteratedTransaction r a, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
-                     => Environment
+awsIteratedSource :: (IteratedTransaction r a)
+                     => Environment (ServiceConfiguration r NormalQuery)
                      -> r
                      -> C.Producer (ResourceT IO) (Response (ResponseMetadata a) a)
 awsIteratedSource env req_ = go req_
@@ -295,8 +299,8 @@ awsIteratedSource env req_ = go req_
                               Nothing -> return ()
                               Just nextRequest -> go nextRequest
 
-awsIteratedList :: (IteratedTransaction r a, ListResponse a i, DefaultServiceConfiguration (ServiceConfiguration r NormalQuery))
-                     => Environment
+awsIteratedList :: (IteratedTransaction r a, ListResponse a i)
+                     => Environment (ServiceConfiguration r NormalQuery)
                      -> r
                      -> C.Producer (ResourceT IO) i
 awsIteratedList env req

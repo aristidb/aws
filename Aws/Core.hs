@@ -81,9 +81,6 @@ module Aws.Core
 , loadCredentialsDefault
   -- * Service configuration
 , DefaultServiceConfiguration(..)
-, ServiceConfigurationMap
-, addServiceConfiguration
-, getServiceConfiguration
   -- * HTTP types
 , Protocol(..)
 , defaultPort
@@ -672,25 +669,6 @@ class Typeable config => DefaultServiceConfiguration config where
     -- | Default debugging-only configuration. (Normally using HTTP instead of HTTPS for easier debugging.)
     debugServiceConfig :: config
     debugServiceConfig = defServiceConfig
-
-newtype ServiceConfigurationMap = ServiceConfigurationMap (M.Map TypeRep Dynamic)
-
-instance Monoid ServiceConfigurationMap where
-    mempty = ServiceConfigurationMap M.empty
-    mappend (ServiceConfigurationMap a) (ServiceConfigurationMap b) = ServiceConfigurationMap (a `mappend` b)
-
-addServiceConfiguration :: Typeable config => config -> ServiceConfigurationMap -> ServiceConfigurationMap
-addServiceConfiguration cfg (ServiceConfigurationMap m) = ServiceConfigurationMap (M.insert (typeOf cfg) (toDyn cfg) m)
-
-getServiceConfiguration :: (DefaultServiceConfiguration config)
-                        => (forall config'. DefaultServiceConfiguration config' => config') -> ServiceConfigurationMap -> config
-getServiceConfiguration defC (ServiceConfigurationMap m) = go undefined
-  where
-    go :: DefaultServiceConfiguration config' => config' -> config'
-    go dummy =
-        case M.lookup (typeOf dummy) m of
-          Nothing -> defC
-          Just dyn -> fromDyn dyn (error "Unexpected type")
 
 -- | @queryList f prefix xs@ constructs a query list from a list of
 -- elements @xs@, using a common prefix @prefix@, and a transformer

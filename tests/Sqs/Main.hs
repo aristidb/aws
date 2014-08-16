@@ -54,8 +54,7 @@ main = do
     runMain args _argsMap
         | any (`elem` helpArgs) args = defaultMain (tests undefined)
         | "--run-with-aws-credentials" `elem` args =
-            Aws.withDefaultEnvironment $ \env0 -> do
-                let env = env0 { Aws.environmentServiceConfigurationMap = Aws.addServiceConfiguration sqsConfiguration mempty }
+            Aws.withEnvironment sqsConfiguration $ \env -> do
                 withArgs (tastyArgs args) . defaultMain $ tests env
         | otherwise = putStrLn help >> exitFailure
 
@@ -90,7 +89,7 @@ help = L.intercalate "\n"
     , ""
     ]
 
-tests :: Environment -> TestTree
+tests :: Environment (SQS.SqsConfiguration NormalQuery) -> TestTree
 tests env = testGroup "SQS Tests"
     [ test_queue env
     , test_message env
@@ -133,20 +132,20 @@ sqsConfiguration = SQS.SqsConfiguration
 
 simpleSqs
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
-    => Environment
+    => Environment (SQS.SqsConfiguration NormalQuery)
     -> r
     -> m (MemoryResponse a)
 simpleSqs env command = liftIO $ simpleAws env command
 
 simpleSqsT
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
-    => Environment
+    => Environment (SQS.SqsConfiguration NormalQuery)
     -> r
     -> EitherT T.Text m (MemoryResponse a)
 simpleSqsT env = tryT . simpleSqs env
 
 withQueueTest
-    :: Environment
+    :: Environment (SQS.SqsConfiguration NormalQuery)
     -> T.Text -- ^ Queue name
     -> (IO (T.Text, SQS.QueueName) -> TestTree) -- ^ test tree
     -> TestTree
@@ -163,7 +162,7 @@ withQueueTest env queueName f = withResource createQueue deleteQueue $ \getQueue
 -- -------------------------------------------------------------------------- --
 -- Queue Tests
 
-test_queue :: Environment -> TestTree
+test_queue :: Environment (SQS.SqsConfiguration NormalQuery) -> TestTree
 test_queue env = testGroup "Queue Tests"
     [ eitherTOnceTest1 "CreateListDeleteQueue" (prop_createListDeleteQueue env)
     ]
@@ -171,7 +170,7 @@ test_queue env = testGroup "Queue Tests"
 -- |
 --
 prop_createListDeleteQueue
-    :: Environment
+    :: Environment (SQS.SqsConfiguration NormalQuery)
     -> T.Text -- ^ queue name
     -> EitherT T.Text IO ()
 prop_createListDeleteQueue env queueName = do
@@ -190,7 +189,7 @@ prop_createListDeleteQueue env queueName = do
 -- -------------------------------------------------------------------------- --
 -- Message Tests
 
-test_message :: Environment -> TestTree
+test_message :: Environment (SQS.SqsConfiguration NormalQuery) -> TestTree
 test_message env =
     withQueueTest env defaultQueueName $ \getQueueParams -> testGroup "Queue Tests"
         [ eitherTOnceTest0 "SendReceiveDeleteMessage" $ do
@@ -208,7 +207,7 @@ test_message env =
 -- and receives messages thereafter one by one.
 --
 prop_sendReceiveDeleteMessage
-    :: Environment
+    :: Environment (SQS.SqsConfiguration NormalQuery)
     -> SQS.QueueName
     -> EitherT T.Text IO ()
 prop_sendReceiveDeleteMessage env queue = do
@@ -249,7 +248,7 @@ prop_sendReceiveDeleteMessage env queue = do
 -- (with value 0) we force SQS to do a consistent receive.
 --
 prop_sendReceiveDeleteMessageLongPolling
-    :: Environment
+    :: Environment (SQS.SqsConfiguration NormalQuery)
     -> SQS.QueueName
     -> EitherT T.Text IO ()
 prop_sendReceiveDeleteMessageLongPolling env queue = do
@@ -290,7 +289,7 @@ prop_sendReceiveDeleteMessageLongPolling env queue = do
 -- message at a time.
 --
 prop_sendReceiveDeleteMessageLongPolling1
-    :: Environment
+    :: Environment (SQS.SqsConfiguration NormalQuery)
     -> SQS.QueueName
     -> EitherT T.Text IO ()
 prop_sendReceiveDeleteMessageLongPolling1 env queue = do
