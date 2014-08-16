@@ -769,12 +769,13 @@ ddbSignQuery target body di sd
       , sqAuthorization = Just auth
       , sqContentType = Just "application/x-amz-json-1.0"
       , sqContentMd5 = Nothing
-      , sqAmzHeaders = amzHeaders
+      , sqAmzHeaders = amzHeaders ++ maybe [] (\tok -> [("x-amz-security-token",tok)]) (iamToken credentials)
       , sqOtherHeaders = []
       , sqBody = Just $ HTTP.RequestBodyLBS bodyLBS
       , sqStringToSign = canonicalRequest
       }
     where
+        credentials = signatureCredentials sd
 
         Region{..} = ddbcRegion di
         host = rUri
@@ -784,10 +785,9 @@ ddbSignQuery target body di sd
         bodyLBS = A.encode body
         bodyHash = Base16.encode $ toBytes (hashlazy bodyLBS :: Digest SHA256)
 
-        amzHeaders = catMaybes
-                     [ Just ("x-amz-date", sigTime)
-                     , Just ("x-amz-target", dyApiVersion <> target)
-                     , ("x-amz-security-token",) `fmap` iamToken (signatureCredentials sd)
+        -- for some reason AWS doesn't want the x-amz-security-token in the canonical request
+        amzHeaders = [ ("x-amz-date", sigTime)
+                     , ("x-amz-target", dyApiVersion <> target)
                      ]
 
         canonicalHeaders = sortBy (compare `on` fst) $ amzHeaders ++
