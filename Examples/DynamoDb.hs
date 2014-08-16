@@ -15,12 +15,27 @@ import qualified Data.Conduit.List     as C
 import qualified Data.Text             as T
 -------------------------------------------------------------------------------
 
+createTableAndWait :: IO ()
+createTableAndWait = do
+  let req0 = createTable "devel-1"
+        [AttributeDefinition "name" AttrString]
+        (HashOnly "name")
+        (ProvisionedThroughput 1 1)
+  resp0 <- runCommand req0
+  print resp0
 
+  print "Waiting for table to be created"
+  threadDelay (30 * 1000000)
+
+  let req1 = DescribeTable "devel-1"
+  resp1 <- runCommand req1
+  print resp1
 
 main :: IO ()
 main = do
-  {- Load configuration -}
   cfg <- Aws.baseConfiguration
+
+  createTableAndWait `catch` (\DdbError{} -> putStrLn "Table already exists")
 
   putStrLn "Putting an item..."
 
