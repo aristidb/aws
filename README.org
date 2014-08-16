@@ -88,6 +88,18 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
+** 0.10 series
+
+- 0.10
+  - SQS: complete overhaul to support 2012-11-05 features
+  - SQS: test suite
+  - S3: use Maybe for 404 HEAD requests on objects instead of throwing a misleading exception
+  - S3: support of poAutoMakeBucket for Internet Archive users
+  - S3: implement GetBucketLocation
+  - S3: add South American region
+  - S3: allow specifying the Content-Type when copying objects
+  - core: fix typo in NoCredentialsException accessor
+
 ** 0.9 series
 
 - 0.9.3
