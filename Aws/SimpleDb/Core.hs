@@ -56,7 +56,7 @@ data SdbConfiguration qt
       , sdbiHost :: B.ByteString
       , sdbiPort :: Int
       }
-    deriving (Show)
+    deriving (Show, Typeable)
 
 instance DefaultServiceConfiguration (SdbConfiguration NormalQuery) where
   defServiceConfig = sdbHttpsPost sdbUsEast

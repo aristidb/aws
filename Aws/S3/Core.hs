@@ -54,7 +54,7 @@ data S3Configuration qt
       , s3UseUri :: Bool
       , s3DefaultExpiry :: NominalDiffTime
       }
-    deriving (Show)
+    deriving (Show, Typeable)
 
 instance DefaultServiceConfiguration (S3Configuration NormalQuery) where
   defServiceConfig = s3 HTTPS s3EndpointUsClassic False

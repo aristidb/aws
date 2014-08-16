@@ -85,7 +85,7 @@ data SqsConfiguration qt
       , sqsUseUri :: Bool
       , sqsDefaultExpiry :: NominalDiffTime
       }
-    deriving (Show)
+    deriving (Show, Typeable)
 
 instance DefaultServiceConfiguration (SqsConfiguration NormalQuery) where
     defServiceConfig = sqs HTTPS sqsEndpointUsClassic False

@@ -66,7 +66,7 @@ data IamConfiguration qt
       , iamProtocol   :: Protocol
       , iamHttpMethod :: Method
       }
-    deriving (Show)
+    deriving (Show, Typeable)
 
 instance DefaultServiceConfiguration (IamConfiguration NormalQuery) where
     defServiceConfig   = iam PostQuery HTTPS iamEndpointDefault

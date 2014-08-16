@@ -66,7 +66,7 @@ data SesConfiguration qt
         sesiHttpMethod :: Method
       , sesiHost       :: B.ByteString
       }
-    deriving (Show)
+    deriving (Show, Typeable)
 
 -- HTTP is not supported right now, always use HTTPS
 instance DefaultServiceConfiguration (SesConfiguration NormalQuery) where

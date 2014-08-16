@@ -81,6 +81,9 @@ module Aws.Core
 , loadCredentialsDefault
   -- * Service configuration
 , DefaultServiceConfiguration(..)
+, ServiceConfigurationMap
+, addServiceConfiguration
+, getServiceConfiguration
   -- * HTTP types
 , Protocol(..)
 , defaultPort
@@ -113,6 +116,7 @@ import           Data.Conduit             (($$+-))
 import qualified Data.Conduit             as C
 import qualified Data.Conduit.List        as CL
 import           Data.Default             (def)
+import           Data.Dynamic
 import           Data.IORef
 import           Data.List
 import qualified Data.Map                 as M
@@ -123,7 +127,6 @@ import qualified Data.Text.Encoding       as T
 import qualified Data.Text.IO             as T
 import           Data.Time
 import qualified Data.Traversable         as Traversable
-import           Data.Typeable
 import           Data.Word
 import qualified Network.HTTP.Conduit     as HTTP
 import qualified Network.HTTP.Types       as HTTP
@@ -549,8 +552,10 @@ signatureData rti cr = do
 
 -- | Tag type for normal queries.
 data NormalQuery
+  deriving (Typeable)
 -- | Tag type for URI-only queries.
 data UriOnlyQuery
+  deriving (Typeable)
 
 -- | A "signable" request object. Assembles together the Query, and signs it in one go.
 class SignQuery request where
@@ -660,13 +665,32 @@ authorizationV4 sd ah region service headers canonicalRequest = do
                       ]
 
 -- | Default configuration for a specific service.
-class DefaultServiceConfiguration config where
+class Typeable config => DefaultServiceConfiguration config where
     -- | Default service configuration.
     defServiceConfig :: config
 
     -- | Default debugging-only configuration. (Normally using HTTP instead of HTTPS for easier debugging.)
     debugServiceConfig :: config
     debugServiceConfig = defServiceConfig
+
+newtype ServiceConfigurationMap = ServiceConfigurationMap (M.Map TypeRep Dynamic)
+
+instance Monoid ServiceConfigurationMap where
+    mempty = ServiceConfigurationMap M.empty
+    mappend (ServiceConfigurationMap a) (ServiceConfigurationMap b) = ServiceConfigurationMap (a `mappend` b)
+
+addServiceConfiguration :: Typeable config => config -> ServiceConfigurationMap -> ServiceConfigurationMap
+addServiceConfiguration cfg (ServiceConfigurationMap m) = ServiceConfigurationMap (M.insert (typeOf cfg) (toDyn cfg) m)
+
+getServiceConfiguration :: (DefaultServiceConfiguration config)
+                        => (forall config'. DefaultServiceConfiguration config' => config') -> ServiceConfigurationMap -> config
+getServiceConfiguration defC (ServiceConfigurationMap m) = go undefined
+  where
+    go :: DefaultServiceConfiguration config' => config' -> config'
+    go dummy =
+        case M.lookup (typeOf dummy) m of
+          Nothing -> defC
+          Just dyn -> fromDyn dyn (error "Unexpected type")
 
 -- | @queryList f prefix xs@ constructs a query list from a list of
 -- elements @xs@, using a common prefix @prefix@, and a transformer
