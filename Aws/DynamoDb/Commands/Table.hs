@@ -5,6 +5,7 @@
 module Aws.DynamoDb.Commands.Table
     ( -- * Commands
       CreateTable(..)
+    , createTable
     , CreateTableResult(..)
     , DescribeTable(..)
     , DescribeTableResult(..)
@@ -312,6 +313,13 @@ data CreateTable = CreateTable {
     -- ^ at most 5 local secondary indices are allowed
     , createGlobalSecondaryIndexes :: [GlobalSecondaryIndex]
     } deriving (Show, Generic)
+
+createTable :: T.Text -- ^ Table name
+            -> [AttributeDefinition]
+            -> KeySchema
+            -> ProvisionedThroughput
+            -> CreateTable
+createTable tn ad ks p = CreateTable tn ad ks p [] []
 
 instance A.ToJSON CreateTable where
     toJSON ct = A.object $ m ++ lindex ++ gindex

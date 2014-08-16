@@ -19,16 +19,11 @@ module Aws.DynamoDb.Commands.Query
     , Slice (..)
     , query
     , QueryResponse (..)
-    , queryPageSource
-    , queryItemSource
-    , paginateQuery
     ) where
 
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
-import           Data.Conduit        (Producer, (=$=))
-import qualified Data.Conduit.List   as C
 import           Data.Default
 import           Data.Maybe
 import qualified Data.Text           as T
@@ -38,45 +33,6 @@ import qualified Data.Vector         as V
 import           Aws.Core
 import           Aws.DynamoDb.Core
 -------------------------------------------------------------------------------
-
-
--------------------------------------------------------------------------------
--- | Low level pagination for 'Query'
-paginateQuery
-    :: Monad m
-    => (Query -> m QueryResponse)
-    -- ^ A way to run queries.
-    -> Query
-    -- ^ A starting point for the pagination
-    -> m (Page m Query QueryResponse)
-paginateQuery run q0 = do
-    res <- run q0
-    let next = case qrLastKey res of
-          Nothing -> Nothing
-          Just _ -> Just $ paginateQuery run q0 { qStartKey = qrLastKey res }
-    return $ Page res next
-
-
--------------------------------------------------------------------------------
--- | Conduit 'Producer' of 'QueryResponse' pages.
-queryPageSource
-    :: Monad m
-    => (Query -> m QueryResponse)
-    -- ^ A way to run 'Query' commands
-    -> Query
-    -- ^ An initial starting point
-    -> Producer m QueryResponse
-queryPageSource run q0 = pageSource $ paginateQuery run q0
-
-
--------------------------------------------------------------------------------
--- | Stream 'Item's via conduit's 'Producer'.
-queryItemSource
-    :: Monad m
-    => (Query -> m QueryResponse)
-    -> Query
-    -> Producer m Item
-queryItemSource run q0 = queryPageSource run q0 =$= C.concatMap (V.toList . qrItems)
 
 
 -------------------------------------------------------------------------------
@@ -185,6 +141,16 @@ instance ResponseConsumer r QueryResponse where
 instance AsMemoryResponse QueryResponse where
     type MemoryResponse QueryResponse = QueryResponse
     loadToMemory = return
+
+
+instance ListResponse QueryResponse Item where
+    listResponse = V.toList . qrItems
+
+
+instance IteratedTransaction Query QueryResponse where
+    nextIteratedRequest request response = case qrLastKey response of
+        Nothing -> Nothing
+        key -> Just request { qStartKey = key }
 
 
 sliceJson :: Slice -> Value

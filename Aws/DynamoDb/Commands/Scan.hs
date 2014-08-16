@@ -18,16 +18,11 @@ module Aws.DynamoDb.Commands.Scan
     ( Scan (..)
     , scan
     , ScanResponse (..)
-    , scanPageSource
-    , scanItemSource
-    , paginateScan
     ) where
 
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
-import           Data.Conduit        (Producer, (=$=))
-import qualified Data.Conduit.List   as C
 import           Data.Default
 import           Data.Maybe
 import qualified Data.Text           as T
@@ -37,44 +32,6 @@ import qualified Data.Vector         as V
 import           Aws.Core
 import           Aws.DynamoDb.Core
 -------------------------------------------------------------------------------
-
-
--------------------------------------------------------------------------------
--- | Low level pagination for 'Scan'
-paginateScan
-    :: Monad m
-    => (Scan -> m ScanResponse)
-    -- ^ A way to run queries
-    -> Scan
-    -- ^ A starting point for the pagination
-    -> m (Page m Scan ScanResponse)
-paginateScan run q0 = do
-    res <- run q0
-    let next = case srLastKey res of
-          Nothing -> Nothing
-          Just _ -> Just $ paginateScan run q0 { sStartKey = srLastKey res }
-    return $ Page res next
-
-
--------------------------------------------------------------------------------
--- | Conduit 'Producer' of 'ScanResponse' pages.
-scanPageSource
-    :: Monad m
-    => (Scan -> m ScanResponse)
-    -- ^ A way to run 'Scan' commands
-    -> Scan
-    -- ^ An initial starting point
-    -> Producer m ScanResponse
-scanPageSource run q0 = pageSource $ paginateScan run q0
-
-
--- | Stream 'Item's via conduit's 'Producer'.
-scanItemSource
-    :: Monad m
-    => (Scan -> m ScanResponse)
-    -> Scan
-    -> Producer m Item
-scanItemSource run q0 = scanPageSource run q0 =$= C.concatMap (V.toList . srItems)
 
 
 -- | A Scan command that uses primary keys for an expedient scan.
@@ -157,3 +114,12 @@ instance ResponseConsumer r ScanResponse where
 instance AsMemoryResponse ScanResponse where
     type MemoryResponse ScanResponse = ScanResponse
     loadToMemory = return
+
+instance ListResponse ScanResponse Item where
+    listResponse = V.toList . srItems
+
+instance IteratedTransaction Scan ScanResponse where
+    nextIteratedRequest request response =
+        case srLastKey response of
+            Nothing -> Nothing
+            key -> Just request { sStartKey = key }

@@ -83,10 +83,6 @@ module Aws.DynamoDb.Core
     , QuerySelect
     , querySelectJson
 
-    -- * Pagination helpers
-    , Page (..)
-    , pageSource
-
     -- * Size estimation
     , DynSize (..)
     , nullAttr
@@ -1090,31 +1086,6 @@ querySelectJson (SelectSpecific as) =
 querySelectJson SelectCount = ["Select" .= String "COUNT"]
 querySelectJson SelectProjected = ["Select" .= String "ALL_PROJECTED_ATTRIBUTES"]
 querySelectJson SelectAll = ["Select" .= String "ALL_ATTRIBUTES"]
-
-
--------------------------------------------------------------------------------
--- | Pagination through results in 'Query' and 'Scan' queries.
-data Page m req resp = Page {
-      pageResult :: resp
-    , pageNext   :: Maybe (m (Page m req resp))
-    }
-
-
--------------------------------------------------------------------------------
--- | Turn a 'Query' or 'Scan' pagination into a conduit 'Producer'.
---
--- For example, the following will get you a nice 'Producer' of
--- 'QueryResponse' objects:
---
--- >>> 'pageSource' $ 'paginateQuery' ('simpleAws' cfg scfg mgr myQuery)
-pageSource :: Monad m => m (Page m req resp) -> Producer m resp
-pageSource p0 = lift p0 >>= go
-    where
-      go Page{..} = do
-          yield pageResult
-          case pageNext of
-            Nothing -> return ()
-            Just run -> lift run >>= go
 
 
 -------------------------------------------------------------------------------
