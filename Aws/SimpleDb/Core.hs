@@ -121,8 +121,8 @@ sdbSignQuery q si sd
                      AbsoluteExpires   time -> ("Expires", fmtAmzTime time)
                   , ("AWSAccessKeyId", accessKeyID cr)
                   , ("SignatureMethod", amzHash ah)
-                  , ("SignatureVersion", "2")
-                  ]
+                  , ("SignatureVersion", "2")]
+		  ++ maybe [] (\tok -> [("SecurityToken", tok)]) (iamToken cr)
       sq = ("Signature", Just sig) : q'
       method = sdbiHttpMethod si
       host = sdbiHost si
