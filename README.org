@@ -90,7 +90,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.10 series
 
-- 0.10.1
+- 0.10.2
   - support STS / IAM temporary credentials in all services
 
 - 0.10
