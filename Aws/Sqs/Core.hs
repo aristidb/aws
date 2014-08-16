@@ -191,7 +191,7 @@ sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
                        ("SignatureMethod", Just("HmacSHA256")), ("SignatureVersion",Just("2")), ("Version",Just("2012-11-05"))
 
                        ])
-      
+
       expires = AbsoluteExpires $ sqsDefaultExpiry `addUTCTime` signatureTime
 
       expiresString = formatTime defaultTimeLocale "%FT%TZ" (fromAbsoluteTimeInfo expires)
@@ -205,7 +205,7 @@ sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
 
       signedQuery = expandedQuery ++ (HTTP.simpleQueryToQuery $ makeAuthQuery)
 
-      makeAuthQuery = [("Signature", sig)]
+      makeAuthQuery = [("Signature", sig)] ++ maybe [] (\x -> [("x-amz-security-token", x)]) (iamToken signatureCredentials)
 
 sqsResponseConsumer :: HTTPResponseConsumer a
                     -> IORef SqsMetadata
