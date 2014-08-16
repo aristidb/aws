@@ -212,6 +212,8 @@ unsafeAwsRef cfg info manager metadataRef request = do
   liftIO $ logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
   httpRequest <- liftIO $ queryToHttpRequest q
   liftIO $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
+  liftIO $ logger cfg Debug $ T.pack $ "Path: " ++ show (HTTP.path httpRequest)
+  liftIO $ logger cfg Debug $ T.pack $ "Query string: " ++ show (HTTP.queryString httpRequest)
   hresp <- HTTP.http httpRequest manager
   forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
     logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
