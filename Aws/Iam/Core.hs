@@ -133,9 +133,8 @@ iamSignQuery q IamConfiguration{..} SignatureData{..}
                           , ("SignatureMethod" , Just $ amzHash HmacSHA256)
                           , ("SignatureVersion", Just "2")
                           , ("Version"         , Just "2010-05-08")
-                          , timestampHeader
-			  , ("SecurityToken", iamToken signatureCredentials)
-                          ]
+                          , timestampHeader] ++
+                          maybe [] (\tok -> [ ("SecurityToken", Just tok)]) (iamToken signatureCredentials)
 
 -- | Reads the metadata from an IAM response and delegates parsing the rest of
 -- the data from the response to the given function.

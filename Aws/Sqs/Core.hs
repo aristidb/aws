@@ -188,8 +188,8 @@ sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
       expandedQuery = sortBy (comparing fst) 
                        ( sqsQuery ++ [ ("AWSAccessKeyId", Just(accessKeyID signatureCredentials)), 
                        ("Expires", Just(BC.pack expiresString)), 
-                       ("SignatureMethod", Just("HmacSHA256")), ("SignatureVersion",Just("2")), ("Version",Just("2012-11-05")),
-                       ("SecurityToken", iamToken signatureCredentials)])
+                       ("SignatureMethod", Just("HmacSHA256")), ("SignatureVersion",Just("2")), ("Version",Just("2012-11-05"))] ++
+                       maybe [] (\tok -> [("SecurityToken", Just tok)]) (iamToken signatureCredentials))
 
       expires = AbsoluteExpires $ sqsDefaultExpiry `addUTCTime` signatureTime
 
@@ -204,7 +204,7 @@ sqsSignQuery SqsQuery{..} SqsConfiguration{..} SignatureData{..}
 
       signedQuery = expandedQuery ++ (HTTP.simpleQueryToQuery $ makeAuthQuery)
 
-      makeAuthQuery = [("Signature", sig)] ++ maybe [] (\x -> [("x-amz-security-token", x)]) (iamToken signatureCredentials)
+      makeAuthQuery = [("Signature", sig)]
 
 sqsResponseConsumer :: HTTPResponseConsumer a
                     -> IORef SqsMetadata
