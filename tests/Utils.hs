@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TupleSections #-}
 
 -- |
 -- Module: Utils
@@ -21,6 +22,7 @@ module Utils
 , sshow
 , tryT
 , retryT
+, retryT_
 , testData
 
 , evalTestT
@@ -34,6 +36,7 @@ module Utils
 , prop_jsonRoundtrip
 ) where
 
+import Control.Applicative
 import Control.Concurrent (threadDelay)
 import Control.Error
 import Control.Monad
@@ -72,11 +75,14 @@ testData :: (IsString a, Monoid a) => a -> a
 testData a = testDataPrefix <> a
 
 retryT :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m a
-retryT i f = go 1
+retryT n f = snd <$> retryT_ n f
+
+retryT_ :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m (Int, a)
+retryT_ n f = go 1
   where
     go x
-        | x >= i = fmapLT (\e -> "error after " <> sshow x <> " retries: " <> e) f
-        | otherwise = f `catchT` \_ -> do
+        | x >= n = fmapLT (\e -> "error after " <> sshow x <> " retries: " <> e) ((x,) <$> f)
+        | otherwise = ((x,) <$> f) `catchT` \_ -> do
             liftIO $ threadDelay (1000000 * min 60 (2^(x-1)))
             go (succ x)
 
