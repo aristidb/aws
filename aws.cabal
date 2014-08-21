@@ -269,6 +269,8 @@ test-suite sqs-tests
         base == 4.*,
         bytestring >= 0.10,
         errors >= 1.4.7,
+        lifted-base >= 0.2,
+        monad-control >= 0.3,
         mtl >= 2.1,
         quickcheck-instances >= 0.3,
         tagged >= 0.7,
