@@ -266,7 +266,7 @@ data TableDescription
       , rCreationDateTime       :: Maybe UTCTime
       , rItemCount              :: Integer
       , rAttributeDefinitions   :: [AttributeDefinition]
-      , rKeySchema              :: KeySchema
+      , rKeySchema              :: Maybe KeySchema
       , rProvisionedThroughput  :: ProvisionedThroughputStatus
       , rLocalSecondaryIndexes  :: [LocalSecondaryIndexStatus]
       , rGlobalSecondaryIndexes :: [GlobalSecondaryIndexStatus]
@@ -285,7 +285,7 @@ instance A.FromJSON TableDescription where
                          <*> (fmap (posixSecondsToUTCTime . fromInteger) <$> t .:? "CreationDateTime")
                          <*> t .: "ItemCount"
                          <*> t .: "AttributeDefinitions"
-                         <*> t .: "KeySchema"
+                         <*> t .:? "KeySchema"
                          <*> t .: "ProvisionedThroughput"
                          <*> t .:? "LocalSecondaryIndexes" .!= []
                          <*> t .:? "GlobalSecondaryIndexes" .!= []
