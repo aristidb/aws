@@ -263,7 +263,7 @@ data TableDescription
         rTableName              :: T.Text
       , rTableSizeBytes         :: Integer
       , rTableStatus            :: T.Text -- ^ one of CREATING, UPDATING, DELETING, ACTIVE
-      , rCreationDateTime       :: UTCTime
+      , rCreationDateTime       :: Maybe UTCTime
       , rItemCount              :: Integer
       , rAttributeDefinitions   :: [AttributeDefinition]
       , rKeySchema              :: KeySchema
@@ -282,7 +282,7 @@ instance A.FromJSON TableDescription where
         TableDescription <$> t .: "TableName"
                          <*> t .: "TableSizeBytes"
                          <*> t .: "TableStatus"
-                         <*> (posixSecondsToUTCTime . fromInteger <$> t .: "CreationDateTime")
+                         <*> (fmap (posixSecondsToUTCTime . fromInteger) <$> t .:? "CreationDateTime")
                          <*> t .: "ItemCount"
                          <*> t .: "AttributeDefinitions"
                          <*> t .: "KeySchema"
