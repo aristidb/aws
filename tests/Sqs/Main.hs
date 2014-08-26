@@ -33,6 +33,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Control
 import Control.Monad.Trans.Resource
 
+import Data.IORef
 import qualified Data.List as L
 import Data.Monoid
 import qualified Data.Text as T
@@ -94,9 +95,10 @@ help = L.intercalate "\n"
     ]
 
 tests :: TestTree
-tests = testGroup "SQS Tests"
+tests = withQueueTest defaultQueueName $ \getQueueParams -> testGroup "SQS Tests"
     [ test_queue
-    , test_message
+    , test_message getQueueParams
+    , test_core getQueueParams
     ]
 
 -- -------------------------------------------------------------------------- --
@@ -201,19 +203,18 @@ prop_createListDeleteQueue queueName = do
 -- -------------------------------------------------------------------------- --
 -- Message Tests
 
-test_message :: TestTree
-test_message =
-    withQueueTest defaultQueueName $ \getQueueParams -> testGroup "Queue Tests"
-        [ eitherTOnceTest0 "SendReceiveDeleteMessage" $ do
-            (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessage queue
-        , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling" $ do
-            (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessageLongPolling queue
-        , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling1" $ do
-            (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessageLongPolling1 queue
-        ]
+test_message :: IO (T.Text, SQS.QueueName) -> TestTree
+test_message getQueueParams = testGroup "Queue Tests"
+    [ eitherTOnceTest0 "SendReceiveDeleteMessage" $ do
+        (_, queue) <- liftIO getQueueParams
+        prop_sendReceiveDeleteMessage queue
+    , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling" $ do
+        (_, queue) <- liftIO getQueueParams
+        prop_sendReceiveDeleteMessageLongPolling queue
+    , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling1" $ do
+        (_, queue) <- liftIO getQueueParams
+        prop_sendReceiveDeleteMessageLongPolling1 queue
+    ]
 
 -- | Simple send and short-polling receive. First sends all messages
 -- and receives messages thereafter one by one.
@@ -329,3 +330,50 @@ prop_sendReceiveDeleteMessageLongPolling1 queue = do
     unless (sent == recv)
         $ left $ "received messages don't match send messages; sent: "
             <> sshow sent <> "; got: " <> sshow recv
+
+
+-- -------------------------------------------------------------------------- --
+-- Test core functionality
+
+test_core :: IO (T.Text, SQS.QueueName) -> TestTree
+test_core getQueueParams = testGroup "Core Tests"
+    [ eitherTOnceTest0 "connectionReuse" $ do
+        (_, queue) <- liftIO getQueueParams
+        prop_connectionReuse queue
+    ]
+
+prop_connectionReuse
+    :: SQS.QueueName
+    -> EitherT T.Text IO ()
+prop_connectionReuse queue = do
+    c <- liftIO $ do
+        cfg <- baseConfiguration
+
+        -- used for counting the number of TCP connections
+        ref <- newIORef (0 :: Int)
+
+        -- Use a single manager for all HTTP requests
+        void . HTTP.withManager (managerSettings ref) $ \manager -> runEitherT $
+
+            handleT (error . T.unpack) . replicateM_ 3 $ do
+                void . sqsT cfg manager $ SQS.ListQueues Nothing
+                mustFail . sqsT cfg manager $
+                    SQS.SendMessage "" (SQS.QueueName "" "") [] Nothing
+                void . sqsT cfg manager $
+                    SQS.SendMessage "test-message" queue [] Nothing
+                void . sqsT cfg manager $
+                    SQS.ReceiveMessage Nothing [] Nothing [] queue (Just 20)
+
+        readIORef ref
+    unless (c == 1) $
+        left "The TCP connection has not been reused"
+  where
+
+    managerSettings ref = HTTP.defaultManagerSettings
+        { HTTP.managerRawConnection = do
+            mkConn <- HTTP.managerRawConnection HTTP.defaultManagerSettings
+            return $ \a b c -> do
+                atomicModifyIORef ref $ \i -> (succ i, ())
+                mkConn a b c
+        }
+
