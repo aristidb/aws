@@ -31,10 +31,13 @@ import Control.Error
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Control
+import Control.Monad.Trans.Resource
 
 import qualified Data.List as L
 import Data.Monoid
 import qualified Data.Text as T
+
+import qualified Network.HTTP.Client as HTTP
 
 import Test.Tasty
 import Test.QuickCheck.Instances ()
@@ -130,6 +133,16 @@ sqsConfiguration = SQS.SqsConfiguration
     , SQS.sqsUseUri = False
     , SQS.sqsDefaultExpiry = 180
     }
+
+sqsT
+    :: (Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration)
+    => Configuration
+    -> HTTP.Manager
+    -> r
+    -> EitherT T.Text IO a
+sqsT cfg manager req = do
+    Response _ r <- liftIO . runResourceT $ aws cfg sqsConfiguration manager req
+    hoistEither $ fmapL sshow r
 
 simpleSqs
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
