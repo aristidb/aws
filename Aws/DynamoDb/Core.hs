@@ -356,13 +356,13 @@ instance DynVal UTCTime where
 
 
 -------------------------------------------------------------------------------
-pico :: Integer
-pico = 10 ^ (12 :: Integer)
+pico :: Rational
+pico = toRational $ 10 ^ (12 :: Integer)
 
 
 -------------------------------------------------------------------------------
 dayPico :: Integer
-dayPico = 86400 * pico
+dayPico = 86400 * round pico
 
 
 -------------------------------------------------------------------------------
@@ -372,8 +372,7 @@ dayPico = 86400 * pico
 toTS :: UTCTime -> Integer
 toTS (UTCTime (ModifiedJulianDay i) diff) = i' + diff'
     where
-      diff' = floor (toRational diff * pico')
-      pico' = toRational pico
+      diff' = floor (toRational diff * pico)
       i' = i * dayPico
 
 
@@ -385,7 +384,7 @@ fromTS :: Integer -> UTCTime
 fromTS i = UTCTime (ModifiedJulianDay days) diff
     where
       (days, secs) = i `divMod` dayPico
-      diff = fromRational ((toRational secs) / toRational pico)
+      diff = fromRational ((toRational secs) / pico)
 
 
 -- | Encoded as 0 and 1.
