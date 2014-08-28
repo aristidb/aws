@@ -90,6 +90,12 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.10 series
 
+- 0.10.3
+  - fix bug introduced in 0.10.2 that broke SQS and IAM connections without STS
+
+- 0.10.2
+  - support STS / IAM temporary credentials in all services
+
 - 0.10
   - [EXPERIMENTAL!] DynamoDB: support for creating/updating/querying and scanning items
   - SQS: complete overhaul to support 2012-11-05 features

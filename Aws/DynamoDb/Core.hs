@@ -127,12 +127,15 @@ import           Data.Byteable
 import qualified Data.ByteString.Base16       as Base16
 import qualified Data.ByteString.Base64       as Base64
 import qualified Data.ByteString.Char8        as B
+import qualified Data.CaseInsensitive         as CI
 import           Data.Conduit
 import           Data.Conduit.Attoparsec      (sinkParser)
 import           Data.Default
+import           Data.Function                (on)
 import qualified Data.HashMap.Strict          as HM
 import           Data.Int
 import           Data.IORef
+import           Data.List
 import qualified Data.Map                     as M
 import           Data.Maybe
 import           Data.Monoid
@@ -776,14 +779,13 @@ ddbSignQuery target body di sd
       , sqAuthorization = Just auth
       , sqContentType = Just "application/x-amz-json-1.0"
       , sqContentMd5 = Nothing
-      , sqAmzHeaders = [ ("X-Amz-Target", dyApiVersion <> target)
-                       , ("X-Amz-Date", sigTime)
-                       ]
+      , sqAmzHeaders = amzHeaders ++ maybe [] (\tok -> [("x-amz-security-token",tok)]) (iamToken credentials)
       , sqOtherHeaders = []
       , sqBody = Just $ HTTP.RequestBodyLBS bodyLBS
       , sqStringToSign = canonicalRequest
       }
     where
+        credentials = signatureCredentials sd
 
         Region{..} = ddbcRegion di
         host = rUri
@@ -793,24 +795,25 @@ ddbSignQuery target body di sd
         bodyLBS = A.encode body
         bodyHash = Base16.encode $ toBytes (hashlazy bodyLBS :: Digest SHA256)
 
-        canonicalRequest = B.concat [ "POST\n"
-                                    , "/\n"
-                                    , "\n" -- query string
-                                    , "content-type:application/x-amz-json-1.0\n"
-                                    , "host:"
-                                    , host
-                                    , "\n"
-                                    , "x-amz-date:"
-                                    , sigTime
-                                    , "\n"
-                                    , "x-amz-target:"
-                                    , dyApiVersion
-                                    , target
-                                    , "\n"
-                                    , "\n" -- end headers
-                                    , "content-type;host;x-amz-date;x-amz-target\n"
-                                    , bodyHash
-                                    ]
+        -- for some reason AWS doesn't want the x-amz-security-token in the canonical request
+        amzHeaders = [ ("x-amz-date", sigTime)
+                     , ("x-amz-target", dyApiVersion <> target)
+                     ]
+
+        canonicalHeaders = sortBy (compare `on` fst) $ amzHeaders ++
+                           [("host", host),
+                            ("content-type", "application/x-amz-json-1.0")]
+
+        canonicalRequest = B.concat $ intercalate ["\n"] (
+                                    [ ["POST"]
+                                    , ["/"]
+                                    , [] -- query string
+                                    ] ++
+                                    map (\(a,b) -> [CI.foldedCase a,":",b]) canonicalHeaders ++
+                                    [ [] -- end headers
+                                    , intersperse ";" (map (CI.foldedCase . fst) canonicalHeaders)
+                                    , [bodyHash]
+                                    ])
 
         auth = authorizationV4 sd HmacSHA256 rName "dynamodb"
                                "content-type;host;x-amz-date;x-amz-target"
