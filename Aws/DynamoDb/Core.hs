@@ -88,7 +88,7 @@ module Aws.DynamoDb.Core
     , ItemCollectionMetrics (..)
     , ReturnItemCollectionMetrics (..)
     , UpdateReturn (..)
-    , QuerySelect
+    , QuerySelect (..)
     , querySelectJson
 
     -- * Size estimation
