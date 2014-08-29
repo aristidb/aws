@@ -973,10 +973,13 @@ conditionJson Condition{..} = condAttr .= condOp
 
 
 instance ToJSON CondOp where
-    toJSON c = object
-      [ "ComparisonOperator" .= String (renderCondOp c)
-      , "AttributeValueList" .= getCondValues c ]
-
+    toJSON c = object $ ("ComparisonOperator" .= String (renderCondOp c)) : valueList
+      where
+        valueList =
+          let vs = getCondValues c in
+            if null vs
+            then []
+            else ["AttributeValueList" .= vs]
 
 -------------------------------------------------------------------------------
 dyApiVersion :: B.ByteString
