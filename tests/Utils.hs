@@ -2,6 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TupleSections #-}
 
 -- |
 -- Module: Utils
@@ -21,6 +23,7 @@ module Utils
 , sshow
 , tryT
 , retryT
+, retryT_
 , testData
 
 , evalTestT
@@ -34,13 +37,17 @@ module Utils
 , prop_jsonRoundtrip
 ) where
 
+import Control.Applicative
 import Control.Concurrent (threadDelay)
-import Control.Error
+import qualified Control.Exception.Lifted as LE
+import Control.Error hiding (syncIO)
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Control
 
 import Data.Aeson (FromJSON, ToJSON, encode, eitherDecode)
+import Data.Dynamic (Dynamic)
 import Data.Monoid
 import Data.Proxy
 import Data.String
@@ -51,6 +58,8 @@ import Test.QuickCheck.Property
 import Test.QuickCheck.Monadic
 import Test.Tasty
 import Test.Tasty.QuickCheck
+
+import System.Exit (ExitCode)
 
 -- -------------------------------------------------------------------------- --
 -- Static Test parameters
@@ -65,18 +74,47 @@ testDataPrefix = "__TEST_AWSHASKELLBINDINGS__"
 -- -------------------------------------------------------------------------- --
 -- General Utils
 
-tryT :: MonadIO m => IO a -> EitherT T.Text m a
+-- | Catches all exceptions except for asynchronous exceptions found in base.
+--
+tryT :: MonadBaseControl IO m => m a -> EitherT T.Text m a
 tryT = fmapLT (T.pack . show) . syncIO
+
+-- | Lifted Version of 'syncIO' form "Control.Error.Util".
+--
+syncIO :: MonadBaseControl IO m => m a -> EitherT LE.SomeException m a
+syncIO a = EitherT $ LE.catches (Right <$> a)
+    [ LE.Handler $ \e -> LE.throw (e :: LE.ArithException)
+    , LE.Handler $ \e -> LE.throw (e :: LE.ArrayException)
+    , LE.Handler $ \e -> LE.throw (e :: LE.AssertionFailed)
+    , LE.Handler $ \e -> LE.throw (e :: LE.AsyncException)
+    , LE.Handler $ \e -> LE.throw (e :: LE.BlockedIndefinitelyOnMVar)
+    , LE.Handler $ \e -> LE.throw (e :: LE.BlockedIndefinitelyOnSTM)
+    , LE.Handler $ \e -> LE.throw (e :: LE.Deadlock)
+    , LE.Handler $ \e -> LE.throw (e ::    Dynamic)
+    , LE.Handler $ \e -> LE.throw (e :: LE.ErrorCall)
+    , LE.Handler $ \e -> LE.throw (e ::    ExitCode)
+    , LE.Handler $ \e -> LE.throw (e :: LE.NestedAtomically)
+    , LE.Handler $ \e -> LE.throw (e :: LE.NoMethodError)
+    , LE.Handler $ \e -> LE.throw (e :: LE.NonTermination)
+    , LE.Handler $ \e -> LE.throw (e :: LE.PatternMatchFail)
+    , LE.Handler $ \e -> LE.throw (e :: LE.RecConError)
+    , LE.Handler $ \e -> LE.throw (e :: LE.RecSelError)
+    , LE.Handler $ \e -> LE.throw (e :: LE.RecUpdError)
+    , LE.Handler $ return . Left
+    ]
 
 testData :: (IsString a, Monoid a) => a -> a
 testData a = testDataPrefix <> a
 
 retryT :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m a
-retryT i f = go 1
+retryT n f = snd <$> retryT_ n f
+
+retryT_ :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m (Int, a)
+retryT_ n f = go 1
   where
     go x
-        | x >= i = fmapLT (\e -> "error after " <> sshow x <> " retries: " <> e) f
-        | otherwise = f `catchT` \_ -> do
+        | x >= n = fmapLT (\e -> "error after " <> sshow x <> " retries: " <> e) ((x,) <$> f)
+        | otherwise = ((x,) <$> f) `catchT` \_ -> do
             liftIO $ threadDelay (1000000 * min 60 (2^(x-1)))
             go (succ x)
 

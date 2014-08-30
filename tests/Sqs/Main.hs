@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- |
 -- Module: Main
@@ -29,6 +30,7 @@ import Control.Arrow (second)
 import Control.Error
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Control
 
 import qualified Data.List as L
 import Data.Monoid
@@ -138,7 +140,7 @@ simpleSqs command = do
     simpleAws c sqsConfiguration command
 
 simpleSqsT
-    :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
+    :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadBaseControl IO m, MonadIO m)
     => r
     -> EitherT T.Text m (MemoryResponse a)
 simpleSqsT = tryT . simpleSqs
