@@ -21,6 +21,7 @@ module Utils
 
 -- * General Utils
 , sshow
+, mustFail
 , tryT
 , retryT
 , retryT_
@@ -127,6 +128,11 @@ retryT_ n f = go 1
 
 sshow :: (Show a, IsString b) => a -> b
 sshow = fromString . show
+
+mustFail :: Monad m => EitherT e m a -> EitherT T.Text m ()
+mustFail = EitherT . eitherT
+    (const . return $ Right ())
+    (const . return $ Left "operation succeeded when a failure was expected")
 
 evalTestTM
     :: Functor f

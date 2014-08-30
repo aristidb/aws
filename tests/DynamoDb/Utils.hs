@@ -31,6 +31,7 @@ module DynamoDb.Utils
 -- * DynamoDb Utils
 , simpleDy
 , simpleDyT
+, dyT
 , withTable
 , withTable_
 , createTestTable
@@ -45,10 +46,13 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Control
+import Control.Monad.Trans.Resource
 
 import Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+
+import qualified Network.HTTP.Client as HTTP
 
 import Test.Tasty
 import Test.QuickCheck.Instances ()
@@ -94,6 +98,16 @@ simpleDyT
     => r
     -> EitherT T.Text m (MemoryResponse a)
 simpleDyT = tryT . simpleDy
+
+dyT
+    :: (Transaction r a, ServiceConfiguration r ~ DY.DdbConfiguration)
+    => Configuration
+    -> HTTP.Manager
+    -> r
+    -> EitherT T.Text IO a
+dyT cfg manager req = do
+    Response _ r <- liftIO . runResourceT $ aws cfg dyConfiguration manager req
+    hoistEither $ fmapL sshow r
 
 withTable
     :: T.Text -- ^ table Name

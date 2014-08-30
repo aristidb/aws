@@ -22,14 +22,19 @@ module Main
 ( main
 ) where
 
+import Aws
 import qualified Aws.DynamoDb as DY
 
 import Control.Arrow (second)
 import Control.Error
 import Control.Monad
+import Control.Monad.IO.Class
 
+import Data.IORef
 import qualified Data.List as L
 import qualified Data.Text as T
+
+import qualified Network.HTTP.Client as HTTP
 
 import Test.Tasty
 import Test.QuickCheck.Instances ()
@@ -90,6 +95,7 @@ tests :: TestTree
 tests = testGroup "DynamoDb Tests"
     [ test_table
     -- , test_message
+    , test_core
     ]
 
 -- -------------------------------------------------------------------------- --
@@ -114,3 +120,38 @@ prop_createDescribeDeleteTable readCapacity writeCapacity tableName = do
     handleT (\e -> deleteTable >> left e) $ do
         retryT 6 . void . simpleDyT $ DY.DescribeTable tTableName
         deleteTable
+
+-- -------------------------------------------------------------------------- --
+-- Test core functionality
+
+test_core :: TestTree
+test_core = testGroup "Core Tests"
+        [ eitherTOnceTest0 "connectionReuse" prop_connectionReuse
+        ]
+
+prop_connectionReuse
+    :: EitherT T.Text IO ()
+prop_connectionReuse = do
+    c <- liftIO $ do
+        cfg <- baseConfiguration
+
+        -- counts the number of TCP connections
+        ref <- newIORef (0 :: Int)
+
+        void . HTTP.withManager (managerSettings ref) $ \manager -> runEitherT $
+            handleT (error . T.unpack) . replicateM_ 3 $ do
+                void $ dyT cfg manager DY.ListTables
+                mustFail . dyT cfg manager $ DY.DescribeTable "____"
+
+        readIORef ref
+    unless (c == 1) $
+        left "The TCP connection has not been reused"
+  where
+    managerSettings ref = HTTP.defaultManagerSettings
+        { HTTP.managerRawConnection = do
+            mkConn <- HTTP.managerRawConnection HTTP.defaultManagerSettings
+            return $ \a b c -> do
+                atomicModifyIORef ref $ \i -> (succ i, ())
+                mkConn a b c
+        }
+
