@@ -122,6 +122,7 @@ import           Data.Aeson
 import qualified Data.Aeson                   as A
 import           Data.Aeson.Types             (Pair, parseEither)
 import qualified Data.Aeson.Types             as A
+import qualified Data.Attoparsec.ByteString   as AttoB (endOfInput)
 import qualified Data.Attoparsec.Text         as Atto
 import           Data.Byteable
 import qualified Data.ByteString.Base16       as Base16
@@ -836,7 +837,7 @@ instance FromJSON AmazonError where
 -------------------------------------------------------------------------------
 ddbResponseConsumer :: A.FromJSON a => IORef DdbResponse -> HTTPResponseConsumer a
 ddbResponseConsumer ref resp = do
-    val <- HTTP.responseBody resp $$+- sinkParser A.json'
+    val <- HTTP.responseBody resp $$+- sinkParser (A.json' <* AttoB.endOfInput)
     case statusCode of
       200 -> rSuccess val
       _   -> rError val
@@ -983,10 +984,13 @@ conditionJson Condition{..} = condAttr .= condOp
 
 
 instance ToJSON CondOp where
-    toJSON c = object
-      [ "ComparisonOperator" .= String (renderCondOp c)
-      , "AttributeValueList" .= getCondValues c ]
-
+    toJSON c = object $ ("ComparisonOperator" .= String (renderCondOp c)) : valueList
+      where
+        valueList =
+          let vs = getCondValues c in
+            if null vs
+            then []
+            else ["AttributeValueList" .= vs]
 
 -------------------------------------------------------------------------------
 dyApiVersion :: B.ByteString

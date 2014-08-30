@@ -1,22 +1,28 @@
-{ cabal, aeson, base16Bytestring, base64Bytestring, blazeBuilder
-, byteable, caseInsensitive, cereal, conduit, conduitExtra
-, cryptohash, dataDefault, filepath, httpConduit, httpTypes
-, liftedBase, monadControl, mtl, resourcet, text, time
-, transformers, unorderedContainers, utf8String, vector, xmlConduit
+{ cabal, aeson, attoparsec, base16Bytestring, base64Bytestring
+, blazeBuilder, byteable, caseInsensitive, cereal, conduit
+, conduitExtra, cryptohash, dataDefault, errors, filepath
+, httpConduit, httpTypes, liftedBase, monadControl, mtl, network
+, QuickCheck, quickcheckInstances, resourcet, safe, scientific
+, tagged, tasty, tastyQuickcheck, text, time, transformers
+, unorderedContainers, utf8String, vector, xmlConduit
 }:
 
 cabal.mkDerivation (self: {
   pname = "aws";
-  version = "0.9";
+  version = "0.10.3";
   src = ./.;
   isLibrary = true;
   isExecutable = true;
   buildDepends = [
-    aeson base16Bytestring base64Bytestring blazeBuilder byteable
-    caseInsensitive cereal conduit conduitExtra cryptohash dataDefault
-    filepath httpConduit httpTypes liftedBase monadControl mtl
-    resourcet text time transformers unorderedContainers utf8String
-    vector xmlConduit
+    aeson attoparsec base16Bytestring base64Bytestring blazeBuilder
+    byteable caseInsensitive cereal conduit conduitExtra cryptohash
+    dataDefault filepath httpConduit httpTypes liftedBase monadControl
+    mtl network resourcet safe scientific tagged text time transformers
+    unorderedContainers utf8String vector xmlConduit
+  ];
+  testDepends = [
+    aeson errors mtl QuickCheck quickcheckInstances tagged tasty
+    tastyQuickcheck text transformers
   ];
   meta = {
     homepage = "http://github.com/aristidb/aws";

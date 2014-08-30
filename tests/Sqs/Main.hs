@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- |
 -- Module: Main
@@ -29,10 +30,15 @@ import Control.Arrow (second)
 import Control.Error
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Control
+import Control.Monad.Trans.Resource
 
+import Data.IORef
 import qualified Data.List as L
 import Data.Monoid
 import qualified Data.Text as T
+
+import qualified Network.HTTP.Client as HTTP
 
 import Test.Tasty
 import Test.QuickCheck.Instances ()
@@ -84,14 +90,15 @@ help = L.intercalate "\n"
     , "When running this test-suite through cabal you may use the following"
     , "command:"
     , ""
-    , "    cabal test sqs-tests --test-option=--run-with-aws-credentials"
+    , "    cabal test --test-option=--run-with-aws-credentials sqs-tests"
     , ""
     ]
 
 tests :: TestTree
-tests = testGroup "SQS Tests"
+tests = withQueueTest defaultQueueName $ \getQueueParams -> testGroup "SQS Tests"
     [ test_queue
-    , test_message
+    , test_message getQueueParams
+    , test_core getQueueParams
     ]
 
 -- -------------------------------------------------------------------------- --
@@ -129,6 +136,16 @@ sqsConfiguration = SQS.SqsConfiguration
     , SQS.sqsDefaultExpiry = 180
     }
 
+sqsT
+    :: (Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration)
+    => Configuration
+    -> HTTP.Manager
+    -> r
+    -> EitherT T.Text IO a
+sqsT cfg manager req = do
+    Response _ r <- liftIO . runResourceT $ aws cfg sqsConfiguration manager req
+    hoistEither $ fmapL sshow r
+
 simpleSqs
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
     => r
@@ -138,7 +155,7 @@ simpleSqs command = do
     simpleAws c sqsConfiguration command
 
 simpleSqsT
-    :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadIO m)
+    :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadBaseControl IO m, MonadIO m)
     => r
     -> EitherT T.Text m (MemoryResponse a)
 simpleSqsT = tryT . simpleSqs
@@ -171,6 +188,7 @@ prop_createListDeleteQueue
     :: T.Text -- ^ queue name
     -> EitherT T.Text IO ()
 prop_createListDeleteQueue queueName = do
+    tQueueName <- testData queueName
     SQS.CreateQueueResponse queueUrl <- simpleSqsT $ SQS.CreateQueue Nothing tQueueName
     let queue = sqsQueueName queueUrl
     handleT (\e -> deleteQueue queue >> left e) $ do
@@ -180,25 +198,23 @@ prop_createListDeleteQueue queueName = do
                 . left $ "queue " <> sshow queueUrl <> " not listed"
         deleteQueue queue
   where
-    tQueueName = testData queueName
     deleteQueue queueUrl = void $ simpleSqsT (SQS.DeleteQueue queueUrl)
 
 -- -------------------------------------------------------------------------- --
 -- Message Tests
 
-test_message :: TestTree
-test_message =
-    withQueueTest defaultQueueName $ \getQueueParams -> testGroup "Queue Tests"
-        [ eitherTOnceTest0 "SendReceiveDeleteMessage" $ do
-            (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessage queue
-        , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling" $ do
-            (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessageLongPolling queue
-        , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling1" $ do
-            (_, queue) <- liftIO getQueueParams
-            prop_sendReceiveDeleteMessageLongPolling1 queue
-        ]
+test_message :: IO (T.Text, SQS.QueueName) -> TestTree
+test_message getQueueParams = testGroup "Queue Tests"
+    [ eitherTOnceTest0 "SendReceiveDeleteMessage" $ do
+        (_, queue) <- liftIO getQueueParams
+        prop_sendReceiveDeleteMessage queue
+    , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling" $ do
+        (_, queue) <- liftIO getQueueParams
+        prop_sendReceiveDeleteMessageLongPolling queue
+    , eitherTOnceTest0 "SendReceiveDeleteMessageLongPolling1" $ do
+        (_, queue) <- liftIO getQueueParams
+        prop_sendReceiveDeleteMessageLongPolling1 queue
+    ]
 
 -- | Simple send and short-polling receive. First sends all messages
 -- and receives messages thereafter one by one.
@@ -314,3 +330,50 @@ prop_sendReceiveDeleteMessageLongPolling1 queue = do
     unless (sent == recv)
         $ left $ "received messages don't match send messages; sent: "
             <> sshow sent <> "; got: " <> sshow recv
+
+
+-- -------------------------------------------------------------------------- --
+-- Test core functionality
+
+test_core :: IO (T.Text, SQS.QueueName) -> TestTree
+test_core getQueueParams = testGroup "Core Tests"
+    [ eitherTOnceTest0 "connectionReuse" $ do
+        (_, queue) <- liftIO getQueueParams
+        prop_connectionReuse queue
+    ]
+
+prop_connectionReuse
+    :: SQS.QueueName
+    -> EitherT T.Text IO ()
+prop_connectionReuse queue = do
+    c <- liftIO $ do
+        cfg <- baseConfiguration
+
+        -- used for counting the number of TCP connections
+        ref <- newIORef (0 :: Int)
+
+        -- Use a single manager for all HTTP requests
+        void . HTTP.withManager (managerSettings ref) $ \manager -> runEitherT $
+
+            handleT (error . T.unpack) . replicateM_ 3 $ do
+                void . sqsT cfg manager $ SQS.ListQueues Nothing
+                mustFail . sqsT cfg manager $
+                    SQS.SendMessage "" (SQS.QueueName "" "") [] Nothing
+                void . sqsT cfg manager $
+                    SQS.SendMessage "test-message" queue [] Nothing
+                void . sqsT cfg manager $
+                    SQS.ReceiveMessage Nothing [] Nothing [] queue (Just 20)
+
+        readIORef ref
+    unless (c == 1) $
+        left "The TCP connection has not been reused"
+  where
+
+    managerSettings ref = HTTP.defaultManagerSettings
+        { HTTP.managerRawConnection = do
+            mkConn <- HTTP.managerRawConnection HTTP.defaultManagerSettings
+            return $ \a b c -> do
+                atomicModifyIORef ref $ \i -> (succ i, ())
+                mkConn a b c
+        }
+
