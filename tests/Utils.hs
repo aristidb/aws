@@ -73,8 +73,10 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 --
 testDataPrefix :: IsString a => MonadBase IO m => m a
 testDataPrefix = do
-    t <- liftBase $ fmap (show . floor) getPOSIXTime
-    return . fromString $ "__TEST_AWSHASKELLBINDINGS__" ++ t
+    t <- liftBase $ getPOSIXTime
+    let t' :: Int
+        t' = floor (t * 1000)
+    return . fromString $ "__TEST_AWSHASKELLBINDINGS__" ++ show t'
 
 -- -------------------------------------------------------------------------- --
 -- General Utils

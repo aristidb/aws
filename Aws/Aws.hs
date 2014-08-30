@@ -209,12 +209,18 @@ unsafeAwsRef
 unsafeAwsRef cfg info manager metadataRef request = do
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
   let q = signQuery request info sd
-  liftIO $ logger cfg Debug $ T.pack $ "String to sign: " ++ show (sqStringToSign q)
+  let logDebug = liftIO . logger cfg Debug . T.pack
+  logDebug $ "String to sign: " ++ show (sqStringToSign q)
   httpRequest <- liftIO $ queryToHttpRequest q
-  liftIO $ logger cfg Debug $ T.pack $ "Host: " ++ show (HTTP.host httpRequest)
-  liftIO $ logger cfg Debug $ T.pack $ "Path: " ++ show (HTTP.path httpRequest)
-  liftIO $ logger cfg Debug $ T.pack $ "Query string: " ++ show (HTTP.queryString httpRequest)
+  logDebug $ "Host: " ++ show (HTTP.host httpRequest)
+  logDebug $ "Path: " ++ show (HTTP.path httpRequest)
+  logDebug $ "Query string: " ++ show (HTTP.queryString httpRequest)
+  case HTTP.requestBody httpRequest of
+    HTTP.RequestBodyLBS lbs -> logDebug $ "Body: " ++ show lbs
+    HTTP.RequestBodyBS bs -> logDebug $ "Body: " ++ show bs
+    _ -> return ()
   hresp <- HTTP.http httpRequest manager
+  logDebug $ "Response status: " ++ show (HTTP.responseStatus hresp)
   forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
     logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
   responseConsumer request metadataRef hresp

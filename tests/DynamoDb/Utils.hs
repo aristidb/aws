@@ -86,7 +86,7 @@ simpleDy
     => r
     -> m (MemoryResponse a)
 simpleDy command = do
-    c <- baseConfiguration
+    c <- dbgConfiguration
     simpleAws c dyConfiguration command
 
 simpleDyT
