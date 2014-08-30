@@ -53,6 +53,7 @@ import Data.Monoid
 import Data.Proxy
 import Data.String
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Data.Typeable
 
 import Test.QuickCheck.Property
@@ -61,6 +62,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 
 import System.Exit (ExitCode)
+import System.IO (stderr)
 
 import Data.Time.Clock.POSIX (getPOSIXTime)
 
@@ -121,7 +123,8 @@ retryT_ n f = go 1
   where
     go x
         | x >= n = fmapLT (\e -> "error after " <> sshow x <> " retries: " <> e) ((x,) <$> f)
-        | otherwise = ((x,) <$> f) `catchT` \_ -> do
+        | otherwise = ((x,) <$> f) `catchT` \e -> do
+            liftIO $ T.hPutStrLn stderr $ "Retrying after error: " <> e
             liftIO $ threadDelay (1000000 * min 60 (2^(x-1)))
             go (succ x)
 

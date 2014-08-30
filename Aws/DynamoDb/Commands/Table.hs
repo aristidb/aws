@@ -284,7 +284,7 @@ instance A.FromJSON TableDescription where
                          <*> t .: "TableStatus"
                          <*> (fmap (posixSecondsToUTCTime . fromInteger) <$> t .:? "CreationDateTime")
                          <*> t .: "ItemCount"
-                         <*> t .: "AttributeDefinitions"
+                         <*> t .:? "AttributeDefinitions" .!= []
                          <*> t .:? "KeySchema"
                          <*> t .: "ProvisionedThroughput"
                          <*> t .:? "LocalSecondaryIndexes" .!= []
