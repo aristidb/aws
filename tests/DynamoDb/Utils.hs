@@ -31,7 +31,6 @@ module DynamoDb.Utils
 -- * DynamoDb Utils
 , simpleDy
 , simpleDyT
-, withTableTest
 , withTable
 , withTable_
 , createTestTable
@@ -96,19 +95,6 @@ simpleDyT
     -> EitherT T.Text m (MemoryResponse a)
 simpleDyT = tryT . simpleDy
 
-withTableTest
-    :: T.Text -- ^ table Name
-    -> Int -- ^ read capacity (#(non-consistent) reads * itemsize/4KB)
-    -> Int -- ^ write capacity (#writes * itemsize/1KB)
-    -> (T.Text -> TestTree) -- ^ test tree
-    -> TestTree
-withTableTest tableName readCapacity writeCapacity f =
-    withResource createTable (const deleteTable) $ \_ -> f tTableName
-  where
-    tTableName = testData tableName
-    createTable = createTestTable tTableName readCapacity writeCapacity
-    deleteTable = void . simpleDy $ DY.DeleteTable tTableName
-
 withTable
     :: T.Text -- ^ table Name
     -> Int -- ^ read capacity (#(non-consistent) reads * itemsize/4KB)
@@ -125,22 +111,24 @@ withTable_
     -> (T.Text -> IO a) -- ^ test tree
     -> IO a
 withTable_ prefix tableName readCapacity writeCapacity f =
-    bracket_ createTable deleteTable $ f tTableName
-  where
-    tTableName = if prefix then testData tableName else tableName
-    deleteTable = do
-        r <- runEitherT . retryT 6 $
-            void (simpleDyT $ DY.DeleteTable tTableName) `catchT` \e ->
-                liftIO . T.hPutStrLn stderr $ "attempt to delete table failed: " <> e
-        either (error . T.unpack) (const $ return ()) r
+    do
+      tTableName <- if prefix then testData tableName else return tableName
 
-    createTable = do
-        r <- runEitherT $ do
-            retryT 3 $ tryT $ createTestTable tTableName readCapacity writeCapacity
-            retryT 6 $ do
-                tableDesc <- simpleDyT $ DY.DescribeTable tTableName
-                when (DY.rTableStatus tableDesc == "CREATING") $ left "Table not ready: status CREATING"
-        either (error . T.unpack) return r
+      let deleteTable = do
+            r <- runEitherT . retryT 6 $
+                void (simpleDyT $ DY.DeleteTable tTableName) `catchT` \e ->
+                    liftIO . T.hPutStrLn stderr $ "attempt to delete table failed: " <> e
+            either (error . T.unpack) (const $ return ()) r
+
+      let createTable = do
+            r <- runEitherT $ do
+                retryT 3 $ tryT $ createTestTable tTableName readCapacity writeCapacity
+                retryT 6 $ do
+                    tableDesc <- simpleDyT $ DY.DescribeTable tTableName
+                    when (DY.rTableStatus tableDesc == "CREATING") $ left "Table not ready: status CREATING"
+            either (error . T.unpack) return r
+
+      bracket_ createTable deleteTable $ f tTableName
 
 createTestTable
     :: T.Text -- ^ table Name

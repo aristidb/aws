@@ -44,6 +44,7 @@ import Control.Error hiding (syncIO)
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.IO.Class
+import Control.Monad.Base
 import Control.Monad.Trans.Control
 
 import Data.Aeson (FromJSON, ToJSON, encode, eitherDecode)
@@ -61,6 +62,8 @@ import Test.Tasty.QuickCheck
 
 import System.Exit (ExitCode)
 
+import Data.Time.Clock.POSIX (getPOSIXTime)
+
 -- -------------------------------------------------------------------------- --
 -- Static Test parameters
 --
@@ -68,8 +71,10 @@ import System.Exit (ExitCode)
 -- | This prefix is used for the IDs and names of all entities that are
 -- created in the AWS account.
 --
-testDataPrefix :: IsString a => a
-testDataPrefix = "__TEST_AWSHASKELLBINDINGS__"
+testDataPrefix :: IsString a => MonadBase IO m => m a
+testDataPrefix = do
+    t <- liftBase $ fmap (show . floor) getPOSIXTime
+    return . fromString $ "__TEST_AWSHASKELLBINDINGS__" ++ t
 
 -- -------------------------------------------------------------------------- --
 -- General Utils
@@ -103,8 +108,8 @@ syncIO a = EitherT $ LE.catches (Right <$> a)
     , LE.Handler $ return . Left
     ]
 
-testData :: (IsString a, Monoid a) => a -> a
-testData a = testDataPrefix <> a
+testData :: (IsString a, Monoid a, MonadBaseControl IO m) => a -> m a
+testData a = fmap (<> a) testDataPrefix
 
 retryT :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m a
 retryT n f = snd <$> retryT_ n f

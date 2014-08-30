@@ -86,7 +86,7 @@ help = L.intercalate "\n"
     , "When running this test-suite through cabal you may use the following"
     , "command:"
     , ""
-    , "    cabal test sqs-tests --test-option=--run-with-aws-credentials"
+    , "    cabal test --test-option=--run-with-aws-credentials sqs-tests"
     , ""
     ]
 
@@ -173,6 +173,7 @@ prop_createListDeleteQueue
     :: T.Text -- ^ queue name
     -> EitherT T.Text IO ()
 prop_createListDeleteQueue queueName = do
+    tQueueName <- testData queueName
     SQS.CreateQueueResponse queueUrl <- simpleSqsT $ SQS.CreateQueue Nothing tQueueName
     let queue = sqsQueueName queueUrl
     handleT (\e -> deleteQueue queue >> left e) $ do
@@ -182,7 +183,6 @@ prop_createListDeleteQueue queueName = do
                 . left $ "queue " <> sshow queueUrl <> " not listed"
         deleteQueue queue
   where
-    tQueueName = testData queueName
     deleteQueue queueUrl = void $ simpleSqsT (SQS.DeleteQueue queueUrl)
 
 -- -------------------------------------------------------------------------- --

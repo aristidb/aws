@@ -108,11 +108,9 @@ prop_createDescribeDeleteTable
     -> T.Text -- ^ table name
     -> EitherT T.Text IO ()
 prop_createDescribeDeleteTable readCapacity writeCapacity tableName = do
+    tTableName <- testData tableName
     tryT $ createTestTable tTableName readCapacity writeCapacity
+    let deleteTable = retryT 6 . void $ simpleDyT (DY.DeleteTable tTableName)
     handleT (\e -> deleteTable >> left e) $ do
         retryT 6 . void . simpleDyT $ DY.DescribeTable tTableName
         deleteTable
-  where
-    tTableName = testData tableName
-    deleteTable = retryT 6 . void $ simpleDyT (DY.DeleteTable tTableName)
-

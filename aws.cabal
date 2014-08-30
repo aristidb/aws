@@ -277,7 +277,9 @@ test-suite sqs-tests
         tasty >= 0.8,
         tasty-quickcheck >= 0.8,
         text >= 1.1,
-        transformers >= 0.3
+        time,
+        transformers >= 0.3,
+        transformers-base >= 0.4
 
     ghc-options: -Wall -threaded
 
@@ -308,5 +310,7 @@ test-suite dynamodb-tests
         tasty >= 0.8,
         tasty-quickcheck >= 0.8,
         text >= 1.1,
-        transformers >= 0.3
+        time,
+        transformers >= 0.3,
+        transformers-base >= 0.4
 
