@@ -266,32 +266,31 @@ awsIteratedAll cfg scfg manager req_ = go req_ Nothing
                                          mapMetadata (meta:) `liftM` go nextRequest (Just resp)
 -}
 
-awsIteratedSource :: (IteratedTransaction r a)
-                     => Configuration
-                     -> ServiceConfiguration r NormalQuery
-                     -> HTTP.Manager
-                     -> r
-                     -> C.Producer (ResourceT IO) (Response (ResponseMetadata a) a)
-awsIteratedSource cfg scfg manager req_ = go req_
-  where go request = do resp <- lift $ aws cfg scfg manager request
-                        C.yield resp
-                        case responseResult resp of
-                          Left _  -> return ()
-                          Right x ->
-                            case nextIteratedRequest request x of
-                              Nothing -> return ()
-                              Just nextRequest -> go nextRequest
+awsIteratedSource
+    :: (IteratedTransaction r a)
+    => Configuration
+    -> ServiceConfiguration r NormalQuery
+    -> HTTP.Manager
+    -> r
+    -> C.Producer (ResourceT IO) (Response (ResponseMetadata a) a)
+awsIteratedSource cfg scfg manager req_ = awsIteratedSource' run req_
+  where
+    run r = do
+        res <- aws cfg scfg manager r
+        a <- readResponseIO res
+        return (a, res)
 
-awsIteratedList :: (IteratedTransaction r a, ListResponse a i)
-                     => Configuration
-                     -> ServiceConfiguration r NormalQuery
-                     -> HTTP.Manager
-                     -> r
-                     -> C.Producer (ResourceT IO) i
-awsIteratedList cfg scfg manager req
-  = awsIteratedSource cfg scfg manager req
-    C.=$=
-    CL.concatMapM (fmap listResponse . readResponseIO)
+
+awsIteratedList
+    :: (IteratedTransaction r a, ListResponse a i)
+    => Configuration
+    -> ServiceConfiguration r NormalQuery
+    -> HTTP.Manager
+    -> r
+    -> C.Producer (ResourceT IO) i
+awsIteratedList cfg scfg manager req = awsIteratedList' run req
+  where
+    run r = readResponseIO =<< aws cfg scfg manager r
 
 
 -------------------------------------------------------------------------------
@@ -300,17 +299,17 @@ awsIteratedList cfg scfg manager req
 -- within application specific monadic contexts.
 awsIteratedSource'
     :: (Monad m, IteratedTransaction r a)
-    => (r -> m a)
+    => (r -> m (a, b))
     -- ^ A runner function for executing transactions.
     -> r
     -- ^ An initial request
-    -> C.Producer m a
+    -> C.Producer m b
 awsIteratedSource' run r0 = go r0
     where
       go q = do
-          r <- lift $ run q
-          C.yield r
-          case nextIteratedRequest q r of
+          (a, b) <- lift $ run q
+          C.yield b
+          case nextIteratedRequest q a of
             Nothing -> return ()
             Just q' -> go q'
 
@@ -326,4 +325,9 @@ awsIteratedList'
     -> r
     -- ^ An initial request
     -> C.Producer m c
-awsIteratedList' run r0 = awsIteratedSource' run r0 C.=$= CL.concatMap (listResponse)
+awsIteratedList' run r0 =
+    awsIteratedSource' run' r0 C.=$=
+    CL.concatMap listResponse
+  where
+    dupl a = (a,a)
+    run' r = dupl `liftM` run r
