@@ -76,6 +76,11 @@ Library
                        Aws.S3.Commands.HeadObject
                        Aws.S3.Commands.PutBucket
                        Aws.S3.Commands.PutObject
+                       Aws.S3.Commands.InitiateMultipartUpload
+                       Aws.S3.Commands.UploadPart
+                       Aws.S3.Commands.CompleteMultipartUpload
+                       Aws.S3.Commands.AbortMultipartUpload
+                       Aws.S3.Commands.MultipartUpload
                        Aws.S3.Core
                        Aws.Ses
                        Aws.Ses.Commands
@@ -167,6 +172,23 @@ Library
 
 Executable GetObject
   Main-is: GetObject.hs
+  Hs-source-dirs: Examples
+
+  if !flag(Examples)
+    Buildable: False
+  else
+    Buildable: True
+    Build-depends:
+                       base == 4.*,
+                       aws,
+                       http-conduit,
+                       conduit,
+                       conduit-extra
+
+  Default-Language: Haskell2010
+
+Executable MultipartUpload
+  Main-is: MultipartUpload.hs
   Hs-source-dirs: Examples
 
   if !flag(Examples)
