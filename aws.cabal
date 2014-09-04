@@ -28,7 +28,7 @@ Source-repository head
 
 Flag Examples
   Description: Build the examples.
-  Default: True
+  Default: False
 
 Library
   Exposed-modules:
