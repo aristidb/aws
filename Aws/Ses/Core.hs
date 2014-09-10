@@ -3,7 +3,9 @@ module Aws.Ses.Core
     , SesMetadata(..)
 
     , SesConfiguration(..)
-    , sesUsEast
+    , sesEuWest1
+    , sesUsEast1
+    , sesUsWest2
     , sesHttpsGet
     , sesHttpsPost
 
@@ -70,13 +72,19 @@ data SesConfiguration qt
 
 -- HTTP is not supported right now, always use HTTPS
 instance DefaultServiceConfiguration (SesConfiguration NormalQuery) where
-    defServiceConfig = sesHttpsPost sesUsEast
+    defServiceConfig = sesHttpsPost sesUsEast1
 
 instance DefaultServiceConfiguration (SesConfiguration UriOnlyQuery) where
-    defServiceConfig = sesHttpsGet sesUsEast
+    defServiceConfig = sesHttpsGet sesUsEast1
 
-sesUsEast :: B.ByteString
-sesUsEast = "email.us-east-1.amazonaws.com"
+sesEuWest1 :: B.ByteString
+sesEuWest1 = "email.eu-west-1.amazonaws.com"
+
+sesUsEast1 :: B.ByteString
+sesUsEast1 = "email.us-east-1.amazonaws.com"
+
+sesUsWest2 :: B.ByteString
+sesUsWest2 = "email.us-west-2.amazonaws.com"
 
 sesHttpsGet :: B.ByteString -> SesConfiguration qt
 sesHttpsGet endpoint = SesConfiguration Get endpoint
