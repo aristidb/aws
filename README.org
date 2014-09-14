@@ -90,6 +90,15 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.10 series
 
+- 0.10.4
+  - S3: support for multi-part uploads
+  - DynamoDB: fixes for JSON serialization
+      WARNING: This includes making some fields in TableDescription Maybe fields, which is breaking. But DynamoDB support was
+               and is also marked as EXPERIMENTAL.
+  - DynamoDB: TCP connection reuse where possible (improving performance)
+  - DynamoDB: Added test suite
+  - SES: support for additional regions
+
 - 0.10.3
   - fix bug introduced in 0.10.2 that broke SQS and IAM connections without STS
 
