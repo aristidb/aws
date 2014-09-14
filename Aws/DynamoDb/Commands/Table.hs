@@ -391,7 +391,12 @@ data UpdateTable
       }
     deriving (Show, Generic)
 instance A.ToJSON UpdateTable where
-    toJSON = A.genericToJSON $ dropOpt 6
+    toJSON a = A.object
+        $ "TableName" .= updateTableName a
+        : "ProvisionedThroughput" .= updateProvisionedThroughput a
+        : case updateGlobalSecondaryIndexUpdates a of
+            [] -> []
+            l -> [ "GlobalSecondaryIndexUpdates" .= l ]
 
 -- | ServiceConfiguration: 'DdbConfiguration'
 instance SignQuery UpdateTable where
