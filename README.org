@@ -90,6 +90,9 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.9 series
 
+- 0.9.4
+  - allow conduit 1.2
+
 - 0.9.3
   - fix performance regression for loadCredentialsDefault
   - add generic makeCredentials function
