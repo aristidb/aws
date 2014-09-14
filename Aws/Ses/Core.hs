@@ -4,6 +4,7 @@ module Aws.Ses.Core
 
     , SesConfiguration(..)
     , sesEuWest1
+    , sesUsEast
     , sesUsEast1
     , sesUsWest2
     , sesHttpsGet
@@ -79,6 +80,9 @@ instance DefaultServiceConfiguration (SesConfiguration UriOnlyQuery) where
 
 sesEuWest1 :: B.ByteString
 sesEuWest1 = "email.eu-west-1.amazonaws.com"
+
+sesUsEast :: B.ByteString
+sesUsEast = sesUsEast1
 
 sesUsEast1 :: B.ByteString
 sesUsEast1 = "email.us-east-1.amazonaws.com"
