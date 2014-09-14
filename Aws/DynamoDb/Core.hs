@@ -1,20 +1,22 @@
-{-# LANGUAGE DeriveDataTypeable        #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE OverloadedStrings         #-}
-{-# LANGUAGE RecordWildCards           #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TypeFamilies              #-}
-{-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NoMonomorphismRestriction  #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Aws.DynamoDb.Core
 -- Copyright   :  Soostone Inc, Chris Allen
 -- License     :  BSD3
 --
--- Maintainer  :  Ozgun Ataman, Chris Allen
+-- Maintainer  :  Ozgun Ataman <ozgun.ataman@soostone.com>
 -- Stability   :  experimental
 --
 -- Shared types and utilities for DyanmoDb functionality.
@@ -65,6 +67,12 @@ module Aws.DynamoDb.Core
     , Item
     , item
     , attributes
+    , ToDynItem (..)
+    , FromDynItem (..)
+    , fromItem
+    , Parser (..)
+    , getAttr
+    , getAttr'
 
     -- * Common types used by operations
     , Conditions (..)
@@ -80,7 +88,7 @@ module Aws.DynamoDb.Core
     , ItemCollectionMetrics (..)
     , ReturnItemCollectionMetrics (..)
     , UpdateReturn (..)
-    , QuerySelect
+    , QuerySelect (..)
     , querySelectJson
 
     -- * Size estimation
@@ -137,6 +145,7 @@ import           Data.Scientific
 import qualified Data.Serialize               as Ser
 import qualified Data.Set                     as S
 import           Data.String
+import           Data.Tagged
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
@@ -360,13 +369,13 @@ instance DynVal UTCTime where
 
 
 -------------------------------------------------------------------------------
-pico :: Integer
-pico = 10 ^ (12 :: Integer)
+pico :: Rational
+pico = toRational $ 10 ^ (12 :: Integer)
 
 
 -------------------------------------------------------------------------------
 dayPico :: Integer
-dayPico = 86400 * pico
+dayPico = 86400 * round pico
 
 
 -------------------------------------------------------------------------------
@@ -376,8 +385,7 @@ dayPico = 86400 * pico
 toTS :: UTCTime -> Integer
 toTS (UTCTime (ModifiedJulianDay i) diff) = i' + diff'
     where
-      diff' = floor (toRational diff * pico')
-      pico' = toRational pico
+      diff' = floor (toRational diff * pico)
       i' = i * dayPico
 
 
@@ -389,7 +397,7 @@ fromTS :: Integer -> UTCTime
 fromTS i = UTCTime (ModifiedJulianDay days) diff
     where
       (days, secs) = i `divMod` dayPico
-      diff = fromRational ((toRational secs) / toRational pico)
+      diff = fromRational ((toRational secs) / pico)
 
 
 -- | Encoded as 0 and 1.
@@ -408,7 +416,8 @@ instance DynVal Bool where
 -- | Type wrapper for binary data to be written to DynamoDB. Wrap any
 -- 'Serialize' instance in there and 'DynVal' will know how to
 -- automatically handle conversions in binary form.
-newtype Bin a = Bin a deriving (Eq,Show,Read,Ord)
+newtype Bin a = Bin { getBin :: a }
+    deriving (Eq,Show,Read,Ord,Typeable,Enum)
 
 
 instance (Ser.Serialize a) => DynVal (Bin a) where
@@ -548,6 +557,7 @@ attributes = map (\ (k, v) -> Attribute k v) . M.toList
 
 showT :: Show a => a -> T.Text
 showT = T.pack . show
+
 
 instance ToJSON DValue where
     toJSON (DNum i) = object ["N" .= showT i]
@@ -1139,5 +1149,165 @@ nullAttr (Attribute _ val) =
       DStringSet s | S.null s -> True
       DBinSet s | S.null s -> True
       _ -> False
+
+
+
+
+-------------------------------------------------------------------------------
+--
+-- | Item Parsing
+--
+-------------------------------------------------------------------------------
+
+
+
+-- | Failure continuation.
+type Failure f r   = String -> f r
+
+-- | Success continuation.
+type Success a f r = a -> f r
+
+
+-- | A continuation-based parser type.
+newtype Parser a = Parser {
+      runParser :: forall f r.
+                   Failure f r
+                -> Success a f r
+                -> f r
+    }
+
+instance Monad Parser where
+    m >>= g = Parser $ \kf ks -> let ks' a = runParser (g a) kf ks
+                                 in runParser m kf ks'
+    {-# INLINE (>>=) #-}
+    return a = Parser $ \_kf ks -> ks a
+    {-# INLINE return #-}
+    fail msg = Parser $ \kf _ks -> kf msg
+    {-# INLINE fail #-}
+
+instance Functor Parser where
+    fmap f m = Parser $ \kf ks -> let ks' a = ks (f a)
+                                  in runParser m kf ks'
+    {-# INLINE fmap #-}
+
+instance Applicative Parser where
+    pure  = return
+    {-# INLINE pure #-}
+    (<*>) = apP
+    {-# INLINE (<*>) #-}
+
+instance Alternative Parser where
+    empty = fail "empty"
+    {-# INLINE empty #-}
+    (<|>) = mplus
+    {-# INLINE (<|>) #-}
+
+instance MonadPlus Parser where
+    mzero = fail "mzero"
+    {-# INLINE mzero #-}
+    mplus a b = Parser $ \kf ks -> let kf' _ = runParser b kf ks
+                                   in runParser a kf' ks
+    {-# INLINE mplus #-}
+
+instance Monoid (Parser a) where
+    mempty  = fail "mempty"
+    {-# INLINE mempty #-}
+    mappend = mplus
+    {-# INLINE mappend #-}
+
+apP :: Parser (a -> b) -> Parser a -> Parser b
+apP d e = do
+  b <- d
+  a <- e
+  return (b a)
+{-# INLINE apP #-}
+
+
+-------------------------------------------------------------------------------
+-- | Types convertible to DynamoDb 'Item' collections.
+--
+-- Use 'attr' and 'attrAs' combinators to conveniently define instances.
+class ToDynItem a where
+    toItem :: a -> Item
+
+
+-------------------------------------------------------------------------------
+-- | Types parseable from DynamoDb 'Item' collections.
+--
+-- User 'getAttr' family of functions to applicatively or monadically
+-- parse into your custom types.
+class FromDynItem a where
+    parseItem :: Item -> Parser a
+
+
+instance ToDynItem Item where toItem = id
+
+instance FromDynItem Item where parseItem = return
+
+
+instance DynVal a => ToDynItem [(T.Text, a)] where
+    toItem as = item $ map (uncurry attr) as
+
+instance (Typeable a, DynVal a) => FromDynItem [(T.Text, a)] where
+    parseItem i = mapM f $ M.toList i
+        where
+          f (k,v) = do
+              v' <- maybe (fail (valErr (Tagged v :: Tagged a DValue))) return $
+                    fromValue v
+              return (k, v')
+
+
+instance DynVal a => ToDynItem (M.Map T.Text a) where
+    toItem m = toItem $ M.toList m
+
+
+instance (Typeable a, DynVal a) => FromDynItem (M.Map T.Text a) where
+    parseItem i = M.fromList <$> parseItem i
+
+
+valErr :: forall a. Typeable a => Tagged a DValue -> String
+valErr (Tagged dv) = "Can't convert DynamoDb value " <> show dv <>
+              " into type " <> (show (typeOf (undefined :: a)))
+
+
+-- | Convenience combinator for parsing fields from an 'Item' returned
+-- by DynamoDb.
+getAttr
+    :: forall a. (Typeable a, DynVal a)
+    => T.Text
+    -- ^ Attribute name
+    -> Item
+    -- ^ Item from DynamoDb
+    -> Parser a
+getAttr k m = do
+    case M.lookup k m of
+      Nothing -> fail ("Key " <> T.unpack k <> " not found")
+      Just dv -> maybe (fail (valErr (Tagged dv :: Tagged a DValue))) return $ fromValue dv
+
+
+-- | Parse attribute if it's present in the 'Item'. Fail if attribute
+-- is present but conversion fails.
+getAttr'
+    :: forall a. (Typeable a, DynVal a)
+    => T.Text
+    -- ^ Attribute name
+    -> Item
+    -- ^ Item from DynamoDb
+    -> Parser (Maybe a)
+getAttr' k m = do
+    case M.lookup k m of
+      Nothing -> return Nothing
+      Just dv -> return $ fromValue dv
+
+
+-------------------------------------------------------------------------------
+-- | Parse an 'Item' into target type using the 'FromDynItem'
+-- instance.
+fromItem :: FromDynItem a => Item -> Either String a
+fromItem i = runParser (parseItem i) Left Right
+
+
+
+
 
 
