@@ -119,7 +119,7 @@ Library
                        bytestring           >= 0.9     && < 0.11,
                        case-insensitive     >= 0.2     && < 1.3,
                        cereal               >= 0.3     && < 0.5,
-                       conduit              >= 1.1     && < 1.2,
+                       conduit              >= 1.1     && < 1.3,
                        conduit-extra        >= 1.1     && < 1.2,
                        containers           >= 0.4,
                        cryptohash           >= 0.11     && < 0.12,
