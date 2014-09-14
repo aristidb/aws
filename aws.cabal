@@ -37,6 +37,7 @@ Library
                        Aws.Core
                        Aws.DynamoDb
                        Aws.DynamoDb.Commands
+                       Aws.DynamoDb.Commands.DeleteItem
                        Aws.DynamoDb.Commands.GetItem
                        Aws.DynamoDb.Commands.PutItem
                        Aws.DynamoDb.Commands.Query

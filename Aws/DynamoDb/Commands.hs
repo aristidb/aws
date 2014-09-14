@@ -1,5 +1,6 @@
 module Aws.DynamoDb.Commands
-    ( module Aws.DynamoDb.Commands.GetItem
+    ( module Aws.DynamoDb.Commands.DeleteItem
+    , module Aws.DynamoDb.Commands.GetItem
     , module Aws.DynamoDb.Commands.PutItem
     , module Aws.DynamoDb.Commands.Query
     , module Aws.DynamoDb.Commands.Scan
@@ -8,6 +9,7 @@ module Aws.DynamoDb.Commands
     ) where
 
 -------------------------------------------------------------------------------
+import           Aws.DynamoDb.Commands.DeleteItem
 import           Aws.DynamoDb.Commands.GetItem
 import           Aws.DynamoDb.Commands.PutItem
 import           Aws.DynamoDb.Commands.Query
