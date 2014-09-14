@@ -90,6 +90,9 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.10 series
 
+- 0.10.5
+  - support for conduit 1.2
+
 - 0.10.4
   - S3: support for multi-part uploads
   - DynamoDB: fixes for JSON serialization
