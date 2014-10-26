@@ -116,7 +116,7 @@ import           Control.Applicative
 import qualified Control.Exception            as C
 import           Control.Monad
 import           Control.Monad.Trans
-import           Control.Monad.Trans.Resource (throwM)
+import           Control.Monad.Catch          (throwM)
 import           Crypto.Hash
 import           Data.Aeson
 import qualified Data.Aeson                   as A
@@ -151,7 +151,7 @@ import qualified Data.Text.Encoding           as T
 import           Data.Time
 import           Data.Typeable
 import           Data.Word
-import qualified Network.HTTP.Conduit         as HTTP
+import qualified Network.HTTP.Client          as HTTP
 import qualified Network.HTTP.Types           as HTTP
 import           Safe
 -------------------------------------------------------------------------------
@@ -837,7 +837,7 @@ instance FromJSON AmazonError where
 -------------------------------------------------------------------------------
 ddbResponseConsumer :: A.FromJSON a => IORef DdbResponse -> HTTPResponseConsumer a
 ddbResponseConsumer ref resp = do
-    val <- HTTP.responseBody resp $$+- sinkParser (A.json' <* AttoB.endOfInput)
+    val <- bodyReaderSource (HTTP.responseBody resp) $$ sinkParser (A.json' <* AttoB.endOfInput)
     case statusCode of
       200 -> rSuccess val
       _   -> rError val

@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Aws.Core
 ( -- * Logging
   Loggable(..)
@@ -13,6 +12,7 @@ module Aws.Core
   -- ** Response data consumers
 , HTTPResponseConsumer
 , ResponseConsumer(..)
+, bodyReaderSource
   -- ** Memory response
 , AsMemoryResponse(..)
   -- ** List response
@@ -97,7 +97,7 @@ import           Control.Arrow
 import qualified Control.Exception        as E
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Resource (ResourceT, MonadThrow (throwM))
+import           Control.Monad.Catch      (MonadThrow (throwM))
 import           Crypto.Hash
 import qualified Data.Aeson               as A
 import           Data.Byteable
@@ -109,9 +109,7 @@ import           Data.ByteString.Char8    ({- IsString -})
 import qualified Data.ByteString.Lazy     as L
 import qualified Data.ByteString.UTF8     as BU
 import           Data.Char
-import           Data.Conduit             (($$+-))
 import qualified Data.Conduit             as C
-import qualified Data.Conduit.List        as CL
 import           Data.Default             (def)
 import           Data.IORef
 import           Data.List
@@ -125,7 +123,7 @@ import           Data.Time
 import qualified Data.Traversable         as Traversable
 import           Data.Typeable
 import           Data.Word
-import qualified Network.HTTP.Conduit     as HTTP
+import qualified Network.HTTP.Client      as HTTP
 import qualified Network.HTTP.Types       as HTTP
 import           System.Directory
 import           System.Environment
@@ -185,8 +183,7 @@ tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
 tellMetadataRef r m = modifyIORef r (`mappend` m)
 
 -- | A full HTTP response parser. Takes HTTP status, response headers, and response body.
-type HTTPResponseConsumer a = HTTP.Response (C.ResumableSource (ResourceT IO) ByteString)
-                              -> ResourceT IO a
+type HTTPResponseConsumer a = HTTP.Response HTTP.BodyReader -> IO a
 
 -- | Class for types that AWS HTTP responses can be parsed into.
 --
@@ -205,16 +202,12 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
 -- | Does not parse response. For debugging.
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
-    responseConsumer _ _ resp = do
-        bss <- HTTP.responseBody resp $$+- CL.consume
-        return resp
-            { HTTP.responseBody = L.fromChunks bss
-            }
+    responseConsumer _ _ = Traversable.mapM (fmap L.fromChunks . HTTP.brConsume)
 
 -- | Class for responses that are fully loaded into memory
 class AsMemoryResponse resp where
     type MemoryResponse resp :: *
-    loadToMemory :: resp -> ResourceT IO (MemoryResponse resp)
+    loadToMemory :: resp -> IO (MemoryResponse resp)
 
 -- | Responses that have one main list in them, and perhaps some decoration.
 class ListResponse resp item | resp -> item where
@@ -307,7 +300,7 @@ loadCredentialsFromEnv = liftIO $ do
                        <*> (T.encodeUtf8 . T.pack <$> secret))
 
 loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
-loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
+loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager HTTP.defaultManagerSettings $ \mgr ->
   do
     -- check if the path is routable
     avail <- liftIO $ hostAvailable "169.254.169.254"
@@ -432,22 +425,14 @@ data SignedQuery
         -- | Additional non-"amz" headers.
       , sqOtherHeaders :: HTTP.RequestHeaders
         -- | Request body (used with 'Post' and 'Put').
-#if MIN_VERSION_http_conduit(2, 0, 0)
       , sqBody :: Maybe HTTP.RequestBody
-#else
-      , sqBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
-#endif
         -- | String to sign. Note that the string is already signed, this is passed mostly for debugging purposes.
       , sqStringToSign :: B.ByteString
       }
     --deriving (Show)
 
 -- | Create a HTTP request from a 'SignedQuery' object.
-#if MIN_VERSION_http_conduit(2, 0, 0)
 queryToHttpRequest :: SignedQuery -> IO HTTP.Request
-#else
-queryToHttpRequest :: SignedQuery -> IO (HTTP.Request (C.ResourceT IO))
-#endif
 queryToHttpRequest SignedQuery{..} =  do
     mauth <- maybe (return Nothing) (Just<$>) sqAuthorization
     return $ def {
@@ -477,7 +462,7 @@ queryToHttpRequest SignedQuery{..} =  do
                            HTTP.renderQueryBuilder False sqQuery
               _         -> HTTP.RequestBodyBuilder 0 mempty
 
-      , HTTP.decompress = HTTP.alwaysDecompress
+      , HTTP.decompress = const True -- decompress for all mime-types
       , HTTP.checkStatus = \_ _ _ -> Nothing
       }
     where 
@@ -814,10 +799,21 @@ xmlCursorConsumer ::
     -> IORef m
     -> HTTPResponseConsumer a
 xmlCursorConsumer parse metadataRef res
-    = do doc <- HTTP.responseBody res $$+- XML.sinkDoc XML.def
+    = do doc <- bodyReaderSource (HTTP.responseBody res) C.$$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata
          case x of
            Left err -> liftIO $ throwM err
            Right v  -> return v
+
+bodyReaderSource
+    :: MonadIO m
+    => HTTP.BodyReader
+    -> C.Producer m ByteString
+bodyReaderSource br = go
+  where
+    go = do
+        bs <- liftIO $ HTTP.brRead br
+        unless (B.null bs) $ C.yield bs >> go
+

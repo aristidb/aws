@@ -20,7 +20,7 @@ import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import           Control.Exception              (Exception)
 import           Control.Monad
-import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
+import           Control.Monad.Catch            (MonadThrow, throwM)
 import           Data.ByteString                (ByteString)
 import           Data.IORef
 import           Data.List                      (intersperse, sort)
@@ -30,7 +30,7 @@ import           Data.Text                      (Text)
 import qualified Data.Text                      as Text
 import           Data.Time
 import           Data.Typeable
-import qualified Network.HTTP.Conduit           as HTTP
+import qualified Network.HTTP.Client            as HTTP
 import qualified Network.HTTP.Types             as HTTP
 import           System.Locale
 import           Text.XML.Cursor                (($//))

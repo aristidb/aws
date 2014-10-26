@@ -5,14 +5,14 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow (second)
-import           Control.Monad.Trans.Resource (throwM)
+import           Control.Monad.Catch (throwM)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import           Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Time
-import qualified Network.HTTP.Conduit as HTTP
+import qualified Network.HTTP.Client as HTTP
 import           Text.XML.Cursor (($/), (&|))
 import           System.Locale
 

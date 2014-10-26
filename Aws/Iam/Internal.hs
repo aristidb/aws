@@ -16,7 +16,7 @@ import           Aws.Iam.Core
 import           Control.Applicative
 import           Control.Arrow       (second)
 import           Control.Monad
-import           Control.Monad.Trans.Resource (MonadThrow)
+import           Control.Monad.Catch (MonadThrow)
 import           Data.ByteString     (ByteString)
 import           Data.Maybe
 import           Data.Monoid         ((<>))

@@ -6,11 +6,11 @@ import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
 import           Control.Monad
+import           Control.Monad.Catch            (MonadThrow, throwM)
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as BC
-import           Data.Conduit                   (($$+-))
+import           Data.Conduit                   (($$))
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -21,7 +21,7 @@ import qualified Data.Text.Encoding             as T
 import qualified Data.Text.Encoding             as TE
 import           Data.Time
 import           Data.Typeable
-import qualified Network.HTTP.Conduit           as HTTP
+import qualified Network.HTTP.Client            as HTTP
 import qualified Network.HTTP.Types             as HTTP
 import           System.Locale
 import qualified Text.XML                       as XML
@@ -228,7 +228,7 @@ sqsXmlResponseConsumer parse metadataRef = sqsResponseConsumer (xmlCursorConsume
 
 sqsErrorResponseConsumer :: HTTPResponseConsumer a
 sqsErrorResponseConsumer resp
-    = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
+    = do doc <- bodyReaderSource (HTTP.responseBody resp) $$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Right err     -> throwM err

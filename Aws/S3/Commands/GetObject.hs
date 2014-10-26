@@ -4,16 +4,13 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Monad.Trans.Resource (ResourceT)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as L
-import qualified Data.Conduit          as C
-import qualified Data.Conduit.List     as CL
 import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
-import qualified Network.HTTP.Conduit  as HTTP
+import qualified Network.HTTP.Client   as HTTP
 import qualified Network.HTTP.Types    as HTTP
 
 data GetObject
@@ -37,7 +34,7 @@ getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing No
 data GetObjectResponse
     = GetObjectResponse {
         gorMetadata :: ObjectMetadata,
-        gorResponse :: HTTP.Response (C.ResumableSource (ResourceT IO) B8.ByteString)
+        gorResponse :: HTTP.Response HTTP.BodyReader
       }
 
 data GetObjectMemoryResponse
@@ -83,7 +80,7 @@ instance Transaction GetObject GetObjectResponse
 instance AsMemoryResponse GetObjectResponse where
     type MemoryResponse GetObjectResponse = GetObjectMemoryResponse
     loadToMemory (GetObjectResponse om x) = do
-        bss <- HTTP.responseBody x C.$$+- CL.consume
+        bss <- HTTP.brConsume $ HTTP.responseBody x
         return $ GetObjectMemoryResponse om x
             { HTTP.responseBody = L.fromChunks bss
             }
