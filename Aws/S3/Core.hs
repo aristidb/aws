@@ -433,11 +433,12 @@ parseObjectMetadata h = ObjectMetadata
 
 type LocationConstraint = T.Text
 
-locationUsClassic, locationUsWest, locationUsWest2, locationEu, locationApSouthEast, locationApSouthEast2, locationApNorthEast, locationSA :: LocationConstraint
+locationUsClassic, locationUsWest, locationUsWest2, locationEu, locationEuFrankfurt, locationApSouthEast, locationApSouthEast2, locationApNorthEast, locationSA :: LocationConstraint
 locationUsClassic = ""
 locationUsWest = "us-west-1"
 locationUsWest2 = "us-west-2"
 locationEu = "EU"
+locationEuFrankfurt = "eu-central-1"
 locationApSouthEast = "ap-southeast-1"
 locationApSouthEast2 = "ap-southeast-2"
 locationApNorthEast = "ap-northeast-1"

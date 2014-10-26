@@ -223,10 +223,10 @@ class ListResponse resp item | resp -> item where
 -- resides in 'SignQuery' and 'ResponseConsumer' respectively.
 class (SignQuery r, ResponseConsumer r a, Loggable (ResponseMetadata a))
       => Transaction r a
-      | r -> a, a -> r
+      | r -> a
 
 -- | A transaction that may need to be split over multiple requests, for example because of upstream response size limits.
-class Transaction r a => IteratedTransaction r a | r -> a , a -> r where
+class Transaction r a => IteratedTransaction r a | r -> a where
     nextIteratedRequest :: r -> a -> Maybe r
 
 -- | Signature version 4: ((region, service),(date,key))
