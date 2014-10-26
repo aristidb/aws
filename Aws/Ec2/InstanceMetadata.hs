@@ -2,12 +2,12 @@ module Aws.Ec2.InstanceMetadata where
 
 import           Control.Applicative
 import           Control.Exception
-import           Control.Monad.Trans.Resource (throwM)
+import           Control.Monad.Catch (throwM)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.ByteString.Lazy.UTF8 as BU
 import           Data.Typeable
-import qualified Network.HTTP.Conduit as HTTP
+import qualified Network.HTTP.Client as HTTP
 
 data InstanceMetadataException
   = MetadataNotFound String

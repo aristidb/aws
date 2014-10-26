@@ -31,7 +31,6 @@ import Control.Error
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Control
-import Control.Monad.Trans.Resource
 
 import Data.IORef
 import qualified Data.List as L
@@ -143,7 +142,7 @@ sqsT
     -> r
     -> EitherT T.Text IO a
 sqsT cfg manager req = do
-    Response _ r <- liftIO . runResourceT $ aws cfg sqsConfiguration manager req
+    Response _ r <- liftIO $ aws cfg sqsConfiguration manager req
     hoistEither $ fmapL sshow r
 
 simpleSqs

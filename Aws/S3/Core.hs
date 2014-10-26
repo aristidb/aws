@@ -1,14 +1,13 @@
-{-# LANGUAGE CPP #-}
 module Aws.S3.Core where
 
 import           Aws.Core
 import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
+import           Control.Monad.Catch            (MonadThrow, throwM)
 import           Crypto.Hash
 import           Data.Byteable
-import           Data.Conduit                   (($$+-))
+import           Data.Conduit                   (($$))
 import           Data.Function
 import           Data.IORef
 import           Data.List
@@ -28,7 +27,7 @@ import qualified Data.ByteString.Base64         as Base64
 import qualified Data.CaseInsensitive           as CI
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
-import qualified Network.HTTP.Conduit           as HTTP
+import qualified Network.HTTP.Client            as HTTP
 import qualified Network.HTTP.Types             as HTTP
 import qualified Text.XML                       as XML
 import qualified Text.XML.Cursor                as Cu
@@ -142,11 +141,7 @@ data S3Query
       , s3QContentMd5 :: Maybe (Digest MD5)
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
-#if MIN_VERSION_http_conduit(2, 0, 0)
       , s3QRequestBody :: Maybe HTTP.RequestBody
-#else
-      , s3QRequestBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
-#endif
       }
 
 instance Show S3Query where
@@ -245,7 +240,7 @@ s3BinaryResponseConsumer inner metadataRef = s3ResponseConsumer inner metadataRe
 
 s3ErrorResponseConsumer :: HTTPResponseConsumer a
 s3ErrorResponseConsumer resp
-    = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
+    = do doc <- bodyReaderSource (HTTP.responseBody resp) $$ XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Right err      -> throwM err

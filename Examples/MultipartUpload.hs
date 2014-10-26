@@ -2,10 +2,10 @@
 
 import qualified Aws
 import qualified Aws.S3 as S3
-import           Data.Conduit (($$+-))
+import Control.Monad.Trans.Resource (runResourceT)
 import           Data.Conduit.Binary (sourceFile)
 import qualified Data.Text as T
-import           Network.HTTP.Conduit (withManager, responseBody)
+import           Network.HTTP.Client (withManager, responseBody, defaultManagerSettings)
 import           System.Environment (getArgs)
 
 main :: IO ()
@@ -17,7 +17,7 @@ main = do
   args <- getArgs
 
   let doUpload bucket obj file chunkSize =
-        withManager $ \mgr -> do
+        withManager defaultManagerSettings $ \mgr -> runResourceT $ do
           S3.multipartUpload cfg s3cfg mgr (T.pack bucket) (T.pack obj) (sourceFile file) (chunkSize*1024*1024)
 
   case args of

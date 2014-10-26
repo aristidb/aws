@@ -5,7 +5,7 @@ import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
 import           Control.Monad
-import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
+import           Control.Monad.Catch            (MonadThrow, throwM)
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Base64         as Base64
 import           Data.IORef
@@ -15,7 +15,7 @@ import           Data.Monoid
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import           Data.Typeable
-import qualified Network.HTTP.Conduit           as HTTP
+import qualified Network.HTTP.Client            as HTTP
 import qualified Network.HTTP.Types             as HTTP
 import           Text.XML.Cursor                (($|), ($/), ($//), (&|))
 import qualified Text.XML.Cursor                as Cu

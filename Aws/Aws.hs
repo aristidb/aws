@@ -37,7 +37,6 @@ import qualified Control.Exception.Lifted     as E
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
-import           Control.Monad.Trans.Resource
 import qualified Data.ByteString              as B
 import qualified Data.CaseInsensitive         as CI
 import qualified Data.Conduit                 as C
@@ -47,7 +46,7 @@ import           Data.Monoid
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import qualified Data.Text.IO                 as T
-import qualified Network.HTTP.Conduit         as HTTP
+import qualified Network.HTTP.Client          as HTTP
 import           System.IO                    (stderr)
 
 -- | The severity of a log message, in rising order.
@@ -114,7 +113,7 @@ aws :: (Transaction r a)
       -> ServiceConfiguration r NormalQuery
       -> HTTP.Manager
       -> r
-      -> ResourceT IO (Response (ResponseMetadata a) a)
+      -> IO (Response (ResponseMetadata a) a)
 aws = unsafeAws
 
 -- | Run an AWS transaction, with HTTP manager and metadata returned in an 'IORef'.
@@ -136,7 +135,7 @@ awsRef :: (Transaction r a)
       -> HTTP.Manager
       -> IORef (ResponseMetadata a)
       -> r
-      -> ResourceT IO a
+      -> IO a
 awsRef = unsafeAwsRef
 
 -- | Run an AWS transaction, with HTTP manager and without metadata.
@@ -152,7 +151,7 @@ pureAws :: (Transaction r a)
       -> ServiceConfiguration r NormalQuery
       -> HTTP.Manager
       -> r
-      -> ResourceT IO a
+      -> IO a
 pureAws cfg scfg mgr req = readResponseIO =<< aws cfg scfg mgr req
 
 -- | Run an AWS transaction, /without/ HTTP manager and without metadata.
@@ -171,7 +170,7 @@ simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
             -> r
             -> io (MemoryResponse a)
 simpleAws cfg scfg request
-  = liftIO $ HTTP.withManager $ \manager ->
+  = liftIO $ HTTP.withManager HTTP.defaultManagerSettings $ \manager ->
       loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
@@ -186,11 +185,11 @@ unsafeAws
       Monoid (ResponseMetadata a),
       Loggable (ResponseMetadata a),
       SignQuery r) =>
-     Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> r -> ResourceT IO (Response (ResponseMetadata a) a)
+     Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> r -> IO (Response (ResponseMetadata a) a)
 unsafeAws cfg scfg manager request = do
   metadataRef <- liftIO $ newIORef mempty
 
-  let catchAll :: ResourceT IO a -> ResourceT IO (Either E.SomeException a)
+  let catchAll :: IO a -> IO (Either E.SomeException a)
       catchAll = E.handle (return . Left) . fmap Right
 
   resp <- catchAll $
@@ -210,7 +209,7 @@ unsafeAwsRef
   :: (ResponseConsumer r a,
       Monoid (ResponseMetadata a),
       SignQuery r) =>
-     Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> ResourceT IO a
+     Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> IO a
 unsafeAwsRef cfg info manager metadataRef request = do
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
   let q = signQuery request info sd
@@ -224,11 +223,11 @@ unsafeAwsRef cfg info manager metadataRef request = do
     HTTP.RequestBodyLBS lbs -> logDebug $ "Body: " ++ show lbs
     HTTP.RequestBodyBS bs -> logDebug $ "Body: " ++ show bs
     _ -> return ()
-  hresp <- HTTP.http httpRequest manager
-  logDebug $ "Response status: " ++ show (HTTP.responseStatus hresp)
-  forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
-    logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
-  responseConsumer request metadataRef hresp
+  HTTP.withResponse httpRequest manager $ \hresp -> do
+    logDebug $ "Response status: " ++ show (HTTP.responseStatus hresp)
+    forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
+        logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
+    responseConsumer request metadataRef hresp
 
 -- | Run a URI-only AWS transaction. Returns a URI that can be sent anywhere. Does not work with all requests.
 --
@@ -253,7 +252,7 @@ awsIteratedAll :: (IteratedTransaction r a)
                   -> ServiceConfiguration r NormalQuery
                   -> HTTP.Manager
                   -> r
-                  -> ResourceT IO (Response [ResponseMetadata a] a)
+                  -> IO (Response [ResponseMetadata a] a)
 awsIteratedAll cfg scfg manager req_ = go req_ Nothing
   where go request prevResp = do Response meta respAttempt <- aws cfg scfg manager request
                                  case maybeCombineIteratedResponse prevResp <$> respAttempt of
@@ -272,7 +271,7 @@ awsIteratedSource
     -> ServiceConfiguration r NormalQuery
     -> HTTP.Manager
     -> r
-    -> C.Producer (ResourceT IO) (Response (ResponseMetadata a) a)
+    -> C.Producer IO (Response (ResponseMetadata a) a)
 awsIteratedSource cfg scfg manager req_ = awsIteratedSource' run req_
   where
     run r = do
@@ -287,7 +286,7 @@ awsIteratedList
     -> ServiceConfiguration r NormalQuery
     -> HTTP.Manager
     -> r
-    -> C.Producer (ResourceT IO) i
+    -> C.Producer IO i
 awsIteratedList cfg scfg manager req = awsIteratedList' run req
   where
     run r = readResponseIO =<< aws cfg scfg manager r

@@ -4,12 +4,12 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Monad.Trans.Resource (throwM)
+import           Control.Monad.Catch (throwM)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
-import qualified Network.HTTP.Conduit  as HTTP
+import qualified Network.HTTP.Client   as HTTP
 import qualified Network.HTTP.Types    as HTTP
 
 data HeadObject

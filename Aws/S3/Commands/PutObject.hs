@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Aws.S3.Commands.PutObject
 where
 
@@ -13,7 +12,7 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.CaseInsensitive  as CI
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
-import qualified Network.HTTP.Conduit  as HTTP
+import qualified Network.HTTP.Client   as HTTP
 
 data PutObject = PutObject {
   poObjectName :: T.Text,
@@ -28,20 +27,12 @@ data PutObject = PutObject {
   poStorageClass :: Maybe StorageClass,
   poWebsiteRedirectLocation :: Maybe T.Text,
   poServerSideEncryption :: Maybe ServerSideEncryption,
-#if MIN_VERSION_http_conduit(2, 0, 0)
   poRequestBody  :: HTTP.RequestBody,
-#else
-  poRequestBody  :: HTTP.RequestBody (C.ResourceT IO),
-#endif
   poMetadata :: [(T.Text,T.Text)],
   poAutoMakeBucket :: Bool -- ^ Internet Archive S3 nonstandard extension
 }
 
-#if MIN_VERSION_http_conduit(2, 0, 0)
 putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
-#else
-putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
-#endif
 putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False
 
 data PutObjectResponse

@@ -6,7 +6,7 @@ import           Control.Monad
 import qualified Data.Map             as M
 import qualified Data.Text            as T
 import qualified Data.Text.Encoding   as T
-import qualified Network.HTTP.Conduit as HTTP
+import qualified Network.HTTP.Client  as HTTP
 import qualified Text.XML             as XML
 
 data PutBucket

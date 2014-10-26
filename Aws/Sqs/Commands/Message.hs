@@ -27,7 +27,7 @@ module Aws.Sqs.Commands.Message
 import Aws.Core
 import Aws.Sqs.Core
 import Control.Applicative
-import Control.Monad.Trans.Resource (throwM)
+import Control.Monad.Catch (throwM)
 import Data.Maybe
 import Data.Monoid
 import Text.XML.Cursor (($/), ($//), (&/), (&|))

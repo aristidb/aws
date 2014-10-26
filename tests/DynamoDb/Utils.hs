@@ -46,7 +46,6 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Control
-import Control.Monad.Trans.Resource
 
 import Data.Monoid
 import qualified Data.Text as T
@@ -106,7 +105,7 @@ dyT
     -> r
     -> EitherT T.Text IO a
 dyT cfg manager req = do
-    Response _ r <- liftIO . runResourceT $ aws cfg dyConfiguration manager req
+    Response _ r <- liftIO $ aws cfg dyConfiguration manager req
     hoistEither $ fmapL sshow r
 
 withTable

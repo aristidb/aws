@@ -13,7 +13,7 @@ import           Control.Monad.Catch
 import           Data.Conduit
 import qualified Data.Conduit.List     as C
 import qualified Data.Text             as T
-import           Network.HTTP.Conduit  (withManager)
+import           Network.HTTP.Client (withManager, defaultManagerSettings)
 -------------------------------------------------------------------------------
 
 createTableAndWait :: IO ()
@@ -94,7 +94,7 @@ main = do
   echo "Now paginating in increments of 5..."
   let q0 = (scan "devel-1") { sLimit = Just 5 }
 
-  xs <- withManager $ \mgr -> do
+  xs <- withManager defaultManagerSettings $ \mgr -> do
     awsIteratedList cfg debugServiceConfig mgr q0 $$ C.consume
   echo ("Pagination returned " ++ show (length xs) ++ " items")
 

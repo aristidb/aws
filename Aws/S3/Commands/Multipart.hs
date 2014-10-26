@@ -5,22 +5,20 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow         (second)
-import           Control.Monad.Trans.Resource
+import           Control.Monad.IO.Class
 import           Crypto.Hash
 import qualified Crypto.Hash.MD5       as MD5
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Conduit
-import qualified Data.Conduit.Binary   as CB
 import qualified Data.Conduit.List     as CL
 import           Data.Maybe
 import           Text.XML.Cursor       (($/))
 import qualified Data.ByteString.Char8 as B8
-import qualified Data.ByteString.Lazy  as BL
 import qualified Data.CaseInsensitive  as CI
 import qualified Data.Map              as M
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
-import qualified Network.HTTP.Conduit  as HTTP
+import qualified Network.HTTP.Client   as HTTP
 import qualified Network.HTTP.Types    as HTTP
 import           Text.Printf(printf)
 import qualified Text.XML              as XML
@@ -328,32 +326,34 @@ instance AsMemoryResponse AbortMultipartUploadResponse where
 ----------------------------
 
 getUploadId ::
-  Configuration
+  MonadIO m
+  => Configuration
   -> S3Configuration NormalQuery
   -> HTTP.Manager
   -> T.Text
   -> T.Text
-  -> ResourceT IO T.Text
+  -> m T.Text
 getUploadId cfg s3cfg mgr bucket object = do
   InitiateMultipartUploadResponse {
       imurBucket = _bucket
     , imurKey = _object'
     , imurUploadId = uploadId
-    } <- pureAws cfg s3cfg mgr $ postInitiateMultipartUpload bucket object
+    } <- liftIO . pureAws cfg s3cfg mgr $ postInitiateMultipartUpload bucket object
   return uploadId
 
 
 sendEtag  ::
-  Configuration
+  MonadIO m
+  => Configuration
   -> S3Configuration NormalQuery
   -> HTTP.Manager
   -> T.Text
   -> T.Text
   -> T.Text
   -> [String]
-  -> ResourceT IO ()
+  -> m ()
 sendEtag cfg s3cfg mgr bucket object uploadId etags = do
-  _ <- pureAws cfg s3cfg mgr $
+  _ <- liftIO . pureAws cfg s3cfg mgr $
        postCompleteMultipartUpload bucket object uploadId (zip [1..] (map T.pack etags))
   return ()
 
@@ -366,7 +366,7 @@ bstr2str bstr =
     toHex chr = printf "%02x" chr
 
 putConduit ::
-  MonadResource m =>
+  MonadIO m =>
   Configuration
   -> S3Configuration NormalQuery
   -> HTTP.Manager
@@ -380,19 +380,14 @@ putConduit cfg s3cfg mgr bucket object uploadId = loop 1
       v' <- await
       case v' of
         Just v -> do
-          let str= (BL.fromStrict v)
-          _ <- liftResourceT $ pureAws cfg s3cfg mgr $
-            uploadPart bucket object n uploadId
-            (HTTP.requestBodySource
-             (BL.length str)
-             (CB.sourceLbs str)
-            )
+          _ <- liftIO $ pureAws cfg s3cfg mgr $
+            uploadPart bucket object n uploadId $ HTTP.RequestBodyBS v
           let etag= bstr2str $ MD5.hash v
           yield etag
           loop (n+1)
         Nothing -> return ()
 
-chunkedConduit :: (MonadResource m) => Integer -> Conduit B8.ByteString m B8.ByteString
+chunkedConduit :: (MonadIO m) => Integer -> Conduit B8.ByteString m B8.ByteString
 chunkedConduit size = do
   loop 0 ""
   where
@@ -413,14 +408,15 @@ chunkedConduit size = do
             loop len newStr
 
 multipartUpload ::
-  Configuration
+  MonadIO m
+  => Configuration
   -> S3Configuration NormalQuery
   -> HTTP.Manager
   -> T.Text
   -> T.Text
-  -> Conduit () (ResourceT IO) B8.ByteString
+  -> Conduit () m B8.ByteString
   -> Integer
-  -> ResourceT IO ()
+  -> m ()
 multipartUpload cfg s3cfg mgr bucket object src chunkSize = do
   uploadId <- getUploadId cfg s3cfg mgr bucket object
   etags <- src
