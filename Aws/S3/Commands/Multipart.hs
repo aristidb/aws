@@ -7,10 +7,8 @@ import           Control.Applicative
 import           Control.Arrow         (second)
 import           Control.Monad.Trans.Resource
 import           Crypto.Hash
-import qualified Crypto.Hash.MD5       as MD5
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Conduit
-import qualified Data.Conduit.Binary   as CB
 import qualified Data.Conduit.List     as CL
 import           Data.Maybe
 import           Text.XML.Cursor       (($/))
@@ -22,7 +20,6 @@ import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
-import           Text.Printf(printf)
 import qualified Text.XML              as XML
 
 {-
@@ -141,7 +138,8 @@ uploadPart bucket obj p i body =
 
 data UploadPartResponse
   = UploadPartResponse {
-      uprVersionId :: Maybe T.Text
+      uprVersionId :: Maybe T.Text,
+      uprETag :: T.Text
     }
   deriving (Show)
 
@@ -170,7 +168,8 @@ instance ResponseConsumer UploadPart UploadPartResponse where
     type ResponseMetadata UploadPartResponse = S3Metadata
     responseConsumer _ = s3ResponseConsumer $ \resp -> do
       let vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
-      return $ UploadPartResponse vid
+      let etag = fromMaybe "" $ T.decodeUtf8 `fmap` lookup "ETag" (HTTP.responseHeaders resp)
+      return $ UploadPartResponse vid etag
 
 instance Transaction UploadPart UploadPartResponse
 
@@ -350,20 +349,12 @@ sendEtag  ::
   -> T.Text
   -> T.Text
   -> T.Text
-  -> [String]
+  -> [T.Text]
   -> ResourceT IO ()
 sendEtag cfg s3cfg mgr bucket object uploadId etags = do
   _ <- pureAws cfg s3cfg mgr $
-       postCompleteMultipartUpload bucket object uploadId (zip [1..] (map T.pack etags))
+       postCompleteMultipartUpload bucket object uploadId (zip [1..] etags)
   return ()
-
-
-bstr2str :: B8.ByteString -> String
-bstr2str bstr =
-  foldr1 (++) $ map toHex $ B8.unpack bstr
-  where
-    toHex :: Char -> String
-    toHex chr = printf "%02x" chr
 
 putConduit ::
   MonadResource m =>
@@ -373,21 +364,15 @@ putConduit ::
   -> T.Text
   -> T.Text
   -> T.Text
-  -> Conduit B8.ByteString m String
+  -> Conduit B8.ByteString m T.Text
 putConduit cfg s3cfg mgr bucket object uploadId = loop 1
   where
     loop n = do
       v' <- await
       case v' of
         Just v -> do
-          let str= (BL.fromStrict v)
-          _ <- liftResourceT $ pureAws cfg s3cfg mgr $
-            uploadPart bucket object n uploadId
-            (HTTP.requestBodySource
-             (BL.length str)
-             (CB.sourceLbs str)
-            )
-          let etag= bstr2str $ MD5.hash v
+          UploadPartResponse _ etag <- liftResourceT $ pureAws cfg s3cfg mgr $
+            uploadPart bucket object n uploadId (HTTP.RequestBodyBS v)
           yield etag
           loop (n+1)
         Nothing -> return ()
