@@ -39,6 +39,7 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
 import qualified Data.ByteString              as B
+import qualified Data.ByteString.Lazy         as L
 import qualified Data.CaseInsensitive         as CI
 import qualified Data.Conduit                 as C
 import qualified Data.Conduit.List            as CL
@@ -221,8 +222,8 @@ unsafeAwsRef cfg info manager metadataRef request = do
   logDebug $ "Path: " ++ show (HTTP.path httpRequest)
   logDebug $ "Query string: " ++ show (HTTP.queryString httpRequest)
   case HTTP.requestBody httpRequest of
-    HTTP.RequestBodyLBS lbs -> logDebug $ "Body: " ++ show lbs
-    HTTP.RequestBodyBS bs -> logDebug $ "Body: " ++ show bs
+    HTTP.RequestBodyLBS lbs -> logDebug $ "Body: " ++ show (L.take 1000 lbs)
+    HTTP.RequestBodyBS bs -> logDebug $ "Body: " ++ show (B.take 1000 bs)
     _ -> return ()
   hresp <- HTTP.http httpRequest manager
   logDebug $ "Response status: " ++ show (HTTP.responseStatus hresp)

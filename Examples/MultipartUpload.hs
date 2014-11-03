@@ -11,7 +11,7 @@ import           System.Environment (getArgs)
 main :: IO ()
 main = do
   {- Set up AWS credentials and the default configuration. -}
-  cfg <- Aws.baseConfiguration
+  cfg <- Aws.dbgConfiguration
   let s3cfg = Aws.defServiceConfig :: S3.S3Configuration Aws.NormalQuery
 
   args <- getArgs
