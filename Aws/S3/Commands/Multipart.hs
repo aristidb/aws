@@ -5,6 +5,7 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow         (second)
+import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Crypto.Hash
 import           Data.ByteString.Char8 ({- IsString -})
@@ -371,9 +372,9 @@ putConduit cfg s3cfg mgr bucket object uploadId = loop 1
       v' <- await
       case v' of
         Just v -> do
-          UploadPartResponse _ etag <- liftResourceT $ pureAws cfg s3cfg mgr $
+          UploadPartResponse _ etag <- liftIO $ runResourceT $ pureAws cfg s3cfg mgr $
             uploadPart bucket object n uploadId (HTTP.RequestBodyBS v)
-          yield etag
+          etag `seq` yield etag
           loop (n+1)
         Nothing -> return ()
 
@@ -383,7 +384,7 @@ chunkedConduit size = do
   where
     loop cnt str = do
       line' <- await
-      case line' of 
+      case line' of
         Nothing -> do
           yield str
           return ()
