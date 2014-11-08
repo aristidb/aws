@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, BangPatterns #-}
 module Aws.S3.Core where
 
 import           Aws.Core
@@ -26,6 +26,7 @@ import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.ByteString.Base64         as Base64
 import qualified Data.CaseInsensitive           as CI
+import qualified Data.Conduit                   as C
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import qualified Network.HTTP.Conduit           as HTTP
@@ -218,9 +219,19 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
             , ("Signature", sig)] ++ iamTok
 
 s3ResponseConsumer :: HTTPResponseConsumer a
+                         -> IORef S3Metadata
+                         -> HTTPResponseConsumer a
+s3ResponseConsumer inner metadataRef = s3BinaryResponseConsumer inner' metadataRef
+  where inner' resp =
+          do
+            !res <- inner resp
+            C.closeResumableSource (HTTP.responseBody resp)
+            return res
+
+s3BinaryResponseConsumer :: HTTPResponseConsumer a
                    -> IORef S3Metadata
                    -> HTTPResponseConsumer a
-s3ResponseConsumer inner metadata resp = do
+s3BinaryResponseConsumer inner metadata resp = do
       let headerString = fmap T.decodeUtf8 . flip lookup (HTTP.responseHeaders resp)
       let amzId2 = headerString "x-amz-id-2"
       let requestId = headerString "x-amz-request-id"
@@ -237,11 +248,6 @@ s3XmlResponseConsumer :: (Cu.Cursor -> Response S3Metadata a)
                       -> HTTPResponseConsumer a
 s3XmlResponseConsumer parse metadataRef =
     s3ResponseConsumer (xmlCursorConsumer parse metadataRef) metadataRef
-
-s3BinaryResponseConsumer :: HTTPResponseConsumer a
-                         -> IORef S3Metadata
-                         -> HTTPResponseConsumer a
-s3BinaryResponseConsumer inner metadataRef = s3ResponseConsumer inner metadataRef
 
 s3ErrorResponseConsumer :: HTTPResponseConsumer a
 s3ErrorResponseConsumer resp

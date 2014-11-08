@@ -63,9 +63,9 @@ postInitiateMultipartUpload b o =
 
 data InitiateMultipartUploadResponse
   = InitiateMultipartUploadResponse {
-      imurBucket   :: Bucket
-    , imurKey      :: T.Text
-    , imurUploadId :: T.Text
+      imurBucket   :: !Bucket
+    , imurKey      :: !T.Text
+    , imurUploadId :: !T.Text
     }
 
 -- | ServiceConfiguration: 'S3Configuration'
@@ -138,8 +138,8 @@ uploadPart bucket obj p i body =
 
 data UploadPartResponse
   = UploadPartResponse {
-      uprVersionId :: Maybe T.Text,
-      uprETag :: T.Text
+      uprVersionId :: !(Maybe T.Text),
+      uprETag :: !T.Text
     }
   deriving (Show)
 
@@ -199,10 +199,10 @@ postCompleteMultipartUpload b o i p = CompleteMultipartUpload b o i p Nothing  N
 
 data CompleteMultipartUploadResponse
   = CompleteMultipartUploadResponse {
-      cmurLocation :: T.Text
-    , cmurBucket   :: Bucket
-    , cmurKey      :: T.Text
-    , cmurETag     :: T.Text
+      cmurLocation :: !T.Text
+    , cmurBucket   :: !Bucket
+    , cmurKey      :: !T.Text
+    , cmurETag     :: !T.Text
     }
 
 -- | ServiceConfiguration: 'S3Configuration'
