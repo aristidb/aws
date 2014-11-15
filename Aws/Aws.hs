@@ -16,6 +16,7 @@ module Aws.Aws
 , aws
 , awsRef
 , pureAws
+, memoryAws
 , simpleAws
   -- ** Unsafe runners
 , unsafeAws
@@ -155,6 +156,22 @@ pureAws :: (Transaction r a)
       -> r
       -> ResourceT IO a
 pureAws cfg scfg mgr req = readResponseIO =<< aws cfg scfg mgr req
+
+-- | Run an AWS transaction, with HTTP manager and without metadata.
+--
+-- Metadata is logged at level 'Info'.
+--
+-- Usage (with existing 'HTTP.Manager'):
+-- @
+--     resp <- aws cfg serviceCfg manager request
+-- @
+memoryAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
+      => Configuration
+      -> ServiceConfiguration r NormalQuery
+      -> HTTP.Manager
+      -> r
+      -> io (MemoryResponse a)
+memoryAws cfg scfg mgr req = liftIO $ runResourceT $ loadToMemory =<< readResponseIO =<< aws cfg scfg mgr req
 
 -- | Run an AWS transaction, /without/ HTTP manager and without metadata.
 --

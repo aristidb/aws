@@ -5,6 +5,7 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow         (second)
+import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Crypto.Hash
 import           Data.ByteString.Char8 ({- IsString -})
@@ -332,13 +333,13 @@ getUploadId ::
   -> HTTP.Manager
   -> T.Text
   -> T.Text
-  -> ResourceT IO T.Text
+  -> IO T.Text
 getUploadId cfg s3cfg mgr bucket object = do
   InitiateMultipartUploadResponse {
       imurBucket = _bucket
     , imurKey = _object'
     , imurUploadId = uploadId
-    } <- pureAws cfg s3cfg mgr $ postInitiateMultipartUpload bucket object
+    } <- memoryAws cfg s3cfg mgr $ postInitiateMultipartUpload bucket object
   return uploadId
 
 
@@ -350,9 +351,9 @@ sendEtag  ::
   -> T.Text
   -> T.Text
   -> [T.Text]
-  -> ResourceT IO ()
+  -> IO ()
 sendEtag cfg s3cfg mgr bucket object uploadId etags = do
-  _ <- pureAws cfg s3cfg mgr $
+  _ <- memoryAws cfg s3cfg mgr $
        postCompleteMultipartUpload bucket object uploadId (zip [1..] etags)
   return ()
 
@@ -371,7 +372,7 @@ putConduit cfg s3cfg mgr bucket object uploadId = loop 1
       v' <- await
       case v' of
         Just v -> do
-          UploadPartResponse _ etag <- liftResourceT $ pureAws cfg s3cfg mgr $
+          UploadPartResponse _ etag <- memoryAws cfg s3cfg mgr $
             uploadPart bucket object n uploadId (HTTP.RequestBodyBS v)
           yield etag
           loop (n+1)
@@ -407,9 +408,9 @@ multipartUpload ::
   -> Integer
   -> ResourceT IO ()
 multipartUpload cfg s3cfg mgr bucket object src chunkSize = do
-  uploadId <- getUploadId cfg s3cfg mgr bucket object
+  uploadId <- liftIO $ getUploadId cfg s3cfg mgr bucket object
   etags <- src
            $= chunkedConduit chunkSize
            $= putConduit cfg s3cfg mgr bucket object uploadId
            $$ CL.consume
-  sendEtag cfg s3cfg mgr bucket object uploadId etags
+  liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
