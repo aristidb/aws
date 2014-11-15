@@ -12,6 +12,7 @@ import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Conduit
 import qualified Data.Conduit.List     as CL
 import           Data.Maybe
+import           Data.Monoid
 import           Text.XML.Cursor       (($/))
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as BL
@@ -365,7 +366,7 @@ putConduit ::
   -> T.Text
   -> T.Text
   -> T.Text
-  -> Conduit B8.ByteString m T.Text
+  -> Conduit BL.ByteString m T.Text
 putConduit cfg s3cfg mgr bucket object uploadId = loop 1
   where
     loop n = do
@@ -373,15 +374,16 @@ putConduit cfg s3cfg mgr bucket object uploadId = loop 1
       case v' of
         Just v -> do
           UploadPartResponse _ etag <- memoryAws cfg s3cfg mgr $
-            uploadPart bucket object n uploadId (HTTP.RequestBodyBS v)
+            uploadPart bucket object n uploadId (HTTP.RequestBodyLBS v)
           yield etag
           loop (n+1)
         Nothing -> return ()
 
-chunkedConduit :: (MonadResource m) => Integer -> Conduit B8.ByteString m B8.ByteString
+chunkedConduit :: (MonadResource m) => Integer -> Conduit B8.ByteString m BL.ByteString
 chunkedConduit size = do
   loop 0 ""
   where
+    loop :: MonadResource m => Int -> BL.ByteString -> Conduit B8.ByteString m BL.ByteString
     loop cnt str = do
       line' <- await
       case line' of 
@@ -389,8 +391,8 @@ chunkedConduit size = do
           yield str
           return ()
         Just line -> do
-          let len = (B8.length line)+cnt
-          let newStr = B8.concat [str, line]
+          let len = B8.length line+cnt
+          let newStr = str <> BL.fromStrict line
           if len >= (fromIntegral size)
             then do
             yield newStr
