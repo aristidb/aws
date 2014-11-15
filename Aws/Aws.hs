@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE BangPatterns          #-}
 
 module Aws.Aws
 ( -- * Logging
@@ -231,10 +232,10 @@ unsafeAwsRef
      Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> ResourceT IO a
 unsafeAwsRef cfg info manager metadataRef request = do
   sd <- liftIO $ signatureData <$> timeInfo <*> credentials $ cfg
-  let q = signQuery request info sd
+  let !q = {-# SCC "unsafeAwsRef:signQuery" #-} signQuery request info sd
   let logDebug = liftIO . logger cfg Debug . T.pack
   logDebug $ "String to sign: " ++ show (sqStringToSign q)
-  httpRequest <- liftIO $ queryToHttpRequest q
+  !httpRequest <- {-# SCC "unsafeAwsRef:httpRequest" #-} liftIO $ queryToHttpRequest q
   logDebug $ "Host: " ++ show (HTTP.host httpRequest)
   logDebug $ "Path: " ++ show (HTTP.path httpRequest)
   logDebug $ "Query string: " ++ show (HTTP.queryString httpRequest)
@@ -242,11 +243,11 @@ unsafeAwsRef cfg info manager metadataRef request = do
     HTTP.RequestBodyLBS lbs -> logDebug $ "Body: " ++ show (L.take 1000 lbs)
     HTTP.RequestBodyBS bs -> logDebug $ "Body: " ++ show (B.take 1000 bs)
     _ -> return ()
-  hresp <- HTTP.http httpRequest manager
+  hresp <- {-# SCC "unsafeAwsRef:http" #-} HTTP.http httpRequest manager
   logDebug $ "Response status: " ++ show (HTTP.responseStatus hresp)
   forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
     logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
-  responseConsumer request metadataRef hresp
+  {-# SCC "unsafeAwsRef:responseConsumer" #-} responseConsumer request metadataRef hresp
 
 -- | Run a URI-only AWS transaction. Returns a URI that can be sent anywhere. Does not work with all requests.
 --

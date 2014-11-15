@@ -408,37 +408,37 @@ httpMethod Delete    = "DELETE"
 data SignedQuery
     = SignedQuery {
         -- | Request method.
-        sqMethod :: Method
+        sqMethod :: !Method
         -- | Protocol to be used.
-      , sqProtocol :: Protocol
+      , sqProtocol :: !Protocol
         -- | HTTP host.
-      , sqHost :: B.ByteString
+      , sqHost :: !B.ByteString
         -- | IP port.
-      , sqPort :: Int
+      , sqPort :: !Int
         -- | HTTP path.
-      , sqPath :: B.ByteString
+      , sqPath :: !B.ByteString
         -- | Query string list (used with 'Get' and 'PostQuery').
-      , sqQuery :: HTTP.Query
+      , sqQuery :: !HTTP.Query
         -- | Request date/time.
-      , sqDate :: Maybe UTCTime
+      , sqDate :: !(Maybe UTCTime)
         -- | Authorization string (if applicable), for @Authorization@ header.  See 'authorizationV4'
-      , sqAuthorization :: Maybe (IO B.ByteString)
+      , sqAuthorization :: !(Maybe (IO B.ByteString))
         -- | Request body content type.
-      , sqContentType :: Maybe B.ByteString
+      , sqContentType :: !(Maybe B.ByteString)
         -- | Request body content MD5.
-      , sqContentMd5 :: Maybe (Digest MD5)
+      , sqContentMd5 :: !(Maybe (Digest MD5))
         -- | Additional Amazon "amz" headers.
-      , sqAmzHeaders :: HTTP.RequestHeaders
+      , sqAmzHeaders :: !HTTP.RequestHeaders
         -- | Additional non-"amz" headers.
-      , sqOtherHeaders :: HTTP.RequestHeaders
+      , sqOtherHeaders :: !HTTP.RequestHeaders
         -- | Request body (used with 'Post' and 'Put').
 #if MIN_VERSION_http_conduit(2, 0, 0)
-      , sqBody :: Maybe HTTP.RequestBody
+      , sqBody :: !(Maybe HTTP.RequestBody)
 #else
-      , sqBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
+      , sqBody :: !(Maybe (HTTP.RequestBody (C.ResourceT IO)))
 #endif
         -- | String to sign. Note that the string is already signed, this is passed mostly for debugging purposes.
-      , sqStringToSign :: B.ByteString
+      , sqStringToSign :: !B.ByteString
       }
     --deriving (Show)
 
