@@ -88,6 +88,14 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
+** 0.11 series
+
+- 0.11
+  - New functions for running AWS transactions
+  - Performance optimizations for DynamoDB and S3 MultiPartUpload
+  - New DynamoDB commands & features
+  - S3 endpoint eu-central-1
+
 ** 0.10 series
 
 - 0.10.5
