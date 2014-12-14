@@ -136,14 +136,13 @@ import qualified Text.XML.Cursor          as Cu
 import           Text.XML.Cursor          hiding (force, forceM)
 -------------------------------------------------------------------------------
 
-
 -- | Types that can be logged (textually).
 class Loggable a where
     toLogText :: a -> T.Text
 
 -- | A response with metadata. Can also contain an error response, or
 -- an internal error, via 'Attempt'.
--- 
+--
 -- Response forms a Writer-like monad.
 data Response m a = Response { responseMetadata :: m
                              , responseResult :: Either E.SomeException a }
@@ -222,10 +221,10 @@ class ListResponse resp item | resp -> item where
 
 
 -- | Associates a request type and a response type in a bi-directional way.
--- 
+--
 -- This allows the type-checker to infer the response type when given
 -- the request type and vice versa.
--- 
+--
 -- Note that the actual request generation and response parsing
 -- resides in 'SignQuery' and 'ResponseConsumer' respectively.
 class (SignQuery r, ResponseConsumer r a, Loggable (ResponseMetadata a))
@@ -458,29 +457,33 @@ queryToHttpRequest SignedQuery{..} =  do
       , HTTP.host = sqHost
       , HTTP.port = sqPort
       , HTTP.path = sqPath
-      , HTTP.queryString = HTTP.renderQuery False sqQuery
+      , HTTP.queryString =
+          if sqMethod == PostQuery
+            then ""
+            else HTTP.renderQuery False sqQuery
+
       , HTTP.requestHeaders = catMaybes [ checkDate (\d -> ("Date", fmtRfc822Time d)) sqDate
                                         , fmap (\c -> ("Content-Type", c)) contentType
                                         , fmap (\md5 -> ("Content-MD5", Base64.encode $ toBytes md5)) sqContentMd5
                                         , fmap (\auth -> ("Authorization", auth)) mauth]
                               ++ sqAmzHeaders
                               ++ sqOtherHeaders
-      , HTTP.requestBody = 
+      , HTTP.requestBody =
 
         -- An explicityly defined body parameter should overwrite everything else.
         case sqBody of
           Just x -> x
-          Nothing -> 
+          Nothing ->
             -- a POST query should convert its query string into the body
             case sqMethod of
-              PostQuery -> HTTP.RequestBodyLBS . Blaze.toLazyByteString $ 
+              PostQuery -> HTTP.RequestBodyLBS . Blaze.toLazyByteString $
                            HTTP.renderQueryBuilder False sqQuery
               _         -> HTTP.RequestBodyBuilder 0 mempty
 
       , HTTP.decompress = HTTP.alwaysDecompress
       , HTTP.checkStatus = \_ _ _ -> Nothing
       }
-    where 
+    where
       checkDate f mb = maybe (f <$> mb) (const Nothing) $ lookup "date" sqOtherHeaders
       -- An explicitly defined content-type should override everything else.
       contentType = sqContentType `mplus` defContentType
@@ -587,7 +590,7 @@ signature cr ah input = Base64.encode sig
 -- See <http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html>: you must create the
 -- canonical request as explained by Step 1 and this function takes care of Steps 2 and 3.
 authorizationV4 :: SignatureData
-                -> AuthorizationHash 
+                -> AuthorizationHash
                 -> B.ByteString -- ^ region, e.g. us-east-1
                 -> B.ByteString -- ^ service, e.g. dynamodb
                 -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
@@ -671,7 +674,7 @@ class DefaultServiceConfiguration config where
 -- | @queryList f prefix xs@ constructs a query list from a list of
 -- elements @xs@, using a common prefix @prefix@, and a transformer
 -- function @f@.
--- 
+--
 -- A dot (@.@) is interspersed between prefix and generated key.
 --
 -- Example:
