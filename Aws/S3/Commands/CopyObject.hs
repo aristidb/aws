@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Aws.S3.Commands.CopyObject
 where
 
@@ -14,7 +15,11 @@ import qualified Data.Text.Encoding as T
 import           Data.Time
 import qualified Network.HTTP.Conduit as HTTP
 import           Text.XML.Cursor (($/), (&|))
+#if MIN_VERSION_time(1,5,0)
+import           Data.Time.Format
+#else
 import           System.Locale
+#endif
 
 data CopyMetadataDirective = CopyMetadata | ReplaceMetadata [(T.Text,T.Text)]
   deriving (Show)

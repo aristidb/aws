@@ -17,7 +17,11 @@ import           Data.Monoid
 import           Control.Applicative            ((<|>))
 import           Data.Time
 import           Data.Typeable
+#if MIN_VERSION_time(1,5,0)
+import           Data.Time.Format
+#else
 import           System.Locale
+#endif
 import           Text.XML.Cursor                (($/), (&|))
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
