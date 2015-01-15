@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Aws.S3.Commands.GetService
 where
 
@@ -5,7 +6,11 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Data.Maybe
 import           Data.Time.Format
+#if MIN_VERSION_time(1,5,0)
+import           Data.Time.Format
+#else
 import           System.Locale
+#endif
 import           Text.XML.Cursor  (($/), ($//), (&|))
 import qualified Data.Text        as T
 import qualified Text.XML.Cursor  as Cu

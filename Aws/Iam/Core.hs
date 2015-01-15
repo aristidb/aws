@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards       #-}
@@ -32,7 +33,11 @@ import           Data.Time
 import           Data.Typeable
 import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
+#if MIN_VERSION_time(1,5,0)
+import           Data.Time.Format
+#else
 import           System.Locale
+#endif
 import           Text.XML.Cursor                (($//))
 import qualified Text.XML.Cursor                as Cu
 
