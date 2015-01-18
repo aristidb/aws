@@ -1,2 +1,2 @@
 { pkgs ? import <nixpkgs> {} }:
-pkgs.haskellPackages_ghc783_profiling.callPackage ./aws.nix {}
+pkgs.haskellPackages_ghc784_profiling.callPackage ./aws.nix {}
