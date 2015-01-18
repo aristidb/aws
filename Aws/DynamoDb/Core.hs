@@ -828,7 +828,7 @@ data AmazonError = AmazonError {
 instance FromJSON AmazonError where
     parseJSON (Object v) = AmazonError
         <$> v .: "__type"
-        <*> v .:? "message"
+        <*> (v .:? "message" <|> v .:? "Message")
     parseJSON _ = error $ "aws: unexpected AmazonError message"
 
 
