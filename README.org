@@ -90,6 +90,9 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.11 series
 
+- 0.11.2
+  - Support for time 1.5 (we previously forgot to relax the upper bound in Cabal)
+
 - 0.11.1
   - Support time 1.5
   - Fix duplicate sending of query when using PostQuery
