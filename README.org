@@ -90,6 +90,10 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.11 series
 
+- 0.11.1
+  - Support time 1.5
+  - Fix duplicate sending of query when using PostQuery
+
 - 0.11
   - New functions for running AWS transactions
   - Performance optimizations for DynamoDB and S3 MultiPartUpload
