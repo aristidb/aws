@@ -396,7 +396,7 @@ data Method
     | Post      -- ^ POST method. Sends a service- and request-specific request body.
     | Put       -- ^ PUT method.
     | Delete    -- ^ DELETE method.
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 -- | HTTP method associated with a request method.
 httpMethod :: Method -> HTTP.Method
