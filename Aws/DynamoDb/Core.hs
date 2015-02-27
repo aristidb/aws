@@ -1138,7 +1138,7 @@ instance (DynSize a, DynSize b) => DynSize (Either a b) where
 -------------------------------------------------------------------------------
 -- | Will an attribute be considered empty by DynamoDb?
 --
--- A 'PutItem' (or similar) with empty attributes will be rejection
+-- A 'PutItem' (or similar) with empty attributes will be rejected
 -- with a 'ValidationException'.
 nullAttr :: Attribute -> Bool
 nullAttr (Attribute _ val) =
