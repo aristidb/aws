@@ -416,3 +416,21 @@ multipartUpload cfg s3cfg mgr bucket object src chunkSize = do
            $= putConduit cfg s3cfg mgr bucket object uploadId
            $$ CL.consume
   liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
+
+multipartUploadWithInitiator ::
+  Configuration
+  -> S3Configuration NormalQuery
+  -> (Bucket -> T.Text -> InitiateMultipartUpload)
+  -> HTTP.Manager
+  -> T.Text
+  -> T.Text
+  -> Conduit () (ResourceT IO) B8.ByteString
+  -> Integer
+  -> ResourceT IO ()
+multipartUploadWithInitiator cfg s3cfg initiator mgr bucket object src chunkSize = do
+  uploadId <- liftIO $ imurUploadId <$> memoryAws cfg s3cfg mgr (initiator bucket object)
+  etags <- src
+           $= chunkedConduit chunkSize
+           $= putConduit cfg s3cfg mgr bucket object uploadId
+           $$ CL.consume
+  liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
