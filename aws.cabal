@@ -202,6 +202,24 @@ Executable MultipartUpload
 
   Default-Language: Haskell2010
 
+Executable MultipartTransfer
+  Main-is: MultipartTransfer.hs
+  Hs-source-dirs: Examples
+
+  if !flag(Examples)
+    Buildable: False
+  else
+    Buildable: True
+    Build-depends:
+                       base == 4.*,
+                       aws,
+                       http-conduit,
+                       conduit,
+                       conduit-extra,
+                       text
+
+  Default-Language: Haskell2010
+
 Executable NukeBucket
   Main-is: NukeBucket.hs
   Hs-source-dirs: Examples
