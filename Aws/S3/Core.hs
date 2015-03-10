@@ -10,6 +10,7 @@ import           Crypto.Hash
 import           Data.Byteable
 import           Data.Conduit                   (($$+-))
 import           Data.Function
+import           Data.Functor                   ((<$>))
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -187,14 +188,15 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
                                                  | otherwise = x1 : merge (x2 : xs)
                 merge xs = xs
 
+      urlEncodedS3QObject = HTTP.urlEncode False <$> s3QObject
       (host, path) = case s3RequestStyle of
-                       PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, s3QObject])
-                       BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", s3QObject])
-                       VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/", s3QObject])
+                       PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
+                       BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", urlEncodedS3QObject])
+                       VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/", urlEncodedS3QObject])
       sortedSubresources = sort s3QSubresources
       canonicalizedResource = Blaze8.fromChar '/' `mappend`
                               maybe mempty (\s -> Blaze.copyByteString s `mappend` Blaze8.fromChar '/') s3QBucket `mappend`
-                              maybe mempty Blaze.copyByteString s3QObject `mappend`
+                              maybe mempty Blaze.copyByteString urlEncodedS3QObject `mappend`
                               HTTP.renderQueryBuilder True sortedSubresources
       ti = case (s3UseUri, signatureTimeInfo) of
              (False, ti') -> ti'
