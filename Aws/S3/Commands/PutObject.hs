@@ -14,6 +14,7 @@ import qualified Data.CaseInsensitive  as CI
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import qualified Network.HTTP.Conduit  as HTTP
+import qualified Network.HTTP.Types    as HTTP
 
 data PutObject = PutObject {
   poObjectName :: T.Text,
@@ -74,7 +75,7 @@ instance SignQuery PutObject where
                                             , ("Content-Encoding",) <$> poContentEncoding
                                             ]
                                , s3QRequestBody = Just poRequestBody
-                               , s3QObject = Just $ T.encodeUtf8 poObjectName
+                               , s3QObject = Just . HTTP.urlEncode False $ T.encodeUtf8 poObjectName
                                }
 
 instance ResponseConsumer PutObject PutObjectResponse where

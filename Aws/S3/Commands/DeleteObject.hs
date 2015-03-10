@@ -6,6 +6,7 @@ import           Aws.S3.Core
 import           Data.ByteString.Char8      ({- IsString -})
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
+import qualified Network.HTTP.Types         as HTTP
 
 data DeleteObject = DeleteObject {
   doObjectName :: T.Text,
@@ -28,7 +29,7 @@ instance SignQuery DeleteObject where
                                , s3QAmzHeaders = []
                                , s3QOtherHeaders = []
                                , s3QRequestBody = Nothing
-                               , s3QObject = Just $ T.encodeUtf8 doObjectName
+                               , s3QObject = Just . HTTP.urlEncode False $ T.encodeUtf8 doObjectName
                                }
 
 instance ResponseConsumer DeleteObject DeleteObjectResponse where
