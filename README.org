@@ -90,6 +90,13 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.11 series
 
+- 0.11.3
+  - Support for blaze-builder 0.4
+  - Support for utf8-string 1.0
+  - New function: multipartUploadWithInitiator
+  - Fix issue in DynamoDB error parsing
+  - Ord instance for Aws.Core.Method
+
 - 0.11.2
   - Support for time 1.5 (we previously forgot to relax the upper bound in Cabal)
 
