@@ -50,7 +50,7 @@ instance SignQuery GetObject where
     signQuery GetObject {..} = s3SignQuery S3Query {
                                    s3QMethod = Get
                                  , s3QBucket = Just $ T.encodeUtf8 goBucket
-                                 , s3QObject = Just . HTTP.urlEncode False $ T.encodeUtf8 goObjectName
+                                 , s3QObject = Just $ T.encodeUtf8 goObjectName
                                  , s3QSubresources = HTTP.toQuery [
                                                        ("versionId" :: B8.ByteString,) <$> goVersionId
                                                      , ("response-content-type" :: B8.ByteString,) <$> goResponseContentType

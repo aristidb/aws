@@ -14,7 +14,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Time
 import qualified Network.HTTP.Conduit as HTTP
-import qualified Network.HTTP.Types as HTTP
 import           Text.XML.Cursor (($/), (&|))
 #if MIN_VERSION_time(1,5,0)
 import           Data.Time.Format
@@ -56,12 +55,12 @@ instance SignQuery CopyObject where
     signQuery CopyObject {..} = s3SignQuery S3Query {
                                  s3QMethod = Put
                                , s3QBucket = Just $ T.encodeUtf8 coBucket
-                               , s3QObject = Just . HTTP.urlEncode False $ T.encodeUtf8 coObjectName
+                               , s3QObject = Just $ T.encodeUtf8 coObjectName
                                , s3QSubresources = []
                                , s3QQuery = []
                                , s3QContentType = coContentType
                                , s3QContentMd5 = Nothing
-                               , s3QAmzHeaders = map (second (HTTP.urlEncode False . T.encodeUtf8)) $ catMaybes [
+                               , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                    Just ("x-amz-copy-source",
                                          oidBucket `T.append` "/" `T.append` oidObject `T.append`
                                          case oidVersion of
