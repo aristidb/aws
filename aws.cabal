@@ -137,7 +137,7 @@ Library
                        resourcet            >= 1.1     && < 1.2,
                        safe                 >= 0.3     && < 0.4,
                        scientific           >= 0.3,
-                       tagged               >= 0.7     && < 0.8,
+                       tagged               >= 0.7     && < 0.9,
                        text                 >= 0.11,
                        time                 >= 1.1.4   && < 1.6,
                        transformers         >= 0.2.2   && < 0.5,
