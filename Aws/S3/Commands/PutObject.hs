@@ -34,7 +34,8 @@ data PutObject = PutObject {
   poRequestBody  :: HTTP.RequestBody (C.ResourceT IO),
 #endif
   poMetadata :: [(T.Text,T.Text)],
-  poAutoMakeBucket :: Bool -- ^ Internet Archive S3 nonstandard extension
+  poAutoMakeBucket :: Bool, -- ^ Internet Archive S3 nonstandard extension
+  poExpect100Continue :: Bool -- ^ Note: Requires http-client >= 0.4.10
 }
 
 #if MIN_VERSION_http_conduit(2, 0, 0)
@@ -42,7 +43,7 @@ putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
 #else
 putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
 #endif
-putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False False
 
 data PutObjectResponse
   = PutObjectResponse {
@@ -72,6 +73,7 @@ instance SignQuery PutObject where
                                             , ("Cache-Control",) <$> poCacheControl
                                             , ("Content-Disposition",) <$> poContentDisposition
                                             , ("Content-Encoding",) <$> poContentEncoding
+           , if poExpect100Continue then Just ("Expect", "100-continue") else Nothing
                                             ]
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
