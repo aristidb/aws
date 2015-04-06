@@ -73,7 +73,9 @@ instance SignQuery PutObject where
                                             , ("Cache-Control",) <$> poCacheControl
                                             , ("Content-Disposition",) <$> poContentDisposition
                                             , ("Content-Encoding",) <$> poContentEncoding
-           , if poExpect100Continue then Just ("Expect", "100-continue") else Nothing
+                                            , if poExpect100Continue
+                                                  then Just ("Expect", "100-continue")
+                                                  else Nothing
                                             ]
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
