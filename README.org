@@ -90,6 +90,12 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 ** 0.11 series
 
+- 0.11.4
+  - Url-encode S3 object names in URLs
+  - filepath 1.4
+  - tagged 0.8.x
+  - limit errors to <2 to avoid compatibility problems
+
 - 0.11.3
   - Support for blaze-builder 0.4
   - Support for utf8-string 1.0
