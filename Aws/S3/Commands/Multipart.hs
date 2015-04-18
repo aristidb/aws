@@ -131,12 +131,13 @@ data UploadPart = UploadPart {
   , upContentMD5 :: Maybe (Digest MD5)
   , upServerSideEncryption :: Maybe ServerSideEncryption
   , upRequestBody  :: HTTP.RequestBody
+  , upExpect100Continue :: Bool -- ^ Note: Requires http-client >= 0.4.10
 }
 
 uploadPart :: Bucket -> T.Text -> Integer -> T.Text -> HTTP.RequestBody -> UploadPart
 uploadPart bucket obj p i body =
   UploadPart obj bucket p i
-  Nothing Nothing Nothing body
+  Nothing Nothing Nothing body False
 
 data UploadPartResponse
   = UploadPartResponse {
@@ -162,7 +163,11 @@ instance SignQuery UploadPart where
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                    ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> upServerSideEncryption
                                  ]
-                               , s3QOtherHeaders = []
+                               , s3QOtherHeaders = catMaybes [
+                                    if upExpect100Continue
+                                        then Just ("Expect", "100-continue")
+                                        else Nothing
+                                 ]
                                , s3QRequestBody = Just upRequestBody
                                }
 
