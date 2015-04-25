@@ -486,6 +486,8 @@ queryToHttpRequest SignedQuery{..} =  do
 
       , HTTP.decompress = HTTP.alwaysDecompress
       , HTTP.checkStatus = \_ _ _ -> Nothing
+
+      , HTTP.redirectCount = 10
       }
     where
       checkDate f mb = maybe (f <$> mb) (const Nothing) $ lookup "date" sqOtherHeaders
