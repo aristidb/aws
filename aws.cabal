@@ -1,5 +1,5 @@
 Name:                aws
-Version:             0.11.4
+Version:             0.12
 Synopsis:            Amazon Web Services (AWS) for Haskell
 Description:         Bindings for Amazon Web Services (AWS), with the aim of supporting all AWS services. To see a high level overview of the library, see the README at <https://github.com/aristidb/aws/blob/master/README.org>.
 Homepage:            http://github.com/aristidb/aws
@@ -20,7 +20,7 @@ Cabal-version:       >=1.10
 Source-repository this
   type: git
   location: https://github.com/aristidb/aws.git
-  tag: 0.11.4
+  tag: 0.12
 
 Source-repository head
   type: git

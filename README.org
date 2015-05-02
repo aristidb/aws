@@ -88,6 +88,12 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 
 * Release Notes
 
+** 0.12 series
+
+- 0.12
+  - S3: Support for "Expect: 100-continue" (optional, technically API breaking)
+  - S3: Properly treat errors with a "301 Permanent Redirect" as errors and expose endpoint information
+
 ** 0.11 series
 
 - 0.11.4
