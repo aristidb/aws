@@ -245,7 +245,7 @@ s3BinaryResponseConsumer inner metadata resp = do
       let m = S3Metadata { s3MAmzId2 = amzId2, s3MRequestId = requestId }
       liftIO $ tellMetadataRef metadata m
 
-      if HTTP.responseStatus resp >= HTTP.status400
+      if HTTP.responseStatus resp >= HTTP.status300
         then s3ErrorResponseConsumer resp
         else inner resp
 
