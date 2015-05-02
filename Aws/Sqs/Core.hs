@@ -2,7 +2,7 @@
 module Aws.Sqs.Core where
 
 import           Aws.Core
-import           Aws.S3.Core                    (LocationConstraint, locationUsClassic, locationUsWest, locationUsWest2, locationApSouthEast, locationApNorthEast, locationEu)
+import           Aws.S3.Core                    (LocationConstraint, locationUsClassic, locationUsWest, locationUsWest2, locationApSouthEast, locationApSouthEast2, locationApNorthEast, locationEu)
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
@@ -142,6 +142,14 @@ sqsEndpointApSouthEast
         endpointHost = "ap-southeast-1.queue.amazonaws.com"
       , endpointDefaultLocationConstraint = locationApSouthEast
       , endpointAllowedLocationConstraints = [locationApSouthEast]
+      }
+
+sqsEndpointApSouthEast2 :: Endpoint
+sqsEndpointApSouthEast2
+    = Endpoint {
+        endpointHost = "sqs.ap-southeast-2.amazonaws.com"
+      , endpointDefaultLocationConstraint = locationApSouthEast2
+      , endpointAllowedLocationConstraints = [locationApSouthEast2]
       }
 
 sqsEndpointApNorthEast :: Endpoint
