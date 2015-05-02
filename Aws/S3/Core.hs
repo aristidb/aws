@@ -115,6 +115,9 @@ data S3Error
       , s3ErrorHostId :: Maybe T.Text -- Error/HostId
       , s3ErrorAccessKeyId :: Maybe T.Text -- Error/AWSAccessKeyId
       , s3ErrorStringToSign :: Maybe B.ByteString -- Error/StringToSignBytes (hexadecimal encoding)
+      , s3ErrorBucket :: Maybe T.Text -- Error/Bucket
+      , s3ErrorEndpointRaw :: Maybe T.Text -- Error/Endpoint (i.e. correct bucket location)
+      , s3ErrorEndpoint :: Maybe B.ByteString -- Error/Endpoint without the bucket prefix
       }
     deriving (Show, Typeable)
 
@@ -269,6 +272,9 @@ s3ErrorResponseConsumer resp
                            let resource = listToMaybe $ root $/ elContent "Resource"
                                hostId = listToMaybe $ root $/ elContent "HostId"
                                accessKeyId = listToMaybe $ root $/ elContent "AWSAccessKeyId"
+                               bucket = listToMaybe $ root $/ elContent "Bucket"
+                               endpointRaw = listToMaybe $ root $/ elContent "Endpoint"
+                               endpoint = T.encodeUtf8 <$> (T.stripPrefix (fromMaybe "" bucket <> ".") =<< endpointRaw)
                                stringToSign = do unprocessed <- listToMaybe $ root $/ elCont "StringToSignBytes"
                                                  bytes <- mapM readHex2 $ words unprocessed
                                                  return $ B.pack bytes
@@ -280,6 +286,9 @@ s3ErrorResponseConsumer resp
                                       , s3ErrorHostId = hostId
                                       , s3ErrorAccessKeyId = accessKeyId
                                       , s3ErrorStringToSign = stringToSign
+                                      , s3ErrorBucket = bucket
+                                      , s3ErrorEndpointRaw = endpointRaw
+                                      , s3ErrorEndpoint = endpoint
                                       }
 
 type CanonicalUserId = T.Text
