@@ -91,6 +91,7 @@ You can also find this example in the source distribution in the ~Examples/~ fol
 ** 0.12 series
 
 - 0.12.1
+  - DDB: Fix eu-west-1, add eu-central-1
   - attoparsec 0.13
   - xml-conduit 1.3
 
