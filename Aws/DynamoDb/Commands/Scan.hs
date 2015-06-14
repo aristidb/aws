@@ -44,6 +44,8 @@ data Scan = Scan {
     -- ^ Exclusive start key to resume a previous query.
     , sLimit         :: Maybe Int
     -- ^ Whether to limit result set size
+    , sIndex         :: Maybe T.Text
+    -- ^ Optional. Index to 'Scan'
     , sSelect        :: QuerySelect
     -- ^ What to return from 'Scan'
     , sRetCons       :: ReturnConsumption
@@ -57,7 +59,7 @@ data Scan = Scan {
 -- | Construct a minimal 'Scan' request.
 scan :: T.Text                   -- ^ Table name
      -> Scan
-scan tn = Scan tn def Nothing Nothing def def 0 1
+scan tn = Scan tn def Nothing Nothing Nothing def def 0 1
 
 
 -- | Response to a 'Scan' query.
@@ -76,6 +78,7 @@ instance ToJSON Scan where
       catMaybes
         [ (("ExclusiveStartKey" .= ) . attributesJson) <$> sStartKey
         , ("Limit" .= ) <$> sLimit
+        , ("IndexName" .= ) <$> sIndex
         ] ++
       conditionsJson "ScanFilter" sFilter ++
       querySelectJson sSelect ++
