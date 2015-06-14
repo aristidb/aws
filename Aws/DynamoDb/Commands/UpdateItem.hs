@@ -79,7 +79,10 @@ au a = AttributeUpdate a def
 instance ToJSON AttributeUpdates where
     toJSON = object . map mk
         where
-          mk AttributeUpdate{..} = (attrName auAttr) .= object
+          mk AttributeUpdate { auAction = UDelete, auAttr = auAttr } =
+            (attrName auAttr) .= object
+            ["Action" .= UDelete]
+          mk AttributeUpdate { .. } = (attrName auAttr) .= object
             ["Value" .= (attrVal auAttr), "Action" .= auAction]
 
 
