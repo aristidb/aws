@@ -1128,6 +1128,7 @@ class DynSize a where
 
 instance DynSize DValue where
     dynSize (DBool _) = 8
+    dynSize (DBoolSet s) = sum $ map (dynSize . DBool) $ S.toList s
     dynSize (DNum _) = 8
     dynSize (DString a) = T.length a
     dynSize (DBinary bs) = T.length . T.decodeUtf8 $ Base64.encode bs
