@@ -159,6 +159,11 @@ import           Safe
 import           Aws.Core
 -------------------------------------------------------------------------------
 
+-------------------------------------------------------------------------------
+-- | Boolean values stored in DynamoDb. Only used in defining new
+-- 'DynVal' instances.
+newtype DynBool = DynBool { unDynBool :: Bool }
+    deriving (Eq,Show,Read,Ord,Typeable)
 
 
 -------------------------------------------------------------------------------
@@ -195,6 +200,16 @@ newtype DynBinary = DynBinary { unDynBinary :: B.ByteString }
 class Ord a => DynData a where
     fromData :: a -> DValue
     toData :: DValue -> Maybe a
+
+instance DynData DynBool where
+    fromData (DynBool i) = DBool i
+    toData (DBool i) = Just $ DynBool i
+    toData _ = Nothing
+
+instance DynData (S.Set DynBool) where
+    fromData set = DBoolSet (S.map unDynBool set)
+    toData (DBoolSet i) = Just $ S.map DynBool i
+    toData _ = Nothing
 
 instance DynData DynNumber where
     fromData (DynNumber i) = DNum i
@@ -274,6 +289,10 @@ instance DynVal DValue where
     fromRep = Just
     toRep   = id
 
+instance DynVal Bool where
+    type DynRep Bool = DynBool
+    fromRep (DynBool i) = Just i
+    toRep i = DynBool i
 
 instance DynVal Int where
     type DynRep Int = DynNumber
@@ -401,18 +420,6 @@ fromTS i = UTCTime (ModifiedJulianDay days) diff
       diff = fromRational ((toRational secs) / pico)
 
 
--- | Encoded as 0 and 1.
-instance DynVal Bool where
-    type DynRep Bool = DynNumber
-    fromRep (DynNumber i) = do
-        (i' :: Int) <- toIntegral i
-        case i' of
-          0 -> return False
-          1 -> return True
-          _ -> Nothing
-    toRep b = DynNumber (if b then 1 else 0)
-
-
 
 -- | Type wrapper for binary data to be written to DynamoDB. Wrap any
 -- 'Serialize' instance in there and 'DynVal' will know how to
@@ -457,6 +464,8 @@ data DValue
     | DStringSet (S.Set T.Text)
     | DBinSet (S.Set B.ByteString)
     -- ^ Binary data will automatically be base64 marshalled.
+    | DBool Bool
+    | DBoolSet (S.Set Bool)
     deriving (Eq,Show,Read,Ord,Typeable)
 
 
@@ -567,6 +576,7 @@ instance ToJSON DValue where
     toJSON (DNumSet i) = object ["NS" .= map showT (S.toList i)]
     toJSON (DStringSet i) = object ["SS" .= S.toList i]
     toJSON (DBinSet i) = object ["BS" .= map (T.decodeUtf8 . Base64.encode) (S.toList i)]
+    toJSON (DBool i) = object ["BOOL" .= i]
     toJSON x = error $ "aws: bug: DynamoDB can't handle " ++ show x
 
 
@@ -586,6 +596,7 @@ instance FromJSON DValue where
             xs <- mapM (either fail return . Base64.decode . T.encodeUtf8)
                   =<< parseJSON s
             return $ DBinSet $ S.fromList xs
+        [("BOOL", b)] -> DBool <$> parseJSON b
 
         x -> fail $ "aws: unknown dynamodb value: " ++ show x
 
@@ -1116,6 +1127,7 @@ class DynSize a where
     dynSize :: a -> Int
 
 instance DynSize DValue where
+    dynSize (DBool _) = 8
     dynSize (DNum _) = 8
     dynSize (DString a) = T.length a
     dynSize (DBinary bs) = T.length . T.decodeUtf8 $ Base64.encode bs
@@ -1309,9 +1321,3 @@ getAttr' k m = do
 -- instance.
 fromItem :: FromDynItem a => Item -> Either String a
 fromItem i = runParser (parseItem i) Left Right
-
-
-
-
-
-
