@@ -10,7 +10,7 @@
 }:
 mkDerivation {
   pname = "aws";
-  version = "0.12.2";
+  version = "0.13.0";
   src = ./.;
   isLibrary = true;
   isExecutable = true;
