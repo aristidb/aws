@@ -1,7 +1,7 @@
 { mkDerivation, aeson, attoparsec, base, base16-bytestring
 , base64-bytestring, blaze-builder, byteable, bytestring
 , case-insensitive, cereal, conduit, conduit-extra, containers
-, cryptohash, data-default, directory, errors-1_4_7, filepath
+, cryptohash, data-default, directory, errors, filepath
 , http-client, http-conduit, http-types, lifted-base, monad-control
 , mtl, network, old-locale, QuickCheck, quickcheck-instances
 , resourcet, safe, scientific, stdenv, tagged, tasty
@@ -23,11 +23,10 @@ mkDerivation {
     unordered-containers utf8-string vector xml-conduit
   ];
   testDepends = [
-    aeson base bytestring errors-1_4_7 http-client lifted-base monad-control
+    aeson base bytestring errors http-client lifted-base monad-control
     mtl QuickCheck quickcheck-instances resourcet tagged tasty
     tasty-quickcheck text time transformers transformers-base
   ];
-  jailbreak = true;
   homepage = "http://github.com/aristidb/aws";
   description = "Amazon Web Services (AWS) for Haskell";
   license = stdenv.lib.licenses.bsd3;
