@@ -208,10 +208,19 @@ data AccessKeyStatus = AccessKeyActive | AccessKeyInactive
 -- <https://docs.aws.amazon.com/IAM/latest/APIReference/API_MFADevice.html>
 data MFADevice = MFADevice
                  { mfaEnableDate   :: UTCTime
+                   -- ^ The date when the MFA device was enabled for
+                   -- the user.
                  , mfaSerialNumber :: Text
+                   -- ^ The serial number that uniquely identifies the
+                   -- MFA device. For virtual MFA devices, the serial
+                   -- number is the device ARN.
                  , mfaUserName     :: Text
+                   -- ^ The user with whom the MFA device is
+                   -- associated. Minimum length of 1. Maximum length
+                   -- of 64.
                  } deriving (Eq, Ord, Show, Typeable)
 
+-- | Parses the IAM @MFADevice@ data type.
 parseMFADevice :: MonadThrow m => Cu.Cursor -> m MFADevice
 parseMFADevice cursor = do
   mfaEnableDate   <- attr "EnableDate" >>= parseDateTime . Text.unpack

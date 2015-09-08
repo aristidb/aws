@@ -22,11 +22,18 @@ import Text.XML.Cursor (laxElement, ($//), (&|))
 
 data ListMFADevices = ListMFADevices
                       { lmfaUserName :: Maybe Text
+                        -- ^ The name of the user whose MFA devices
+                        -- you want to list.  If you do not specify a
+                        -- user name, IAM determines the user name
+                        -- implicitly based on the AWS access key ID
+                        -- signing the request
                       , lmfaMarker   :: Maybe Text
-                        -- ^ Used for paginating requests. Marks the position of the last request.
+                        -- ^ Used for paginating requests. Marks the
+                        -- position of the last request.
                       , lmfaMaxItems :: Maybe Integer
-                        -- ^ Used for paginating requests. Specifies the maximum number of items
-                        -- to return in the response. Defaults to 100.
+                        -- ^ Used for paginating requests. Specifies
+                        -- the maximum number of items to return in
+                        -- the response. Defaults to 100.
                       } deriving (Eq, Ord, Show, Typeable)
 
 instance SignQuery ListMFADevices where
@@ -35,11 +42,19 @@ instance SignQuery ListMFADevices where
                                  ([ ("UserName",) <$> lmfaUserName ]
                                  <> markedIter lmfaMarker lmfaMaxItems)
 
-
 data ListMFADevicesResponse = ListMFADevicesResponse
                               { lmfarMFADevices :: [MFADevice]
+                                -- ^^List of 'MFA Device's.
                               , lmfarIsTruncated :: Bool
+                                -- ^ @True@ if the request was
+                                -- truncated because of too many
+                                -- items.
                               , lmfarMarker :: Maybe Text
+                                -- ^ Marks the position at which the
+                                -- request was truncated. This value
+                                -- must be passed with the next
+                                -- request to continue listing from
+                                -- the last position.
                               } deriving (Eq, Ord, Show, Typeable)
 
 instance ResponseConsumer ListMFADevices ListMFADevicesResponse where
