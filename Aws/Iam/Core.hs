@@ -14,8 +14,8 @@ module Aws.Iam.Core
     , AccessKeyStatus(..)
     , User(..)
     , parseUser
-    , MFADevice(..)
-    , parseMFADevice
+    , MfaDevice(..)
+    , parseMfaDevice
     ) where
 
 import           Aws.Core
@@ -206,7 +206,7 @@ data AccessKeyStatus = AccessKeyActive | AccessKeyInactive
 -- | The IAM @MFADevice@ data type.
 --
 -- <https://docs.aws.amazon.com/IAM/latest/APIReference/API_MFADevice.html>
-data MFADevice = MFADevice
+data MfaDevice = MfaDevice
                  { mfaEnableDate   :: UTCTime
                    -- ^ The date when the MFA device was enabled for
                    -- the user.
@@ -221,11 +221,11 @@ data MFADevice = MFADevice
                  } deriving (Eq, Ord, Show, Typeable)
 
 -- | Parses the IAM @MFADevice@ data type.
-parseMFADevice :: MonadThrow m => Cu.Cursor -> m MFADevice
-parseMFADevice cursor = do
+parseMfaDevice :: MonadThrow m => Cu.Cursor -> m MfaDevice
+parseMfaDevice cursor = do
   mfaEnableDate   <- attr "EnableDate" >>= parseDateTime . Text.unpack
   mfaSerialNumber <- attr "SerialNumber"
   mfaUserName     <- attr "UserName"
-  return MFADevice{..}
+  return MfaDevice{..}
  where attr name = force ("Missing " ++ Text.unpack name) $
                cursor $// elContent name

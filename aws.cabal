@@ -56,7 +56,7 @@ Library
                        Aws.Iam.Commands.GetUser
                        Aws.Iam.Commands.GetUserPolicy
                        Aws.Iam.Commands.ListAccessKeys
-                       Aws.Iam.Commands.ListMFADevices
+                       Aws.Iam.Commands.ListMfaDevices
                        Aws.Iam.Commands.ListUserPolicies
                        Aws.Iam.Commands.ListUsers
                        Aws.Iam.Commands.PutUserPolicy

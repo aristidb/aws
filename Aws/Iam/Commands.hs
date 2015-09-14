@@ -7,7 +7,7 @@ module Aws.Iam.Commands
     , module Aws.Iam.Commands.GetUser
     , module Aws.Iam.Commands.GetUserPolicy
     , module Aws.Iam.Commands.ListAccessKeys
-    , module Aws.Iam.Commands.ListMFADevices
+    , module Aws.Iam.Commands.ListMfaDevices
     , module Aws.Iam.Commands.ListUserPolicies
     , module Aws.Iam.Commands.ListUsers
     , module Aws.Iam.Commands.PutUserPolicy
@@ -23,7 +23,7 @@ import           Aws.Iam.Commands.DeleteUserPolicy
 import           Aws.Iam.Commands.GetUser
 import           Aws.Iam.Commands.GetUserPolicy
 import           Aws.Iam.Commands.ListAccessKeys
-import           Aws.Iam.Commands.ListMFADevices
+import           Aws.Iam.Commands.ListMfaDevices
 import           Aws.Iam.Commands.ListUserPolicies
 import           Aws.Iam.Commands.ListUsers
 import           Aws.Iam.Commands.PutUserPolicy

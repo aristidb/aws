@@ -1,15 +1,15 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE RecordWildCards       #-}
-module Aws.Iam.Commands.ListMFADevices
-       ( ListMFADevices(..)
-       , ListMFADevicesResponse(..)
+module Aws.Iam.Commands.ListMfaDevices
+       ( ListMfaDevices(..)
+       , ListMfaDevicesResponse(..)
        ) where
 
 import Aws.Core
 import Aws.Iam.Core
 import Aws.Iam.Internal
-import Control.Applicative
+--import Control.Applicative
 import Data.Text (Text)
 import Data.Typeable
 import Text.XML.Cursor (laxElement, ($//), (&|))
@@ -21,7 +21,7 @@ import Text.XML.Cursor (laxElement, ($//), (&|))
 --
 -- <https://docs.aws.amazon.com/IAM/latest/APIReference/API_ListMFADevices.html>
 
-data ListMFADevices = ListMFADevices
+data ListMfaDevices = ListMfaDevices
                       { lmfaUserName :: Maybe Text
                         -- ^ The name of the user whose MFA devices
                         -- you want to list.  If you do not specify a
@@ -37,15 +37,15 @@ data ListMFADevices = ListMFADevices
                         -- the response. Defaults to 100.
                       } deriving (Eq, Ord, Show, Typeable)
 
-instance SignQuery ListMFADevices where
-  type ServiceConfiguration ListMFADevices = IamConfiguration
-  signQuery ListMFADevices{..} = iamAction' "ListMFADevices"
+instance SignQuery ListMfaDevices where
+  type ServiceConfiguration ListMfaDevices = IamConfiguration
+  signQuery ListMfaDevices{..} = iamAction' "ListMFADevices"
                                  ([ ("UserName",) <$> lmfaUserName ]
                                  <> markedIter lmfaMarker lmfaMaxItems)
 
-data ListMFADevicesResponse = ListMFADevicesResponse
-                              { lmfarMFADevices :: [MFADevice]
-                                -- ^^List of 'MFA Device's.
+data ListMfaDevicesResponse = ListMfaDevicesResponse
+                              { lmfarMfaDevices :: [MfaDevice]
+                                -- ^ List of 'MFA Device's.
                               , lmfarIsTruncated :: Bool
                                 -- ^ @True@ if the request was
                                 -- truncated because of too many
@@ -58,23 +58,23 @@ data ListMFADevicesResponse = ListMFADevicesResponse
                                 -- the last position.
                               } deriving (Eq, Ord, Show, Typeable)
 
-instance ResponseConsumer ListMFADevices ListMFADevicesResponse where
-  type ResponseMetadata ListMFADevicesResponse = IamMetadata
+instance ResponseConsumer ListMfaDevices ListMfaDevicesResponse where
+  type ResponseMetadata ListMfaDevicesResponse = IamMetadata
   responseConsumer _req =
     iamResponseConsumer $ \ cursor -> do
       (lmfarIsTruncated, lmfarMarker) <- markedIterResponse cursor
-      lmfarMFADevices <-
-        sequence $ cursor $// laxElement "member" &| parseMFADevice
-      return ListMFADevicesResponse{..}
+      lmfarMfaDevices <-
+        sequence $ cursor $// laxElement "member" &| parseMfaDevice
+      return ListMfaDevicesResponse{..}
 
-instance Transaction ListMFADevices ListMFADevicesResponse
+instance Transaction ListMfaDevices ListMfaDevicesResponse
 
-instance IteratedTransaction ListMFADevices ListMFADevicesResponse where
+instance IteratedTransaction ListMfaDevices ListMfaDevicesResponse where
     nextIteratedRequest request response
         = case lmfarMarker response of
             Nothing     -> Nothing
             Just marker -> Just $ request { lmfaMarker = Just marker }
 
-instance AsMemoryResponse ListMFADevicesResponse where
-    type MemoryResponse ListMFADevicesResponse = ListMFADevicesResponse
+instance AsMemoryResponse ListMfaDevicesResponse where
+    type MemoryResponse ListMfaDevicesResponse = ListMfaDevicesResponse
     loadToMemory = return
