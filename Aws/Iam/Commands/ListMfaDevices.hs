@@ -9,7 +9,7 @@ module Aws.Iam.Commands.ListMfaDevices
 import Aws.Core
 import Aws.Iam.Core
 import Aws.Iam.Internal
---import Control.Applicative
+import Control.Applicative
 import Data.Text (Text)
 import Data.Typeable
 import Text.XML.Cursor (laxElement, ($//), (&|))
