@@ -326,20 +326,25 @@ writeCannedAcl AclLogDeliveryWrite       = "log-delivery-write"
 
 data StorageClass
     = Standard
+    | StandardInfrequentAccess
     | ReducedRedundancy
     | Glacier
+    | OtherStorageClass T.Text
     deriving (Show)
 
-parseStorageClass :: MonadThrow m => T.Text -> m StorageClass
-parseStorageClass "STANDARD"           = return Standard
-parseStorageClass "REDUCED_REDUNDANCY" = return ReducedRedundancy
-parseStorageClass "GLACIER"            = return Glacier
-parseStorageClass s = throwM . XmlException $ "Invalid Storage Class: " ++ T.unpack s
+parseStorageClass :: T.Text -> StorageClass
+parseStorageClass "STANDARD"           = Standard
+parseStorageClass "STANDARD_IA"        = StandardInfrequentAccess
+parseStorageClass "REDUCED_REDUNDANCY" = ReducedRedundancy
+parseStorageClass "GLACIER"            = Glacier
+parseStorageClass s                    = OtherStorageClass s
 
 writeStorageClass :: StorageClass -> T.Text
-writeStorageClass Standard          = "STANDARD"
-writeStorageClass ReducedRedundancy = "REDUCED_REDUNDANCY"
-writeStorageClass Glacier           = "GLACIER"
+writeStorageClass Standard                 = "STANDARD"
+writeStorageClass StandardInfrequentAccess = "STANDARD_IA"
+writeStorageClass ReducedRedundancy        = "REDUCED_REDUNDANCY"
+writeStorageClass Glacier                  = "GLACIER"
+writeStorageClass (OtherStorageClass s) = s
 
 data ServerSideEncryption
     = AES256
@@ -392,7 +397,7 @@ parseObjectInfo el
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time
          eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
          size <- forceM "Missing object Size" $ el $/ elContent "Size" &| textReadInt
-         storageClass <- forceM "Missing object StorageClass" $ el $/ elContent "StorageClass" &| parseStorageClass
+         storageClass <- forceM "Missing object StorageClass" $ el $/ elContent "StorageClass" &| return . parseStorageClass
          owner <- case el $/ Cu.laxElement "Owner" &| parseUserInfo of
                     (x:_) -> fmap' Just x
                     [] -> return Nothing
