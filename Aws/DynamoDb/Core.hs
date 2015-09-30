@@ -470,6 +470,7 @@ data DValue
     | DBoolSet (S.Set Bool)
     -- ^ Composite data
     | DList (V.Vector DValue)
+    | DMap (M.Map T.Text DValue)
     deriving (Eq,Show,Read,Ord,Typeable)
 
 
@@ -583,6 +584,7 @@ instance ToJSON DValue where
     toJSON (DBinSet i) = object ["BS" .= map (T.decodeUtf8 . Base64.encode) (S.toList i)]
     toJSON (DBool i) = object ["BOOL" .= i]
     toJSON (DList i) = object ["L" .= i]
+    toJSON (DMap i) = object ["M" .= i]
     toJSON x = error $ "aws: bug: DynamoDB can't handle " ++ show x
 
 
@@ -605,6 +607,7 @@ instance FromJSON DValue where
             return $ DBinSet $ S.fromList xs
         [("BOOL", b)] -> DBool <$> parseJSON b
         [("L", attrs)] -> DList <$> parseJSON attrs
+        [("M", attrs)] -> DMap <$> parseJSON attrs
 
         x -> fail $ "aws: unknown dynamodb value: " ++ show x
 
@@ -1145,6 +1148,7 @@ instance DynSize DValue where
     dynSize (DStringSet s) = sum $ map (dynSize . DString) $ S.toList s
     dynSize (DBinSet s) = sum $ map (dynSize . DBinary) $ S.toList s
     dynSize (DList s) = sum $ map dynSize $ V.toList s
+    dynSize (DMap s) = sum $ map dynSize $ M.elems s
 
 instance DynSize Attribute where
     dynSize (Attribute k v) = T.length k + dynSize v
