@@ -151,6 +151,7 @@ import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
 import           Data.Typeable
+import qualified Data.Vector                  as V
 import           Data.Word
 import qualified Network.HTTP.Conduit         as HTTP
 import qualified Network.HTTP.Types           as HTTP
@@ -467,6 +468,8 @@ data DValue
     -- ^ Binary data will automatically be base64 marshalled.
     | DBool Bool
     | DBoolSet (S.Set Bool)
+    -- ^ Composite data
+    | DList (V.Vector DValue)
     deriving (Eq,Show,Read,Ord,Typeable)
 
 
@@ -579,6 +582,7 @@ instance ToJSON DValue where
     toJSON (DStringSet i) = object ["SS" .= S.toList i]
     toJSON (DBinSet i) = object ["BS" .= map (T.decodeUtf8 . Base64.encode) (S.toList i)]
     toJSON (DBool i) = object ["BOOL" .= i]
+    toJSON (DList i) = object ["L" .= i]
     toJSON x = error $ "aws: bug: DynamoDB can't handle " ++ show x
 
 
@@ -600,6 +604,7 @@ instance FromJSON DValue where
                   =<< parseJSON s
             return $ DBinSet $ S.fromList xs
         [("BOOL", b)] -> DBool <$> parseJSON b
+        [("L", attrs)] -> DList <$> parseJSON attrs
 
         x -> fail $ "aws: unknown dynamodb value: " ++ show x
 
@@ -1139,6 +1144,7 @@ instance DynSize DValue where
     dynSize (DNumSet s) = 8 * S.size s
     dynSize (DStringSet s) = sum $ map (dynSize . DString) $ S.toList s
     dynSize (DBinSet s) = sum $ map (dynSize . DBinary) $ S.toList s
+    dynSize (DList s) = sum $ map dynSize $ V.toList s
 
 instance DynSize Attribute where
     dynSize (Attribute k v) = T.length k + dynSize v
