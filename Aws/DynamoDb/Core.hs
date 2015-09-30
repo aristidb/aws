@@ -456,7 +456,8 @@ toIntegral sc = Just $ floor sc
 -- | Value types natively recognized by DynamoDb. We pretty much
 -- exactly reflect the AWS API onto Haskell types.
 data DValue
-    = DNum Scientific
+    = DNull
+    | DNum Scientific
     | DString T.Text
     | DBinary B.ByteString
     -- ^ Binary data will automatically be base64 marshalled.
@@ -570,6 +571,7 @@ showT = T.pack . show
 
 
 instance ToJSON DValue where
+    toJSON DNull = object ["NULL" .= True]
     toJSON (DNum i) = object ["N" .= showT i]
     toJSON (DString i) = object ["S" .= i]
     toJSON (DBinary i) = object ["B" .= (T.decodeUtf8 $ Base64.encode i)]
@@ -584,6 +586,7 @@ instance FromJSON DValue where
     parseJSON o = do
       (obj :: [(T.Text, Value)]) <- M.toList `liftM` parseJSON o
       case obj of
+        [("NULL", _)] -> return DNull
         [("N", numStr)] -> DNum <$> parseScientific numStr
         [("S", str)] -> DString <$> parseJSON str
         [("B", bin)] -> do
@@ -1127,6 +1130,7 @@ class DynSize a where
     dynSize :: a -> Int
 
 instance DynSize DValue where
+    dynSize DNull = 8
     dynSize (DBool _) = 8
     dynSize (DBoolSet s) = sum $ map (dynSize . DBool) $ S.toList s
     dynSize (DNum _) = 8
