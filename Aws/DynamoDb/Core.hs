@@ -387,38 +387,37 @@ instance DynVal UTCTime where
     fromRep num = fromTS <$> fromRep num
     toRep x = toRep (toTS x)
 
-
 -------------------------------------------------------------------------------
 pico :: Rational
 pico = toRational $ 10 ^ (12 :: Integer)
-
 
 -------------------------------------------------------------------------------
 dayPico :: Integer
 dayPico = 86400 * round pico
 
+-------------------------------------------------------------------------------
+unixEpochDay :: Day
+unixEpochDay = ModifiedJulianDay 40587
 
 -------------------------------------------------------------------------------
 -- | Convert UTCTime to picoseconds
 --
 -- TODO: Optimize performance?
 toTS :: UTCTime -> Integer
-toTS (UTCTime (ModifiedJulianDay i) diff) = i' + diff'
+toTS (UTCTime i diff) = i' + diff'
     where
       diff' = floor (toRational diff * pico)
-      i' = i * dayPico
-
+      i' = (fromInteger (diffDays i unixEpochDay)) * dayPico
 
 -------------------------------------------------------------------------------
 -- | Convert picoseconds to UTCTime
 --
 -- TODO: Optimize performance?
 fromTS :: Integer -> UTCTime
-fromTS i = UTCTime (ModifiedJulianDay days) diff
+fromTS i = UTCTime (addDays days unixEpochDay) diff
     where
       (days, secs) = i `divMod` dayPico
-      diff = fromRational ((toRational secs) / pico)
-
+      diff = fromRational ((toRational secs) / pico)   
 
 
 -- | Type wrapper for binary data to be written to DynamoDB. Wrap any
