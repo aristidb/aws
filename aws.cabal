@@ -1,5 +1,5 @@
 Name:                aws
-Version:             0.13.0
+Version:             0.13.0-snapshot
 Synopsis:            Amazon Web Services (AWS) for Haskell
 Description:         Bindings for Amazon Web Services (AWS), with the aim of supporting all AWS services. To see a high level overview of the library, see the README at <https://github.com/aristidb/aws/blob/master/README.org>.
 Homepage:            http://github.com/aristidb/aws
@@ -146,7 +146,7 @@ Library
                        utf8-string          >= 0.3     && < 1.1,
                        vector               >= 0.10,
                        xml-conduit          >= 1.2     && <1.4
- 
+
   if !impl(ghc >= 7.6)
     Build-depends: ghc-prim
 
@@ -354,4 +354,3 @@ test-suite dynamodb-tests
         time,
         transformers >= 0.3,
         transformers-base >= 0.4
-
