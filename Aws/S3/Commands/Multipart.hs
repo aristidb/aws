@@ -422,6 +422,21 @@ multipartUpload cfg s3cfg mgr bucket object src chunkSize = do
            $$ CL.consume
   liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
 
+multipartUploadSink :: MonadResource m
+  => Configuration
+  -> S3Configuration NormalQuery
+  -> HTTP.Manager
+  -> T.Text    -- ^ Bucket name
+  -> T.Text    -- ^ Object name
+  -> Integer   -- ^ chunkSize (minimum: 5MB)
+  -> Sink B8.ByteString m ()
+multipartUploadSink cfg s3cfg mgr bucket object chunkSize = do
+  uploadId <- liftIO $ getUploadId cfg s3cfg mgr bucket object
+  etags <- chunkedConduit chunkSize
+           $= putConduit cfg s3cfg mgr bucket object uploadId
+           $= CL.consume
+  liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
+
 multipartUploadWithInitiator ::
   Configuration
   -> S3Configuration NormalQuery
