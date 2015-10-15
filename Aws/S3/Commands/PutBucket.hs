@@ -3,8 +3,8 @@ module Aws.S3.Commands.PutBucket where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Monad
+import           Data.Maybe
 import qualified Data.Map             as M
-import qualified Data.Text            as T
 import qualified Data.Text.Encoding   as T
 import qualified Network.HTTP.Conduit as HTTP
 import qualified Text.XML             as XML
@@ -14,6 +14,7 @@ data PutBucket
         pbBucket :: Bucket
       , pbCannedAcl :: Maybe CannedAcl
       , pbLocationConstraint :: LocationConstraint
+      , pbStorageClass :: Maybe StorageClass -- ^ Google Cloud Storage S3 nonstandard extension
       }
     deriving (Show)
 
@@ -38,7 +39,7 @@ instance SignQuery PutBucket where
                                                                  Just acl -> [("x-amz-acl", T.encodeUtf8 $ writeCannedAcl acl)]
                                            , s3QOtherHeaders = []
                                            , s3QRequestBody
-                                               = guard (not . T.null $ pbLocationConstraint) >>
+                                               = guard (not (null elts)) >>
                                                  (Just . HTTP.RequestBodyLBS . XML.renderLBS XML.def)
                                                  XML.Document {
                                                           XML.documentPrologue = XML.Prologue [] Nothing []
@@ -49,14 +50,22 @@ instance SignQuery PutBucket where
         where root = XML.Element {
                                XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}CreateBucketConfiguration"
                              , XML.elementAttributes = M.empty
-                             , XML.elementNodes = [
-                                                   XML.NodeElement (XML.Element {
-                                                                             XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}LocationConstraint"
-                                                                           , XML.elementAttributes = M.empty
-                                                                           , XML.elementNodes = [XML.NodeContent pbLocationConstraint]
-                                                                           })
-                                                  ]
+                             , XML.elementNodes = elts
                              }
+              elts = catMaybes
+                             [ Just (locationconstraint pbLocationConstraint)
+                             , fmap storageclass pbStorageClass
+                             ]
+              locationconstraint c = XML.NodeElement (XML.Element {
+                               XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}LocationConstraint"
+                             , XML.elementAttributes = M.empty
+                             , XML.elementNodes = [XML.NodeContent c]
+                             })
+              storageclass c = XML.NodeElement (XML.Element {
+                               XML.elementName = "StorageClass"
+                             , XML.elementAttributes = M.empty
+                             , XML.elementNodes = [XML.NodeContent (writeStorageClass c)]
+                             })
 
 instance ResponseConsumer r PutBucketResponse where
     type ResponseMetadata PutBucketResponse = S3Metadata
