@@ -5,6 +5,7 @@ import           Aws.S3.Core
 import           Control.Monad
 import           Data.Maybe
 import qualified Data.Map             as M
+import qualified Data.Text            as T
 import qualified Data.Text.Encoding   as T
 import qualified Network.HTTP.Conduit as HTTP
 import qualified Text.XML             as XML
@@ -53,7 +54,7 @@ instance SignQuery PutBucket where
                              , XML.elementNodes = elts
                              }
               elts = catMaybes
-                             [ Just (locationconstraint pbLocationConstraint)
+                             [ if T.null pbLocationConstraint then Nothing else Just (locationconstraint pbLocationConstraint)
                              , fmap storageclass pbStorageClass
                              ]
               locationconstraint c = XML.NodeElement (XML.Element {
