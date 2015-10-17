@@ -240,6 +240,25 @@ Executable NukeBucket
 
   Default-Language: Haskell2010
 
+Executable PutBucketNearLine
+  Main-is: PutBucketNearLine.hs
+  Hs-source-dirs: Examples
+
+  if !flag(Examples)
+    Buildable: False
+  else
+    Buildable: True
+    Build-depends:
+                       base == 4.*,
+                       aws,
+                       http-conduit,
+                       conduit,
+                       conduit-extra,
+                       text >=0.1,
+                       transformers
+
+  Default-Language: Haskell2010
+
 Executable SimpleDb
   Main-is: SimpleDb.hs
   Hs-source-dirs: Examples
