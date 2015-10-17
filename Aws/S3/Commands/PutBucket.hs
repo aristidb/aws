@@ -15,9 +15,12 @@ data PutBucket
         pbBucket :: Bucket
       , pbCannedAcl :: Maybe CannedAcl
       , pbLocationConstraint :: LocationConstraint
-      , pbStorageClass :: Maybe StorageClass -- ^ Google Cloud Storage S3 nonstandard extension
+      , pbXStorageClass :: Maybe StorageClass -- ^ Google Cloud Storage S3 nonstandard extension
       }
     deriving (Show)
+
+putBucket :: Bucket -> PutBucket
+putBucket bucket = PutBucket bucket Nothing locationUsClassic Nothing
 
 data PutBucketResponse
     = PutBucketResponse
@@ -55,7 +58,7 @@ instance SignQuery PutBucket where
                              }
               elts = catMaybes
                              [ if T.null pbLocationConstraint then Nothing else Just (locationconstraint pbLocationConstraint)
-                             , fmap storageclass pbStorageClass
+                             , fmap storageclass pbXStorageClass
                              ]
               locationconstraint c = XML.NodeElement (XML.Element {
                                XML.elementName = "{http://s3.amazonaws.com/doc/2006-03-01/}LocationConstraint"
