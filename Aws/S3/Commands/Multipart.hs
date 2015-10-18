@@ -12,7 +12,6 @@ import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Conduit
 import qualified Data.Conduit.List     as CL
 import           Data.Maybe
-import           Data.Monoid
 import           Text.XML.Cursor       (($/))
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as BL
@@ -385,25 +384,21 @@ putConduit cfg s3cfg mgr bucket object uploadId = loop 1
         Nothing -> return ()
 
 chunkedConduit :: (MonadResource m) => Integer -> Conduit B8.ByteString m BL.ByteString
-chunkedConduit size = do
-  loop 0 ""
+chunkedConduit size = loop 0 []
   where
-    loop :: MonadResource m => Int -> BL.ByteString -> Conduit B8.ByteString m BL.ByteString
-    loop cnt str = do
-      line' <- await
-      case line' of 
-        Nothing -> do
-          yield str
-          return ()
-        Just line -> do
-          let len = B8.length line+cnt
-          let newStr = str <> BL.fromStrict line
-          if len >= (fromIntegral size)
-            then do
-            yield newStr
-            loop 0 ""
-            else
-            loop len newStr
+    loop :: Monad m => Integer -> [B8.ByteString] -> Conduit B8.ByteString m BL.ByteString
+    loop cnt str = await >>= maybe (yieldChunk str) go
+      where
+        go :: Monad m => B8.ByteString -> Conduit B8.ByteString m BL.ByteString
+        go line
+          | size <= len = yieldChunk newStr >> loop 0 []
+          | otherwise   = loop len newStr
+          where
+            len = fromIntegral (B8.length line) + cnt
+            newStr = line:str
+
+    yieldChunk :: Monad m => [B8.ByteString] -> Conduit i m BL.ByteString
+    yieldChunk = yield . BL.fromChunks . reverse
 
 multipartUpload ::
   Configuration
