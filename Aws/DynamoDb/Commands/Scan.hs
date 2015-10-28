@@ -36,22 +36,24 @@ import           Aws.DynamoDb.Core
 
 -- | A Scan command that uses primary keys for an expedient scan.
 data Scan = Scan {
-      sTableName     :: T.Text
+      sTableName      :: T.Text
     -- ^ Required.
-    , sFilter        :: Conditions
+    , sConsistentRead :: Bool
+    -- ^ Whether to require a consistent read
+    , sFilter         :: Conditions
     -- ^ Whether to filter results before returning to client
-    , sStartKey      :: Maybe [Attribute]
+    , sStartKey       :: Maybe [Attribute]
     -- ^ Exclusive start key to resume a previous query.
-    , sLimit         :: Maybe Int
+    , sLimit          :: Maybe Int
     -- ^ Whether to limit result set size
-    , sIndex         :: Maybe T.Text
+    , sIndex          :: Maybe T.Text
     -- ^ Optional. Index to 'Scan'
-    , sSelect        :: QuerySelect
+    , sSelect         :: QuerySelect
     -- ^ What to return from 'Scan'
-    , sRetCons       :: ReturnConsumption
-    , sSegment       :: Int
+    , sRetCons        :: ReturnConsumption
+    , sSegment        :: Int
     -- ^ Segment number, starting at 0, for parallel queries.
-    , sTotalSegments :: Int
+    , sTotalSegments  :: Int
     -- ^ Total number of parallel segments. 1 means sequential scan.
     } deriving (Eq,Show,Read,Ord,Typeable)
 
@@ -59,7 +61,7 @@ data Scan = Scan {
 -- | Construct a minimal 'Scan' request.
 scan :: T.Text                   -- ^ Table name
      -> Scan
-scan tn = Scan tn def Nothing Nothing Nothing def def 0 1
+scan tn = Scan tn False def Nothing Nothing Nothing def def 0 1
 
 
 -- | Response to a 'Scan' query.
@@ -86,6 +88,7 @@ instance ToJSON Scan where
       , "ReturnConsumedCapacity" .= sRetCons
       , "Segment" .= sSegment
       , "TotalSegments" .= sTotalSegments
+      , "ConsistentRead" .= sConsistentRead
       ]
 
 
