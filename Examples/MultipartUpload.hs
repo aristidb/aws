@@ -6,6 +6,7 @@ import           Data.Conduit (($$))
 import           Data.Conduit.Binary (sourceFile)
 import qualified Data.Text as T
 import           Network.HTTP.Conduit (withManager, responseBody)
+import           Control.Monad.Trans.Resource (ResourceT)
 import           System.Environment (getArgs)
 
 main :: IO ()
@@ -18,7 +19,7 @@ main = do
 
   let doUpload bucket obj file chunkSize =
         withManager $ \mgr -> do
-          sourceFile file $$ S3.multipartUploadSink cfg s3cfg mgr (T.pack bucket) (T.pack obj) (chunkSize*1024*1024)
+          (sourceFile file $$ S3.multipartUploadSink cfg s3cfg mgr (T.pack bucket) (T.pack obj) (chunkSize*1024*1024)) :: ResourceT IO ()
 
   case args of
     [bucket,obj,file] ->
