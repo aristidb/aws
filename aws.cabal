@@ -12,6 +12,7 @@ Category:            Network, Web, AWS, Cloud, Distributed Computing
 Build-type:          Simple
 
 Extra-source-files:  README.org
+                     CHANGELOG
                      Examples/GetObject.hs
                      Examples/SimpleDb.hs
 
