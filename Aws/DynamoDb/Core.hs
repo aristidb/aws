@@ -45,6 +45,7 @@ module Aws.DynamoDb.Core
     , DynVal(..)
     , toValue, fromValue
     , Bin (..)
+    , OldBool(..)
 
     -- * Defining new 'DynVal' instances
     , DynData(..)
@@ -204,6 +205,12 @@ class Ord a => DynData a where
 instance DynData DynBool where
     fromData (DynBool i) = DBool i
     toData (DBool i) = Just $ DynBool i
+    toData (DNum i) = DynBool `fmap` do
+        (i' :: Int) <- toIntegral i
+        case i' of
+          0 -> return False
+          1 -> return True
+          _ -> Nothing
     toData _ = Nothing
 
 instance DynData (S.Set DynBool) where
@@ -434,6 +441,17 @@ instance (Ser.Serialize a) => DynVal (Bin a) where
     fromRep (DynBinary i) = either (const Nothing) (Just . Bin) $
                             Ser.decode i
 
+newtype OldBool = OldBool Bool
+
+instance DynVal OldBool where
+    type DynRep OldBool = DynNumber
+    fromRep (DynNumber i) = OldBool `fmap` do
+        (i' :: Int) <- toIntegral i
+        case i' of
+          0 -> return False
+          1 -> return True
+          _ -> Nothing
+    toRep (OldBool b) = DynNumber (if b then 1 else 0)
 
 
 -------------------------------------------------------------------------------

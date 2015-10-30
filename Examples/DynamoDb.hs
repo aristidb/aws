@@ -12,6 +12,7 @@ import           Control.Concurrent
 import           Control.Monad
 import           Control.Monad.Catch
 import           Data.Conduit
+import           Data.Maybe
 import qualified Data.Conduit.List     as C
 import qualified Data.Text             as T
 import           Network.HTTP.Conduit  (withManager)
@@ -33,6 +34,25 @@ createTableAndWait = do
   resp1 <- runCommand req1
   print resp1
 
+data ExampleItem = ExampleItem {
+      name :: T.Text
+    , class_ :: T.Text
+    , boolAttr :: Bool
+    , oldBoolAttr :: Bool
+    }
+    deriving (Show)
+
+instance ToDynItem ExampleItem where
+    toItem (ExampleItem name class_ boolAttr oldBoolAttr) =
+        item [ attr "name" name
+             , attr "class" class_
+             , attr "boolattr" boolAttr
+             , attr "oldboolattr" (OldBool oldBoolAttr)
+             ]
+
+instance FromDynItem ExampleItem where
+    parseItem x = ExampleItem <$> getAttr "name" x <*> getAttr "class" x <*> getAttr "boolattr" x <*> getAttr "oldboolattr" x
+
 main :: IO ()
 main = do
   cfg <- Aws.baseConfiguration
@@ -41,10 +61,10 @@ main = do
 
   putStrLn "Putting an item..."
 
-  let x = item [ attrAs text "name" "josh"
-               , attrAs text "class" "not-so-awesome"]
+  let x = ExampleItem { name = "josh", class_ = "not-so-awesome",
+                        boolAttr = False, oldBoolAttr = True }
 
-  let req1 = (putItem "devel-1" x ) { piReturn = URAllOld
+  let req1 = (putItem "devel-1" (toItem x)) { piReturn = URAllOld
                                     , piRetCons =  RCTotal
                                     , piRetMet = RICMSize
                                     }
@@ -58,6 +78,9 @@ main = do
   let req2 = getItem "devel-1" (hk "name" "josh")
   resp2 <- runCommand req2
   print resp2
+
+  let y = fromItem (fromMaybe (item []) $ girItem resp2) :: Either String ExampleItem
+  print y
 
   print =<< runCommand
     (updateItem "devel-1" (hk "name" "josh") [au (Attribute "class" "awesome")])
@@ -74,7 +97,7 @@ main = do
 
   echo "Updating with true conditional"
   print =<< runCommand
-    (updateItem "devel-1" (hk "name" "josh") [au (Attribute "class" "awesomer")])
+    (updateItem "devel-1" (hk "name" "josh") [au (Attribute "class" "awesomer"), au (attr "oldboolattr" False)])
       { uiExpect = Conditions CondAnd [Condition "name" (DEq "josh")] }
 
   echo "Getting the item back..."
