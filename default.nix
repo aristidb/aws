@@ -14,7 +14,7 @@ mkDerivation {
   src = ./.;
   isLibrary = true;
   isExecutable = true;
-  buildDepends = [
+  libraryHaskellDepends = [
     aeson attoparsec base base16-bytestring base64-bytestring
     blaze-builder byteable bytestring case-insensitive cereal conduit
     conduit-extra containers cryptohash data-default directory filepath
@@ -22,7 +22,7 @@ mkDerivation {
     old-locale resourcet safe scientific tagged text time transformers
     unordered-containers utf8-string vector xml-conduit
   ];
-  testDepends = [
+  testHaskellDepends = [
     aeson base bytestring errors http-client lifted-base monad-control
     mtl QuickCheck quickcheck-instances resourcet tagged tasty
     tasty-quickcheck text time transformers transformers-base
