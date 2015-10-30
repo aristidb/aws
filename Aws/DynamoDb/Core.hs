@@ -152,6 +152,7 @@ import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
 import           Data.Typeable
+import qualified Data.Vector                  as V
 import           Data.Word
 import qualified Network.HTTP.Conduit         as HTTP
 import qualified Network.HTTP.Types           as HTTP
@@ -474,7 +475,8 @@ toIntegral sc = Just $ floor sc
 -- | Value types natively recognized by DynamoDb. We pretty much
 -- exactly reflect the AWS API onto Haskell types.
 data DValue
-    = DNum Scientific
+    = DNull
+    | DNum Scientific
     | DString T.Text
     | DBinary B.ByteString
     -- ^ Binary data will automatically be base64 marshalled.
@@ -484,6 +486,9 @@ data DValue
     -- ^ Binary data will automatically be base64 marshalled.
     | DBool Bool
     | DBoolSet (S.Set Bool)
+    -- ^ Composite data
+    | DList (V.Vector DValue)
+    | DMap (M.Map T.Text DValue)
     deriving (Eq,Show,Read,Ord,Typeable)
 
 
@@ -588,6 +593,7 @@ showT = T.pack . show
 
 
 instance ToJSON DValue where
+    toJSON DNull = object ["NULL" .= True]
     toJSON (DNum i) = object ["N" .= showT i]
     toJSON (DString i) = object ["S" .= i]
     toJSON (DBinary i) = object ["B" .= (T.decodeUtf8 $ Base64.encode i)]
@@ -595,6 +601,8 @@ instance ToJSON DValue where
     toJSON (DStringSet i) = object ["SS" .= S.toList i]
     toJSON (DBinSet i) = object ["BS" .= map (T.decodeUtf8 . Base64.encode) (S.toList i)]
     toJSON (DBool i) = object ["BOOL" .= i]
+    toJSON (DList i) = object ["L" .= i]
+    toJSON (DMap i) = object ["M" .= i]
     toJSON x = error $ "aws: bug: DynamoDB can't handle " ++ show x
 
 
@@ -602,6 +610,7 @@ instance FromJSON DValue where
     parseJSON o = do
       (obj :: [(T.Text, Value)]) <- M.toList `liftM` parseJSON o
       case obj of
+        [("NULL", _)] -> return DNull
         [("N", numStr)] -> DNum <$> parseScientific numStr
         [("S", str)] -> DString <$> parseJSON str
         [("B", bin)] -> do
@@ -615,6 +624,8 @@ instance FromJSON DValue where
                   =<< parseJSON s
             return $ DBinSet $ S.fromList xs
         [("BOOL", b)] -> DBool <$> parseJSON b
+        [("L", attrs)] -> DList <$> parseJSON attrs
+        [("M", attrs)] -> DMap <$> parseJSON attrs
 
         x -> fail $ "aws: unknown dynamodb value: " ++ show x
 
@@ -1145,6 +1156,7 @@ class DynSize a where
     dynSize :: a -> Int
 
 instance DynSize DValue where
+    dynSize DNull = 8
     dynSize (DBool _) = 8
     dynSize (DBoolSet s) = sum $ map (dynSize . DBool) $ S.toList s
     dynSize (DNum _) = 8
@@ -1153,6 +1165,8 @@ instance DynSize DValue where
     dynSize (DNumSet s) = 8 * S.size s
     dynSize (DStringSet s) = sum $ map (dynSize . DString) $ S.toList s
     dynSize (DBinSet s) = sum $ map (dynSize . DBinary) $ S.toList s
+    dynSize (DList s) = sum $ map dynSize $ V.toList s
+    dynSize (DMap s) = sum $ map dynSize $ M.elems s
 
 instance DynSize Attribute where
     dynSize (Attribute k v) = T.length k + dynSize v
