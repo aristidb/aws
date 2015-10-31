@@ -11,6 +11,7 @@ import           Aws.DynamoDb.Core
 import           Control.Concurrent
 import           Control.Monad
 import           Control.Monad.Catch
+import           Control.Applicative
 import           Data.Conduit
 import           Data.Maybe
 import qualified Data.Conduit.List     as C
