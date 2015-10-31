@@ -112,12 +112,12 @@ prop_createDescribeDeleteTable
     :: Int -- ^ read capacity (#(non-consistent) reads * itemsize/4KB)
     -> Int -- ^ write capacity (#writes * itemsize/1KB)
     -> T.Text -- ^ table name
-    -> EitherT T.Text IO ()
+    -> ExceptT T.Text IO ()
 prop_createDescribeDeleteTable readCapacity writeCapacity tableName = do
     tTableName <- testData tableName
     tryT $ createTestTable tTableName readCapacity writeCapacity
     let deleteTable = retryT 6 . void $ simpleDyT (DY.DeleteTable tTableName)
-    handleT (\e -> deleteTable >> left e) $ do
+    flip catchE (\e -> deleteTable >> throwE e) $ do
         retryT 6 . void . simpleDyT $ DY.DescribeTable tTableName
         deleteTable
 
@@ -130,7 +130,7 @@ test_core = testGroup "Core Tests"
         ]
 
 prop_connectionReuse
-    :: EitherT T.Text IO ()
+    :: ExceptT T.Text IO ()
 prop_connectionReuse = do
     c <- liftIO $ do
         cfg <- baseConfiguration
@@ -138,14 +138,14 @@ prop_connectionReuse = do
         -- counts the number of TCP connections
         ref <- newIORef (0 :: Int)
 
-        void . HTTP.withManager (managerSettings ref) $ \manager -> runEitherT $
-            handleT (error . T.unpack) . replicateM_ 3 $ do
+        void . HTTP.withManager (managerSettings ref) $ \manager -> runExceptT $
+            flip catchE (error . T.unpack) . replicateM_ 3 $ do
                 void $ dyT cfg manager DY.ListTables
                 mustFail . dyT cfg manager $ DY.DescribeTable "____"
 
         readIORef ref
     unless (c == 1) $
-        left "The TCP connection has not been reused"
+        throwE "The TCP connection has not been reused"
   where
     managerSettings ref = HTTP.defaultManagerSettings
         { HTTP.managerRawConnection = do

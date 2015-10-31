@@ -96,7 +96,7 @@ simpleDy command = do
 simpleDyT
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ DY.DdbConfiguration, MonadBaseControl IO m, MonadIO m)
     => r
-    -> EitherT T.Text m (MemoryResponse a)
+    -> ExceptT T.Text m (MemoryResponse a)
 simpleDyT = tryT . simpleDy
 
 dyT
@@ -104,7 +104,7 @@ dyT
     => Configuration
     -> HTTP.Manager
     -> r
-    -> EitherT T.Text IO a
+    -> ExceptT T.Text IO a
 dyT cfg manager req = do
     Response _ r <- liftIO . runResourceT $ aws cfg dyConfiguration manager req
     hoistEither $ fmapL sshow r
@@ -129,17 +129,17 @@ withTable_ prefix tableName readCapacity writeCapacity f =
       tTableName <- if prefix then testData tableName else return tableName
 
       let deleteTable = do
-            r <- runEitherT . retryT 6 $
-                void (simpleDyT $ DY.DeleteTable tTableName) `catchT` \e ->
+            r <- runExceptT . retryT 6 $
+                void (simpleDyT $ DY.DeleteTable tTableName) `catchE` \e ->
                     liftIO . T.hPutStrLn stderr $ "attempt to delete table failed: " <> e
             either (error . T.unpack) (const $ return ()) r
 
       let createTable = do
-            r <- runEitherT $ do
+            r <- runExceptT $ do
                 retryT 3 $ tryT $ createTestTable tTableName readCapacity writeCapacity
                 retryT 6 $ do
                     tableDesc <- simpleDyT $ DY.DescribeTable tTableName
-                    when (DY.rTableStatus tableDesc == "CREATING") $ left "Table not ready: status CREATING"
+                    when (DY.rTableStatus tableDesc == "CREATING") $ throwE "Table not ready: status CREATING"
             either (error . T.unpack) return r
 
       bracket_ createTable deleteTable $ f tTableName
