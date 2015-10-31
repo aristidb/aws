@@ -67,11 +67,11 @@ main = do
   let receiveMessageReq = Sqs.ReceiveMessage Nothing [] (Just 1) [] sqsQName (Just 20)
   let numMessages = length messages
   removedMsgs <- replicateM numMessages $ do
-      msgs <- eitherT (const $ return []) return . retryT 2 $ do
+      msgs <- exceptT (const $ return []) return . retryT 2 $ do
         Sqs.ReceiveMessageResponse r <- liftIO $ Aws.simpleAws cfg sqscfg receiveMessageReq
         case r of
-          [] -> left "no message received"
-          _ -> right r
+          [] -> throwE "no message received"
+          _ -> return r
       putStrLn $ "number of messages received: " ++ show (length msgs)
       forM msgs (\msg -> do
                      -- here we remove a message, delete it from the queue, and then return the
@@ -88,7 +88,7 @@ main = do
   {- | Let's make sure the queue was actually deleted and that the same number of queues exist at when
      | the program ends as when it started.
   -}
-  eitherT T.putStrLn T.putStrLn . retryT 4 $ do
+  exceptT T.putStrLn T.putStrLn . retryT 4 $ do
     qUrls <- liftIO $ do
       putStrLn $ "Listing all queueus to check to see if " ++ show (Sqs.qName sqsQName) ++ " is gone"
       Sqs.ListQueuesResponse qUrls_ <- Aws.simpleAws cfg sqscfg $ Sqs.ListQueues Nothing
@@ -96,16 +96,16 @@ main = do
       return qUrls_
 
     if qUrl `elem` qUrls
-        then left $ " *\n *\n * Warning, '" <> sshow qName <> "' was not deleted\n"
+        then throwE $ " *\n *\n * Warning, '" <> sshow qName <> "' was not deleted\n"
                     <> " * This is probably just a race condition."
-        else right $ "     The queue '" <> sshow qName <> "' was correctly deleted"
+        else return $ "     The queue '" <> sshow qName <> "' was correctly deleted"
 
-retryT :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m a
+retryT :: MonadIO m => Int -> ExceptT T.Text m a -> ExceptT T.Text m a
 retryT i f = go 1
   where
     go x
         | x >= i = fmapLT (\e -> "error after " <> sshow x <> " retries: " <> e) f
-        | otherwise = f `catchT` \_ -> do
+        | otherwise = f `catchE` \_ -> do
             liftIO $ threadDelay (1000000 * min 60 (2^(x-1)))
             go (succ x)
 

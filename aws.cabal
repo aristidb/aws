@@ -146,7 +146,8 @@ Library
                        unordered-containers >= 0.2,
                        utf8-string          >= 0.3     && < 1.1,
                        vector               >= 0.10,
-                       xml-conduit          >= 1.2     && <1.4
+                       xml-conduit          >= 1.2     && <1.4,
+                       errors
  
   if !impl(ghc >= 7.6)
     Build-depends: ghc-prim
@@ -296,22 +297,22 @@ Executable DynamoDb
   Default-Language: Haskell2010
 
 
--- Executable Sqs
---   Main-is: Sqs.hs
---   Hs-source-dirs: Examples
--- 
---   if !flag(Examples)
---     Buildable: False
---   else
---     Buildable: True
---     Build-depends:
---                        base == 4.*,
---                        aws,
---                        errors >= 1.4.7 && < 2.0,
---                        text >=0.11,
---                        transformers >= 0.3
--- 
---   Default-Language: Haskell2010
+Executable Sqs
+  Main-is: Sqs.hs
+  Hs-source-dirs: Examples
+
+  if !flag(Examples)
+    Buildable: False
+  else
+    Buildable: True
+    Build-depends:
+                       base == 4.*,
+                       aws,
+                       errors >= 2.0,
+                       text >=0.11,
+                       transformers >= 0.3
+
+  Default-Language: Haskell2010
 
 -- test-suite sqs-tests
 --     type: exitcode-stdio-1.0
