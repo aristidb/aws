@@ -116,10 +116,10 @@ syncIO a = ExceptT $ LE.catches (Right <$> a)
 testData :: (IsString a, Monoid a, MonadBaseControl IO m) => a -> m a
 testData a = fmap (<> a) testDataPrefix
 
-retryT :: MonadIO m => Int -> ExceptT T.Text m a -> ExceptT T.Text m a
+retryT :: (Functor m, MonadIO m) => Int -> ExceptT T.Text m a -> ExceptT T.Text m a
 retryT n f = snd <$> retryT_ n f
 
-retryT_ :: MonadIO m => Int -> ExceptT T.Text m a -> ExceptT T.Text m (Int, a)
+retryT_ :: (Functor m, MonadIO m) => Int -> ExceptT T.Text m a -> ExceptT T.Text m (Int, a)
 retryT_ n f = go 1
   where
     go x
