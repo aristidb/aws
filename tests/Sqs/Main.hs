@@ -141,7 +141,7 @@ sqsT
     => Configuration
     -> HTTP.Manager
     -> r
-    -> EitherT T.Text IO a
+    -> ExceptT T.Text IO a
 sqsT cfg manager req = do
     Response _ r <- liftIO . runResourceT $ aws cfg sqsConfiguration manager req
     hoistEither $ fmapL sshow r
@@ -157,7 +157,7 @@ simpleSqs command = do
 simpleSqsT
     :: (AsMemoryResponse a, Transaction r a, ServiceConfiguration r ~ SQS.SqsConfiguration, MonadBaseControl IO m, MonadIO m)
     => r
-    -> EitherT T.Text m (MemoryResponse a)
+    -> ExceptT T.Text m (MemoryResponse a)
 simpleSqsT = tryT . simpleSqs
 
 withQueueTest
@@ -186,16 +186,16 @@ test_queue = testGroup "Queue Tests"
 --
 prop_createListDeleteQueue
     :: T.Text -- ^ queue name
-    -> EitherT T.Text IO ()
+    -> ExceptT T.Text IO ()
 prop_createListDeleteQueue queueName = do
     tQueueName <- testData queueName
     SQS.CreateQueueResponse queueUrl <- simpleSqsT $ SQS.CreateQueue Nothing tQueueName
     let queue = sqsQueueName queueUrl
-    handleT (\e -> deleteQueue queue >> left e) $ do
+    flip catchE (\e -> deleteQueue queue >> throwE e) $ do
         retryT 6 $ do
             SQS.ListQueuesResponse allQueueUrls <- simpleSqsT (SQS.ListQueues Nothing)
             unless (queueUrl `elem` allQueueUrls)
-                . left $ "queue " <> sshow queueUrl <> " not listed"
+                . throwE $ "queue " <> sshow queueUrl <> " not listed"
         deleteQueue queue
   where
     deleteQueue queueUrl = void $ simpleSqsT (SQS.DeleteQueue queueUrl)
@@ -221,7 +221,7 @@ test_message getQueueParams = testGroup "Queue Tests"
 --
 prop_sendReceiveDeleteMessage
     :: SQS.QueueName
-    -> EitherT T.Text IO ()
+    -> ExceptT T.Text IO ()
 prop_sendReceiveDeleteMessage queue = do
 
     -- a visibility timeout should be used only if either @receiveBatch == 1@
@@ -241,10 +241,10 @@ prop_sendReceiveDeleteMessage queue = do
         msgs <- retryT 5 $ do
             r <- simpleSqsT $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
             case r of
-                SQS.ReceiveMessageResponse [] -> left "no message received"
+                SQS.ReceiveMessageResponse [] -> throwE "no message received"
                 SQS.ReceiveMessageResponse t
-                    | length t <= receiveBatch -> right t
-                    | otherwise -> left $ "unexpected number of messages received: " <> sshow (length t)
+                    | length t <= receiveBatch -> return t
+                    | otherwise -> throwE $ "unexpected number of messages received: " <> sshow (length t)
         forM_ msgs $ \msg -> retryT 5 $
             simpleSqsT $ SQS.DeleteMessage (SQS.mReceiptHandle msg) queue
         return (map SQS.mBody msgs)
@@ -252,7 +252,7 @@ prop_sendReceiveDeleteMessage queue = do
     let recv = L.sort recMsgs
     let sent = L.sort messages
     unless (sent == recv)
-        $ left $ "received messages don't match send messages; sent: "
+        $ throwE $ "received messages don't match send messages; sent: "
             <> sshow sent <> "; got: " <> sshow recv
 
 -- | Checks for consistent receive: There is no message delay, so all messages
@@ -261,7 +261,7 @@ prop_sendReceiveDeleteMessage queue = do
 --
 prop_sendReceiveDeleteMessageLongPolling
     :: SQS.QueueName
-    -> EitherT T.Text IO ()
+    -> ExceptT T.Text IO ()
 prop_sendReceiveDeleteMessageLongPolling queue = do
 
     let delay = Nothing
@@ -279,10 +279,10 @@ prop_sendReceiveDeleteMessageLongPolling queue = do
         msgs <- do
             r <- simpleSqsT $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
             case r of
-                SQS.ReceiveMessageResponse [] -> left "no messages received"
+                SQS.ReceiveMessageResponse [] -> throwE "no messages received"
                 SQS.ReceiveMessageResponse t
-                    | length t == receiveBatch -> right t
-                    | otherwise -> left $ "unexpected number of messages received: " <> sshow (length t)
+                    | length t == receiveBatch -> return t
+                    | otherwise -> throwE $ "unexpected number of messages received: " <> sshow (length t)
         forM_ msgs $ \msg -> retryT 5 $
             simpleSqsT $ SQS.DeleteMessage (SQS.mReceiptHandle msg) queue
         return (map SQS.mBody msgs)
@@ -290,7 +290,7 @@ prop_sendReceiveDeleteMessageLongPolling queue = do
     let recv = L.sort recMsgs
     let sent = L.sort messages
     unless (sent == recv)
-        $ left $ "received messages don't match send messages; sent: "
+        $ throwE $ "received messages don't match send messages; sent: "
             <> sshow sent <> "; got: " <> sshow recv
 
 -- | Checks that long polling is actually enabled. We add a delay to the messages
@@ -301,7 +301,7 @@ prop_sendReceiveDeleteMessageLongPolling queue = do
 --
 prop_sendReceiveDeleteMessageLongPolling1
     :: SQS.QueueName
-    -> EitherT T.Text IO ()
+    -> ExceptT T.Text IO ()
 prop_sendReceiveDeleteMessageLongPolling1 queue = do
 
     let delay = Just 2
@@ -317,10 +317,10 @@ prop_sendReceiveDeleteMessageLongPolling1 queue = do
         msgs <- do
             r <- simpleSqsT $ SQS.ReceiveMessage visTimeout [] (Just receiveBatch) [] queue poll
             case r of
-                SQS.ReceiveMessageResponse [] -> left "no messages received"
+                SQS.ReceiveMessageResponse [] -> throwE "no messages received"
                 SQS.ReceiveMessageResponse t
-                    | length t == receiveBatch -> right t
-                    | otherwise -> left $ "unexpected number of messages received: " <> sshow (length t)
+                    | length t == receiveBatch -> return t
+                    | otherwise -> throwE $ "unexpected number of messages received: " <> sshow (length t)
         forM_ msgs $ \m -> retryT 5 $
             simpleSqsT $ SQS.DeleteMessage (SQS.mReceiptHandle m) queue
         return (map SQS.mBody msgs)
@@ -328,7 +328,7 @@ prop_sendReceiveDeleteMessageLongPolling1 queue = do
     let recv = L.sort recMsgs
     let sent = L.sort messages
     unless (sent == recv)
-        $ left $ "received messages don't match send messages; sent: "
+        $ throwE $ "received messages don't match send messages; sent: "
             <> sshow sent <> "; got: " <> sshow recv
 
 
@@ -344,7 +344,7 @@ test_core getQueueParams = testGroup "Core Tests"
 
 prop_connectionReuse
     :: SQS.QueueName
-    -> EitherT T.Text IO ()
+    -> ExceptT T.Text IO ()
 prop_connectionReuse queue = do
     c <- liftIO $ do
         cfg <- baseConfiguration
@@ -353,9 +353,9 @@ prop_connectionReuse queue = do
         ref <- newIORef (0 :: Int)
 
         -- Use a single manager for all HTTP requests
-        void . HTTP.withManager (managerSettings ref) $ \manager -> runEitherT $
+        void . HTTP.withManager (managerSettings ref) $ \manager -> runExceptT $
 
-            handleT (error . T.unpack) . replicateM_ 3 $ do
+            flip catchE (error . T.unpack) . replicateM_ 3 $ do
                 void . sqsT cfg manager $ SQS.ListQueues Nothing
                 mustFail . sqsT cfg manager $
                     SQS.SendMessage "" (SQS.QueueName "" "") [] Nothing
@@ -366,7 +366,7 @@ prop_connectionReuse queue = do
 
         readIORef ref
     unless (c == 1) $
-        left "The TCP connection has not been reused"
+        throwE "The TCP connection has not been reused"
   where
 
     managerSettings ref = HTTP.defaultManagerSettings

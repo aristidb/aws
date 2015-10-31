@@ -86,13 +86,13 @@ testDataPrefix = do
 
 -- | Catches all exceptions except for asynchronous exceptions found in base.
 --
-tryT :: MonadBaseControl IO m => m a -> EitherT T.Text m a
+tryT :: MonadBaseControl IO m => m a -> ExceptT T.Text m a
 tryT = fmapLT (T.pack . show) . syncIO
 
 -- | Lifted Version of 'syncIO' form "Control.Error.Util".
 --
-syncIO :: MonadBaseControl IO m => m a -> EitherT LE.SomeException m a
-syncIO a = EitherT $ LE.catches (Right <$> a)
+syncIO :: MonadBaseControl IO m => m a -> ExceptT LE.SomeException m a
+syncIO a = ExceptT $ LE.catches (Right <$> a)
     [ LE.Handler $ \e -> LE.throw (e :: LE.ArithException)
     , LE.Handler $ \e -> LE.throw (e :: LE.ArrayException)
     , LE.Handler $ \e -> LE.throw (e :: LE.AssertionFailed)
@@ -116,15 +116,15 @@ syncIO a = EitherT $ LE.catches (Right <$> a)
 testData :: (IsString a, Monoid a, MonadBaseControl IO m) => a -> m a
 testData a = fmap (<> a) testDataPrefix
 
-retryT :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m a
+retryT :: MonadIO m => Int -> ExceptT T.Text m a -> ExceptT T.Text m a
 retryT n f = snd <$> retryT_ n f
 
-retryT_ :: MonadIO m => Int -> EitherT T.Text m a -> EitherT T.Text m (Int, a)
+retryT_ :: MonadIO m => Int -> ExceptT T.Text m a -> ExceptT T.Text m (Int, a)
 retryT_ n f = go 1
   where
     go x
         | x >= n = fmapLT (\e -> "error after " <> sshow x <> " retries: " <> e) ((x,) <$> f)
-        | otherwise = ((x,) <$> f) `catchT` \e -> do
+        | otherwise = ((x,) <$> f) `catchE` \e -> do
             liftIO $ T.hPutStrLn stderr $ "Retrying after error: " <> e
             liftIO $ threadDelay (1000000 * min 60 (2^(x-1)))
             go (succ x)
@@ -132,31 +132,31 @@ retryT_ n f = go 1
 sshow :: (Show a, IsString b) => a -> b
 sshow = fromString . show
 
-mustFail :: Monad m => EitherT e m a -> EitherT T.Text m ()
-mustFail = EitherT . eitherT
+mustFail :: Monad m => ExceptT e m a -> ExceptT T.Text m ()
+mustFail = ExceptT . exceptT
     (const . return $ Right ())
     (const . return $ Left "operation succeeded when a failure was expected")
 
 evalTestTM
     :: Functor f
     => String -- ^ test name
-    -> f (EitherT T.Text IO a) -- ^ test
+    -> f (ExceptT T.Text IO a) -- ^ test
     -> f (PropertyM IO Bool)
 evalTestTM name = fmap $
-    (liftIO . runEitherT) >=> \r -> case r of
+    (liftIO . runExceptT) >=> \r -> case r of
         Left e ->
             fail $ "failed to run test \"" <> name <> "\": " <> show e
         Right _ -> return True
 
 evalTestT
     :: String -- ^ test name
-    -> EitherT T.Text IO a -- ^ test
+    -> ExceptT T.Text IO a -- ^ test
     -> PropertyM IO Bool
 evalTestT name = runIdentity . evalTestTM name . Identity
 
 eitherTOnceTest0
     :: String -- ^ test name
-    -> EitherT T.Text IO a -- ^ test
+    -> ExceptT T.Text IO a -- ^ test
     -> TestTree
 eitherTOnceTest0 name test = testProperty name . once . monadicIO
     $ evalTestT name test
@@ -164,7 +164,7 @@ eitherTOnceTest0 name test = testProperty name . once . monadicIO
 eitherTOnceTest1
     :: (Arbitrary a, Show a)
     => String -- ^ test name
-    -> (a -> EitherT T.Text IO b)
+    -> (a -> ExceptT T.Text IO b)
     -> TestTree
 eitherTOnceTest1 name test = testProperty name . once $ monadicIO
     . evalTestTM name test
@@ -172,7 +172,7 @@ eitherTOnceTest1 name test = testProperty name . once $ monadicIO
 eitherTOnceTest2
     :: (Arbitrary a, Show a, Arbitrary b, Show b)
     => String -- ^ test name
-    -> (a -> b -> EitherT T.Text IO c)
+    -> (a -> b -> ExceptT T.Text IO c)
     -> TestTree
 eitherTOnceTest2 name test = testProperty name . once $ \a b -> monadicIO
     $ (evalTestTM name $ uncurry test) (a, b)
