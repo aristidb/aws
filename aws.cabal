@@ -11,10 +11,8 @@ Copyright:           See contributors list in README and LICENSE file
 Category:            Network, Web, AWS, Cloud, Distributed Computing
 Build-type:          Simple
 
-Extra-source-files:  README.org
-                     CHANGELOG
-                     Examples/GetObject.hs
-                     Examples/SimpleDb.hs
+Extra-source-files:  README.md
+                     CHANGELOG.md
 
 Cabal-version:       >=1.10
 
