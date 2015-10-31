@@ -121,18 +121,18 @@ Resources
 Contributors
 ============
 
-  Name                 Github                                            E-Mail                           Company                                               Components
-  -------------------- ------------------------------------------------- -------------------------------- ----------------------------------------------------- --------------------
-  Abhinav Gupta        [abhinav](https://github.com/abhinav)             mail@abhinavg.net                -                                                     IAM, SES
-  Aristid Breitkreuz   [aristidb](https://github.com/aristidb)           aristidb@gmail.com               -                                                     Co-Maintainer
-  Bas van Dijk         [basvandijk](https://github.com/basvandijk)       v.dijk.bas@gmail.com             [Erudify AG](http://erudify.ch)                       S3
-  David Vollbracht     [qxjit](https://github.com/qxjit)                                                                                                        
-  Felipe Lessa         [meteficha](https://github.com/meteficha)         felipe.lessa@gmail.com           currently secret                                      Core, S3, SES
-  Nathan Howell        [NathanHowell](https://github.com/NathanHowell)   nhowell@alphaheavy.com           [Alpha Heavy Industries](http://www.alphaheavy.com)   S3
-  Ozgun Ataman         [ozataman](https://github.com/ozataman)           ozgun.ataman@soostone.com        [Soostone Inc](http://soostone.com)                   Core, S3, DynamoDb
-  Steve Severance      [sseveran](https://github.com/sseveran)           sseverance@alphaheavy.com        [Alpha Heavy Industries](http://www.alphaheavy.com)   S3, SQS
-  John Wiegley         [jwiegley](https://github.com/jwiegley)           johnw@fpcomplete.com             [FP Complete](http://fpcomplete.com)                  Co-Maintainer, S3
-  Chris Dornan         [cdornan](https://github.com/cdornan)             chris.dornan@irisconnect.co.uk   [Iris Connect](http://irisconnect.co.uk)              Core
-  John Lenz            [wuzzeb](https://github/com/wuzzeb)                                                                                                      DynamoDB, Core
+  Name                |Github                                           |E-Mail                          |Company                                              |Components
+  --------------------|-------------------------------------------------|--------------------------------|-----------------------------------------------------|--------------------
+  Abhinav Gupta       |[abhinav](https://github.com/abhinav)            |mail@abhinavg.net               |-                                                    |IAM, SES
+  Aristid Breitkreuz  |[aristidb](https://github.com/aristidb)          |aristidb@gmail.com              |-                                                    |Co-Maintainer
+  Bas van Dijk        |[basvandijk](https://github.com/basvandijk)      |v.dijk.bas@gmail.com            |[Erudify AG](http://erudify.ch)                      |S3
+  David Vollbracht    |[qxjit](https://github.com/qxjit)                |                                |                                                     |
+  Felipe Lessa        |[meteficha](https://github.com/meteficha)        |felipe.lessa@gmail.com          |currently secret                                     |Core, S3, SES
+  Nathan Howell       |[NathanHowell](https://github.com/NathanHowell)  |nhowell@alphaheavy.com          |[Alpha Heavy Industries](http://www.alphaheavy.com)  |S3
+  Ozgun Ataman        |[ozataman](https://github.com/ozataman)          |ozgun.ataman@soostone.com       |[Soostone Inc](http://soostone.com)                  |Core, S3, DynamoDb
+  Steve Severance     |[sseveran](https://github.com/sseveran)          |sseverance@alphaheavy.com       |[Alpha Heavy Industries](http://www.alphaheavy.com)  |S3, SQS
+  John Wiegley        |[jwiegley](https://github.com/jwiegley)          |johnw@fpcomplete.com            |[FP Complete](http://fpcomplete.com)                 |Co-Maintainer, S3
+  Chris Dornan        |[cdornan](https://github.com/cdornan)            |chris.dornan@irisconnect.co.uk  |[Iris Connect](http://irisconnect.co.uk)             |Core
+  John Lenz           |[wuzzeb](https://github/com/wuzzeb)              |                                |                                                     |DynamoDB, Core
 
 
