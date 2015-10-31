@@ -1,6 +1,6 @@
 sudo: false
 language: haskell
 install:
-        - cabal install --only-dependencies -fexamples
+        - cabal install --only-dependencies -fexamples --enable-tests
 script:
-        - cabal configure -fexamples && cabal build
+        - cabal configure -fexamples --enable-tests && cabal build
