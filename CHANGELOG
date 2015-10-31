@@ -1,8 +1,21 @@
 
 ** 0.13 series
 
+NOTE: 0.13 brings breaking changes compared to 0.12.1!
+
 - 0.13
-  TODO write down
+  - DDB: Add support for scanning an index
+  - DDB: Allow deleting an attribute on update
+  - DDB: !BREAKING! Add support for native boolean values via "Bool". Can read old values,
+         and there's a compatibility wrapper OldBool that behaves exactly the same way it
+         used to.
+  - DDB: Add support for Null, L (list) and M (map) data types.
+  - DDB: Support consistent reads in Scan requests
+  - IAM: Add list-mfa-devices command
+  - S3: Extend StorageClass to support arbitrary classes, and StandardInfrequentAccess
+  - S3: Add a Sink interface for multipart uploading
+  - S3: Performance improvement for chunkedConduit
+  - S3: Partial support for Google Nearline
 
 ** 0.12 series
 
