@@ -49,7 +49,7 @@ module Aws.DynamoDb.Core
 
     -- * Defining new 'DynVal' instances
     , DynData(..)
-    , DynBinary(..), DynNumber(..), DynString(..)
+    , DynBinary(..), DynNumber(..), DynString(..), DynBool(..)
 
     -- * Working with key/value pairs
     , Attribute (..)
