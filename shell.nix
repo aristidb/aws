@@ -1,5 +1,5 @@
 with (import <nixpkgs> {}).pkgs;
 let
-  pkg = haskellngPackages.callPackage ./. {};
+  pkg = haskellPackages.callPackage ./. {};
 in
   pkg.env
