@@ -267,10 +267,17 @@ makeCredentials accessKeyID secretAccessKey = liftIO $ do
     return Credentials { .. }
 
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
+-- May return 'Nothing' if @HOME@ is unset.
 --
 -- Value: /<user directory>/@/.aws-keys@
-credentialsDefaultFile :: MonadIO io => io FilePath
-credentialsDefaultFile = liftIO $ (</> ".aws-keys") <$> getHomeDirectory
+credentialsDefaultFile :: MonadIO io => io (Maybe FilePath)
+credentialsDefaultFile = liftIO $ tryMaybe ((</> ".aws-keys") <$> getHomeDirectory)
+
+tryMaybe :: IO a -> IO (Maybe a)
+tryMaybe action = E.catch (Just <$> action) f
+  where
+    f :: E.SomeException -> IO (Maybe a)
+    f _ = return Nothing
 
 -- | The key to be used in the access credential file that is loaded, when using 'loadCredentialsDefault'.
 --
@@ -373,8 +380,10 @@ loadCredentialsFromEnvOrFileOrInstanceMetadata file key =
 -- See 'loadCredentialsFromEnv' and 'loadCredentialsFromFile' for details.
 loadCredentialsDefault :: MonadIO io => io (Maybe Credentials)
 loadCredentialsDefault = do
-  file <- credentialsDefaultFile
-  loadCredentialsFromEnvOrFileOrInstanceMetadata file credentialsDefaultKey
+  mfile <- credentialsDefaultFile
+  case mfile of
+      Just file -> loadCredentialsFromEnvOrFileOrInstanceMetadata file credentialsDefaultKey
+      Nothing   -> loadCredentialsFromEnv
 
 -- | Protocols supported by AWS. Currently, all AWS services use the HTTP or HTTPS protocols.
 data Protocol
