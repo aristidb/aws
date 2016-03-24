@@ -379,6 +379,18 @@ instance DynVal Double where
     fromRep (DynNumber i) = Just $ toRealFloat i
     toRep i = DynNumber (fromFloatDigits i)
 
+instance DynVal a => DynVal (V.Vector a) where
+  type DynRep (V.Vector a) = DValue
+  toRep v = DList $ fmap toValue v
+  fromRep (DList l) = traverse fromValue l
+  fromRep _         = Nothing
+
+instance DynVal a => DynVal (M.Map T.Text a) where
+  type DynRep (M.Map T.Text a) = DValue
+  toRep m = DMap $ fmap toValue m
+  fromRep (DMap m) = traverse fromValue m
+  fromRep _        = Nothing
+
 
 -------------------------------------------------------------------------------
 -- | Encoded as number of days
