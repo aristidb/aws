@@ -151,6 +151,7 @@ import           Data.Tagged
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
+import           Data.Traversable             (traverse)
 import           Data.Typeable
 import qualified Data.Vector                  as V
 import           Data.Word
