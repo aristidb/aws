@@ -4,7 +4,7 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Monad.Trans.Resource (ResourceT)
+import           Control.Monad.Trans.Resource (ResourceT, throwM)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as L
@@ -28,11 +28,15 @@ data GetObject
       , goResponseContentDisposition :: Maybe T.Text
       , goResponseContentEncoding :: Maybe T.Text
       , goResponseContentRange :: Maybe (Int,Int)
+      , goIfMatch :: Maybe T.Text
+      -- ^ Return the object only if its entity tag (ETag, which is an md5sum of the content) is the same as the one specified; otherwise, catch a 'StatusCodeException' with a status of 412 precondition failed.
+      , goIfNoneMatch :: Maybe T.Text
+      -- ^ Return the object only if its entity tag (ETag, which is an md5sum of the content) is different from the one specified; otherwise, catch a 'StatusCodeException' with a status of 304 not modified.
       }
   deriving (Show)
 
 getObject :: Bucket -> T.Text -> GetObject
-getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 data GetObjectResponse
     = GetObjectResponse {
@@ -66,6 +70,8 @@ instance SignQuery GetObject where
                                  , s3QAmzHeaders = []
                                  , s3QOtherHeaders = catMaybes [
                                                        decodeRange <$> goResponseContentRange
+                                                     , ("if-match",) . T.encodeUtf8 <$> goIfMatch
+                                                     , ("if-none-match",) . T.encodeUtf8 <$> goIfNoneMatch
                                                      ]
                                  , s3QRequestBody = Nothing
                                  }
@@ -74,9 +80,15 @@ instance SignQuery GetObject where
 instance ResponseConsumer GetObject GetObjectResponse where
     type ResponseMetadata GetObjectResponse = S3Metadata
     responseConsumer GetObject{..} metadata resp
-        = do rsp <- s3BinaryResponseConsumer return metadata resp
-             om <- parseObjectMetadata (HTTP.responseHeaders resp)
-             return $ GetObjectResponse om rsp
+        | status == HTTP.status200 = do
+            rsp <- s3BinaryResponseConsumer return metadata resp
+            om <- parseObjectMetadata (HTTP.responseHeaders resp)
+            return $ GetObjectResponse om rsp
+        | otherwise = throwM $ HTTP.StatusCodeException status headers cookies
+      where
+        status  = HTTP.responseStatus    resp
+        headers = HTTP.responseHeaders   resp
+        cookies = HTTP.responseCookieJar resp
 
 instance Transaction GetObject GetObjectResponse
 

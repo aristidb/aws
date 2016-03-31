@@ -7,6 +7,7 @@ import           Control.Applicative
 import           Control.Monad.Trans.Resource (throwM)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
+import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import qualified Network.HTTP.Conduit  as HTTP
@@ -17,11 +18,15 @@ data HeadObject
         hoBucket :: Bucket
       , hoObjectName :: Object
       , hoVersionId :: Maybe T.Text
+      , hoIfMatch :: Maybe T.Text
+      -- ^ Return the object only if its entity tag (ETag, which is an md5sum of the content) is the same as the one specified; otherwise, catch a 'StatusCodeException' with a status of 412 precondition failed.
+      , hoIfNoneMatch :: Maybe T.Text
+      -- ^ Return the object only if its entity tag (ETag, which is an md5sum of the content) is different from the one specified; otherwise, catch a 'StatusCodeException' with a status of 304 not modified.
       }
   deriving (Show)
 
 headObject :: Bucket -> T.Text -> HeadObject
-headObject b o = HeadObject b o Nothing
+headObject b o = HeadObject b o Nothing Nothing Nothing
 
 data HeadObjectResponse
     = HeadObjectResponse {
@@ -46,7 +51,10 @@ instance SignQuery HeadObject where
                                  , s3QContentType = Nothing
                                  , s3QContentMd5 = Nothing
                                  , s3QAmzHeaders = []
-                                 , s3QOtherHeaders = []
+                                 , s3QOtherHeaders = catMaybes [
+                                                       ("if-match",) . T.encodeUtf8 <$> hoIfMatch
+                                                     , ("if-none-match",) . T.encodeUtf8 <$> hoIfNoneMatch
+                                                     ]
                                  , s3QRequestBody = Nothing
                                  }
 
