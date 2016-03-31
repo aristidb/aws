@@ -24,6 +24,7 @@ import qualified Data.List                    as L
 import           Data.Monoid
 import qualified Data.Text                    as T
 import           Data.Typeable
+import           Data.Proxy
 import           Network.HTTP.Client          (HttpException (..),
                                                RequestBody (..), newManager)
 import           Network.HTTP.Client.TLS      (tlsManagerSettings)

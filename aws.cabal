@@ -394,4 +394,5 @@ test-suite s3-tests
         resourcet,
         tasty >= 0.8,
         tasty-hunit >= 0.8,
-        text
+        text,
+        tagged >= 0.7
