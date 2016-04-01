@@ -1352,7 +1352,7 @@ getAttr' k m = do
 -- | Combinator for parsing an attribute into a 'FromDynItem'.
 getItem
     :: FromDynItem a
-    => Text
+    => T.Text
     -- ^ Attribute name
     -> Item
     -- ^ Item from DynamoDb
