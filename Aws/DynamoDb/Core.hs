@@ -75,7 +75,7 @@ module Aws.DynamoDb.Core
     , Parser (..)
     , getAttr
     , getAttr'
-    , getItem
+    , parseAttr
 
     -- * Common types used by operations
     , Conditions (..)
@@ -1350,14 +1350,14 @@ getAttr' k m = do
       Just dv -> return $ fromValue dv
 
 -- | Combinator for parsing an attribute into a 'FromDynItem'.
-getItem
+parseAttr
     :: FromDynItem a
     => T.Text
     -- ^ Attribute name
     -> Item
     -- ^ Item from DynamoDb
     -> Parser a
-getItem k m =
+parseAttr k m =
   case M.lookup k m of
     Nothing -> fail ("Key " <> T.unpack k <> " not found")
     Just (DMap dv) -> either (fail "...") return $ fromItem dv
