@@ -309,12 +309,12 @@ loadCredentialsFromFile file key = liftIO $ do
 loadCredentialsFromEnv :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromEnv = liftIO $ do
   env <- getEnvironment
-  let lk = flip lookup env
+  let lk = fmap (T.encodeUtf8 . T.pack) . flip lookup env
       keyID = lk "AWS_ACCESS_KEY_ID"
       secret = lk "AWS_ACCESS_KEY_SECRET" `mplus` lk "AWS_SECRET_ACCESS_KEY"
-  Traversable.sequence
-      (makeCredentials <$> (T.encodeUtf8 . T.pack <$> keyID)
-                       <*> (T.encodeUtf8 . T.pack <$> secret))
+      setSession creds = creds { iamToken = lk "AWS_SESSION_TOKEN" }
+      makeCredentials' k s = setSession <$> makeCredentials k s
+  Traversable.sequence $ makeCredentials' <$> keyID <*> secret
 
 loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
