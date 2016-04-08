@@ -166,7 +166,10 @@ data S3Query
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QContentType :: Maybe B.ByteString
+      , s3QContentMd5 :: Maybe (Digest MD5)
+      -- ^ The Content-MD5 header value.
       , s3QContentSha256 :: Maybe (Digest SHA256)
+      -- ^ The SHA256 of the payload. Empty payload is assumed by default.
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
 #if MIN_VERSION_http_conduit(2, 0, 0)
@@ -198,7 +201,7 @@ s3SignQuery S3Query{..} S3Configuration{..} sd@SignatureData{..}
       , sqDate = Just signatureTime
       , sqAuthorization = authorization
       , sqContentType = s3QContentType
-      , sqContentMd5 = Nothing -- s3QContentSHA256
+      , sqContentMd5 = s3QContentMd5
       , sqAmzHeaders = amzHeaders
       , sqOtherHeaders = s3QOtherHeaders
       , sqBody = s3QRequestBody
