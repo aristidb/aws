@@ -59,7 +59,7 @@ instance SignQuery CopyObject where
                                , s3QSubresources = []
                                , s3QQuery = []
                                , s3QContentType = coContentType
-                               , s3QContentMd5 = Nothing
+                               , s3QContentSha256 = Nothing
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                    Just ("x-amz-copy-source",
                                          oidBucket `T.append` "/" `T.append` oidObject `T.append`

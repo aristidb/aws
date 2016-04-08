@@ -35,7 +35,7 @@ instance SignQuery GetBucketLocation where
                                      , s3QSubresources = [("location" :: B8.ByteString, Nothing :: Maybe B8.ByteString)]
                                      , s3QQuery = HTTP.toQuery ([] :: [(B8.ByteString, T.Text)]) 
                                      , s3QContentType = Nothing
-                                     , s3QContentMd5 = Nothing
+                                     , s3QContentSha256 = Nothing
                                      , s3QAmzHeaders = []
                                      , s3QOtherHeaders = []
                                      , s3QRequestBody = Nothing

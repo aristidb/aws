@@ -36,7 +36,7 @@ instance SignQuery PutBucket where
                                            , s3QSubresources = []
                                            , s3QQuery        = []
                                            , s3QContentType  = Nothing
-                                           , s3QContentMd5   = Nothing
+                                           , s3QContentSha256= Nothing
                                            , s3QObject       = Nothing
                                            , s3QAmzHeaders   = case pbCannedAcl of
                                                                  Nothing -> []

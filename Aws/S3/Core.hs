@@ -166,7 +166,7 @@ data S3Query
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QContentType :: Maybe B.ByteString
-      , s3QContentMd5 :: Maybe (Digest MD5)
+      , s3QContentSha256 :: Maybe (Digest SHA256)
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
 #if MIN_VERSION_http_conduit(2, 0, 0)
@@ -184,9 +184,10 @@ instance Show S3Query where
                        " ; query: " ++ show s3QQuery ++
                        " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++
                        "]"
-
+-- | For signature v4 signing see
+-- <http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html>
 s3SignQuery :: S3Query -> S3Configuration qt -> SignatureData -> SignedQuery
-s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
+s3SignQuery S3Query{..} S3Configuration{..} sd@SignatureData{..}
     = SignedQuery {
         sqMethod = s3QMethod
       , sqProtocol = s3Protocol
@@ -197,14 +198,25 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       , sqDate = Just signatureTime
       , sqAuthorization = authorization
       , sqContentType = s3QContentType
-      , sqContentMd5 = s3QContentMd5
+      , sqContentMd5 = Nothing -- s3QContentSHA256
       , sqAmzHeaders = amzHeaders
       , sqOtherHeaders = s3QOtherHeaders
       , sqBody = s3QRequestBody
       , sqStringToSign = stringToSign
       }
     where
-      amzHeaders = merge $ sortBy (compare `on` fst) (s3QAmzHeaders ++ (fmap (\(k, v) -> (CI.mk k, v)) iamTok))
+      credentials = signatureCredentials
+
+      -- hash of an empty string
+      emptyBodyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      bodyHash = fromMaybe emptyBodyHash (Base64.encode . toBytes <$> s3QContentSha256)
+
+      -- needs to match th eone produces in the @authorizationV4@
+      sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime
+      amzSigHeaders = [("x-amz-date", sigTime)
+                      ,("x-amz-content-sha256", bodyHash)]
+      
+      amzHeaders = merge $ sortBy (compare `on` fst) (s3QAmzHeaders ++ (fmap (\(k, v) -> (CI.mk k, v)) (amzSigHeaders ++ iamTok)))
           where merge (x1@(k1,v1):x2@(k2,v2):xs) | k1 == k2  = merge ((k1, B8.intercalate "," [v1, v2]) : xs)
                                                  | otherwise = x1 : merge (x2 : xs)
                 merge xs = xs
@@ -215,29 +227,38 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
                        BucketStyle -> ([s3QBucket, Just (rUri s3Region)], [Just "/", urlEncodedS3QObject])
                        VHostStyle  -> ([Just $ fromMaybe (rUri s3Region) s3QBucket], [Just "/", urlEncodedS3QObject])
       sortedSubresources = sort s3QSubresources
-      canonicalizedResource = Blaze8.fromChar '/' `mappend`
-                              maybe mempty (\s -> Blaze.copyByteString s `mappend` Blaze8.fromChar '/') s3QBucket `mappend`
-                              maybe mempty Blaze.copyByteString urlEncodedS3QObject `mappend`
-                              HTTP.renderQueryBuilder True sortedSubresources
+
       ti = case (s3UseUri, signatureTimeInfo) of
              (False, ti') -> ti'
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
              (True, AbsoluteExpires time) -> AbsoluteExpires time
       sig = signature signatureCredentials HmacSHA1 stringToSign
       iamTok = maybe [] (\x -> [("x-amz-security-token", x)]) (iamToken signatureCredentials)
-      stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
-                       [[Blaze.copyByteString $ httpMethod s3QMethod]
-                       , [maybe mempty (Blaze.copyByteString . Base64.encode . toBytes) s3QContentMd5]
-                       , [maybe mempty Blaze.copyByteString s3QContentType]
-                       , [Blaze.copyByteString $ case ti of
-                                                   AbsoluteTimestamp time -> fmtRfc822Time time
-                                                   AbsoluteExpires time -> fmtTimeEpochSeconds time]
-                       , map amzHeader amzHeaders
-                       , [canonicalizedResource]
+      
+      -- must provide host in the canonical headers.
+      canonicalHeaders = sortBy (compare `on` fst) $ amzHeaders ++ catMaybes
+                         [Just ("host", B.intercalate "." $ catMaybes host)
+                         , ("content-type",) <$> s3QContentType
+                         ]
+
+      stringToSign = B.concat $ intercalate ["\n"] $
+                       [ [httpMethod s3QMethod]             -- method
+                       , [mconcat . catMaybes $ path]       -- path
+                       , []                                 -- query string
+                       ] ++
+                       map (\(a,b) -> [CI.foldedCase a,":",b]) canonicalHeaders ++
+                       [ [] -- end headers
+--                       , [Blaze.copyByteString $ case ti of
+--                                                   AbsoluteTimestamp time -> fmtRfc822Time time
+--                                                   AbsoluteExpires time -> fmtTimeEpochSeconds time]
+                       , intersperse ";" (map (CI.foldedCase . fst) canonicalHeaders)
+                       , [bodyHash]
                        ]
-          where amzHeader (k, v) = Blaze.copyByteString (CI.foldedCase k) `mappend` Blaze8.fromChar ':' `mappend` Blaze.copyByteString v
       (authorization, authQuery) = case ti of
-                                 AbsoluteTimestamp _ -> (Just $ return $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
+                                 AbsoluteTimestamp _ -> (Just $ authorizationV4 sd HmacSHA256 (rName s3Region) "s3"
+                                                         (B.concat (intersperse ";" (map (CI.foldedCase . fst) canonicalHeaders)))
+                                                         stringToSign,
+                                                         [])
                                  AbsoluteExpires time -> (Nothing, HTTP.toQuery $ makeAuthQuery time)
       makeAuthQuery time
           = [("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)
