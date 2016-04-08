@@ -239,6 +239,7 @@ unsafeAwsRef cfg info manager metadataRef request = do
   logDebug $ "Host: " ++ show (HTTP.host httpRequest)
   logDebug $ "Path: " ++ show (HTTP.path httpRequest)
   logDebug $ "Query string: " ++ show (HTTP.queryString httpRequest)
+  logDebug $ "Header: " ++ show (HTTP.requestHeaders httpRequest)
   case HTTP.requestBody httpRequest of
     HTTP.RequestBodyLBS lbs -> logDebug $ "Body: " ++ show (L.take 1000 lbs)
     HTTP.RequestBodyBS bs -> logDebug $ "Body: " ++ show (B.take 1000 bs)
