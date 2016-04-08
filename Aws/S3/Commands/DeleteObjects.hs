@@ -70,7 +70,7 @@ instance SignQuery DeleteObjects where
       , s3QSubresources = HTTP.toQuery [("delete" :: B.ByteString, Nothing :: Maybe B.ByteString)]
       , s3QQuery        = []
       , s3QContentType  = Nothing
-      , s3QContentSha256= Just $ hashlazy dosBody
+      , s3QContentMd5   = Just $ hashlazy dosBody
       , s3QObject       = Nothing
       , s3QAmzHeaders   = maybeToList $ (("x-amz-mfa", ) . T.encodeUtf8) <$> dosMultiFactorAuthentication
       , s3QOtherHeaders = []

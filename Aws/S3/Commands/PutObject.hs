@@ -22,7 +22,7 @@ data PutObject = PutObject {
   poCacheControl :: Maybe T.Text,
   poContentDisposition :: Maybe T.Text,
   poContentEncoding :: Maybe T.Text,
-  poContentSha256 :: Maybe (Digest SHA256),
+  poContentMD5 :: Maybe (Digest MD5),
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
@@ -60,7 +60,7 @@ instance SignQuery PutObject where
                                , s3QSubresources = []
                                , s3QQuery = []
                                , s3QContentType = poContentType
-                               , s3QContentSha256 = poContentSha256
+                               , s3QContentMd5 = poContentMD5
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
                                             , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass

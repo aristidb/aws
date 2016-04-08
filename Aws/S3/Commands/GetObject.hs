@@ -66,7 +66,7 @@ instance SignQuery GetObject where
                                                      ]
                                  , s3QQuery = []
                                  , s3QContentType = Nothing
-                                 , s3QContentSha256 = Nothing
+                                 , s3QContentMd5 = Nothing
                                  , s3QAmzHeaders = []
                                  , s3QOtherHeaders = catMaybes [
                                                        decodeRange <$> goResponseContentRange

@@ -79,7 +79,7 @@ instance SignQuery InitiateMultipartUpload where
       , s3QSubresources = HTTP.toQuery[ ("uploads" :: B8.ByteString , Nothing :: Maybe B8.ByteString)]
       , s3QQuery = []
       , s3QContentType = T.encodeUtf8 <$> imuContentType
-      , s3QContentSha256 = Nothing
+      , s3QContentMd5 = Nothing
       , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
           ("x-amz-acl",) <$> writeCannedAcl <$> imuAcl
         , ("x-amz-storage-class",) <$> writeStorageClass <$> imuStorageClass
@@ -127,7 +127,7 @@ data UploadPart = UploadPart {
   , upPartNumber :: Integer
   , upUploadId :: T.Text
   , upContentType :: Maybe B8.ByteString
-  , upContentSha256 :: Maybe (Digest SHA256)
+  , upContentMD5 :: Maybe (Digest MD5)
   , upServerSideEncryption :: Maybe ServerSideEncryption
   , upRequestBody  :: HTTP.RequestBody
   , upExpect100Continue :: Bool -- ^ Note: Requires http-client >= 0.4.10
@@ -158,7 +158,7 @@ instance SignQuery UploadPart where
                                  ]
                                , s3QQuery = []
                                , s3QContentType = upContentType
-                               , s3QContentSha256 = upContentSha256
+                               , s3QContentMd5 = upContentMD5
                                , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
                                    ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> upServerSideEncryption
                                  ]
@@ -223,7 +223,7 @@ instance SignQuery CompleteMultipartUpload where
         ]
       , s3QQuery = []
       , s3QContentType = Nothing
-      , s3QContentSha256 = Nothing
+      , s3QContentMd5 = Nothing
       , s3QAmzHeaders = catMaybes [ ("x-amz-expiration",) <$> (T.encodeUtf8 <$> cmuExpiration)
                                   , ("x-amz-server-side-encryption",) <$> (T.encodeUtf8 <$> cmuServerSideEncryption)
                                   , ("x-amz-server-side-encryption-customer-algorithm",)
@@ -309,7 +309,7 @@ instance SignQuery AbortMultipartUpload where
         ]
       , s3QQuery = []
       , s3QContentType = Nothing
-      , s3QContentSha256 = Nothing
+      , s3QContentMd5 = Nothing
       , s3QAmzHeaders = []
       , s3QOtherHeaders = []
       , s3QRequestBody = Nothing
