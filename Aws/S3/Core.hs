@@ -219,10 +219,13 @@ s3SignQuery S3Query{..} S3Configuration{..} sd@SignatureData{..}
 
       -- needs to match th eone produces in the @authorizationV4@
       sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime
-      amzSigHeaders = [("x-amz-date", sigTime)
-                      ,("x-amz-content-sha256", bodyHash)]
+
+      -- inject date and an empty content sha256, if not given.
+      s3QAmzHeaders' = (hAMZDate, sigTime):case lookup hAmzContentSha256 s3QAmzHeaders of
+        Just bodyHash -> s3QAmzHeaders
+        Nothing -> (hAmzContentSha256, emptyBodyHash)s3QAmzHeaders
       
-      amzHeaders = merge $ sortBy (compare `on` fst) (s3QAmzHeaders ++ (fmap (\(k, v) -> (CI.mk k, v)) (amzSigHeaders ++ iamTok)))
+      amzHeaders = merge $ sortBy (compare `on` fst) (s3QAmzHeaders' ++ amzSigHeaders ++ (fmap (\(k, v) -> (CI.mk k, v)) iamTok))
           where merge (x1@(k1,v1):x2@(k2,v2):xs) | k1 == k2  = merge ((k1, B8.intercalate "," [v1, v2]) : xs)
                                                  | otherwise = x1 : merge (x2 : xs)
                 merge xs = xs
