@@ -185,6 +185,11 @@ instance Show S3Query where
                        " ; query: " ++ show s3QQuery ++
                        " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++
                        "]"
+
+hAmzDate, hAMZContentSha256 :: HeaderName
+hAmzDate = "x-amz-date"
+hAmzContentSha256 = "x-amz-content-sha256"
+
 -- | For signature v4 signing see
 -- <http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html>
 s3SignQuery :: S3Query -> S3Configuration qt -> SignatureData -> SignedQuery
