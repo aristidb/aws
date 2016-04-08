@@ -168,8 +168,6 @@ data S3Query
       , s3QContentType :: Maybe B.ByteString
       , s3QContentMd5 :: Maybe (Digest MD5)
       -- ^ The Content-MD5 header value.
-      , s3QContentSha256 :: Maybe (Digest SHA256)
-      -- ^ The SHA256 of the payload. Empty payload is assumed by default.
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
 #if MIN_VERSION_http_conduit(2, 0, 0)
