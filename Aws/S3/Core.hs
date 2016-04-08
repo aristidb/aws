@@ -50,10 +50,17 @@ data RequestStyle
     | VHostStyle
     deriving (Show)
 
+-- identical to DynamoDb.Core.Region
+data Region = Region {
+    rUri  :: B.ByteString
+  , rName :: B.ByteString
+  } deriving (Eq,Show,Read,Typeable)
+
 data S3Configuration qt
     = S3Configuration {
         s3Protocol :: Protocol
-      , s3Endpoint :: B.ByteString
+      , s3Region :: Region
+      -- ^ The regional endpoint. Ex: 's3UsEast1'
       , s3RequestStyle :: RequestStyle
       , s3Port :: Int
       , s3ServerSideEncryption :: Maybe ServerSideEncryption
@@ -63,40 +70,51 @@ data S3Configuration qt
     deriving (Show)
 
 instance DefaultServiceConfiguration (S3Configuration NormalQuery) where
-  defServiceConfig = s3 HTTPS s3EndpointUsClassic False
-
-  debugServiceConfig = s3 HTTP s3EndpointUsClassic False
+  defServiceConfig = s3 HTTPS s3UsEast1 False
+  debugServiceConfig = s3 HTTP s3UsEast1 False
 
 instance DefaultServiceConfiguration (S3Configuration UriOnlyQuery) where
-  defServiceConfig = s3 HTTPS s3EndpointUsClassic True
-  debugServiceConfig = s3 HTTP s3EndpointUsClassic True
+  defServiceConfig = s3 HTTPS s3UsEast1 True
+  debugServiceConfig = s3 HTTP s3UsEast1 True
 
-s3EndpointUsClassic :: B.ByteString
-s3EndpointUsClassic = "s3.amazonaws.com"
+--------------------------------------------------------------------------------
+-- | S3 Regions
 
-s3EndpointUsWest :: B.ByteString
-s3EndpointUsWest = "s3-us-west-1.amazonaws.com"
+s3UsEast1 :: Region -- ^ US East (N. Virginia)
+s3UsEast1 = Region "s3-external-1.amazonaws.com" "us-east-1"
 
-s3EndpointUsWest2 :: B.ByteString
-s3EndpointUsWest2 = "s3-us-west-2.amazonaws.com"
+s3UsWest1 :: Region -- ^ US West (N. California)
+s3UsWest1 = Region "s3-us-west-1.amazonaws.com" "us-west-1"
 
-s3EndpointEu :: B.ByteString
-s3EndpointEu = "s3-eu-west-1.amazonaws.com"
+s3UsWest2 :: Region -- ^ US West (Oregon)
+s3UsWest2 = Region "s3-us-west-2.amazonaws.com" "us-west-2"
 
-s3EndpointApSouthEast :: B.ByteString
-s3EndpointApSouthEast = "s3-ap-southeast-1.amazonaws.com"
+s3EuWest1 :: Region -- ^ EU (Ireland)
+s3EuWest1 = Region "s3-eu-west-1.amazonaws.com" "eu-west-1"
 
-s3EndpointApSouthEast2 :: B.ByteString
-s3EndpointApSouthEast2 = "s3-ap-southeast-2.amazonaws.com"
+s3EuCentral1 :: Region -- ^ EU (Frankfurt)
+s3EuCentral1 = Region "s3-eu-central-1.amazonaws.com" "eu-central-1"
 
-s3EndpointApNorthEast :: B.ByteString
-s3EndpointApNorthEast = "s3-ap-northeast-1.amazonaws.com"
+s3ApNe1 :: Region -- ^ Asia Pacific (Tokyo)
+s3ApNe1 = Region "s3-ap-northeast-1.amazonaws.com" "ap-northeast-1"
 
-s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration qt
-s3 protocol endpoint uri
+s3ApNe2 :: Region -- ^ Asia Pacific (Seoul)
+s3ApNe2 = Region "s3-ap-northeast-2.amazonaws.com" "ap-northeast-2"
+
+s3ApSe1 :: Region -- ^ Asia Pacific (Singapore)
+s3ApSe1 = Region "s3-ap-southeast-1.amazonaws.com" "ap-southeast-1"
+
+s3ApSe2 :: Region -- ^ Asia Pacific (Sydney)
+s3ApSe2 = Region "s3-ap-southeast-2.amazonaws.com" "ap-southeast-2"
+
+s3SaEast1 :: Region -- ^ South America (São Paulo)
+s3SaEast1 = Region "s3-sa-east-1.amazonaws.com" "sa-east-1"
+
+s3 :: Protocol -> Region -> Bool -> S3Configuration qt
+s3 protocol region uri
     = S3Configuration {
          s3Protocol = protocol
-       , s3Endpoint = endpoint
+       , s3Region = region
        , s3RequestStyle = BucketStyle
        , s3Port = defaultPort protocol
        , s3ServerSideEncryption = Nothing
@@ -193,9 +211,9 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
 
       urlEncodedS3QObject = HTTP.urlEncode False <$> s3QObject
       (host, path) = case s3RequestStyle of
-                       PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
-                       BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", urlEncodedS3QObject])
-                       VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/", urlEncodedS3QObject])
+                       PathStyle   -> ([Just (rUri s3Region)], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
+                       BucketStyle -> ([s3QBucket, Just (rUri s3Region)], [Just "/", urlEncodedS3QObject])
+                       VHostStyle  -> ([Just $ fromMaybe (rUri s3Region) s3QBucket], [Just "/", urlEncodedS3QObject])
       sortedSubresources = sort s3QSubresources
       canonicalizedResource = Blaze8.fromChar '/' `mappend`
                               maybe mempty (\s -> Blaze.copyByteString s `mappend` Blaze8.fromChar '/') s3QBucket `mappend`
