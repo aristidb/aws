@@ -8,7 +8,7 @@ import           Control.Applicative
 import           Control.Arrow         (second)
 import           Crypto.Hash
 import           Data.Byteable
-import qualified Data.ByteString.Base64   as Base64
+import qualified Data.ByteString.Base16 as Base16
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
 import qualified Data.ByteString.Char8 as B
@@ -83,7 +83,7 @@ instance SignQuery PutObject where
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
                                }
-      where sha256Header = (hAmzContentSha256, fromMaybe "UNSIGNED-PAYLOAD" (Base64.encode . toBytes <$> poContentSHA256))
+      where sha256Header = (hAmzContentSha256, fromMaybe "UNSIGNED-PAYLOAD" (Base16.encode . toBytes <$> poContentSHA256))
 
 instance ResponseConsumer PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
