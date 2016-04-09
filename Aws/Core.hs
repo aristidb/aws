@@ -50,6 +50,7 @@ module Aws.Core
 , AuthorizationHash(..)
 , amzHash
 , signature
+, credentialV4
 , authorizationV4
   -- ** Query construction helpers
 , queryList
@@ -601,6 +602,23 @@ signature cr ah input = Base64.encode sig
       computeSig :: HashAlgorithm a => a -> ByteString
       computeSig t = toBytes (hmacAlg t (secretAccessKey cr) input)
 
+-- | Generates the Credential string, required for V4 signatures.
+credentialV4 :: SignatureData
+             -> B.ByteString -- ^ region, e.g. us-east-1
+             -> B.ByteString -- ^ service, e.g. dynamodb
+             -> B.ByteString
+credentialV4 sd region service =
+  B.concat [ accessKeyID (signatureCredentials sd)
+           , "/"
+           , date
+           , "/"
+           , region
+           , "/"
+           , service
+           , "/aws4_request"
+           ]
+  where date = fmtTime "%Y%m%d" $ signatureTime sd
+
 -- | Use this to create the Authorization header to set into 'sqAuthorization'.
 -- See <http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html>: you must create the
 -- canonical request as explained by Step 1 and this function takes care of Steps 2 and 3.
@@ -663,15 +681,8 @@ authorizationV4 sd ah region service headers canonicalRequest = do
     -- finally, return the header
     return $ B.concat [ alg
                       , " Credential="
-                      , accessKeyID (signatureCredentials sd)
-                      , "/"
-                      , date
-                      , "/"
-                      , region
-                      , "/"
-                      , service
-                      , "/aws4_request,"
-                      , "SignedHeaders="
+                      , credentialV4 sd region service
+                      , ",SignedHeaders="
                       , headers
                       , ",Signature="
                       , sig
