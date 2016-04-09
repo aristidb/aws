@@ -52,6 +52,7 @@ module Aws.Core
 , signature
 , credentialV4
 , authorizationV4
+, authorizationV4'
   -- ** Query construction helpers
 , queryList
 , awsBool
@@ -687,6 +688,62 @@ authorizationV4 sd ah region service headers canonicalRequest = do
                       , ",Signature="
                       , sig
                       ]
+
+-- | IO free version of @authorizationV4@, us this if you need
+-- to compute the signature outside of IO.
+authorizationV4' :: SignatureData
+                 -> AuthorizationHash
+                 -> B.ByteString -- ^ region, e.g. us-east-1
+                 -> B.ByteString -- ^ service, e.g. dynamodb
+                 -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
+                 -> B.ByteString -- ^ canonicalRequest (before hashing)
+                 -> B.ByteString
+authorizationV4' sd ah region service headers canonicalRequest = do
+    let ref = v4SigningKeys $ signatureCredentials sd
+        date = fmtTime "%Y%m%d" $ signatureTime sd
+        mkHmac k i = case ah of
+                        HmacSHA1 -> toBytes (hmac k i :: HMAC SHA1)
+                        HmacSHA256 -> toBytes (hmac k i :: HMAC SHA256)
+        mkHash i = case ah of
+                        HmacSHA1 -> toBytes (hash i :: Digest SHA1)
+                        HmacSHA256 -> toBytes (hash i :: Digest SHA256)
+        alg = case ah of
+                    HmacSHA1 -> "AWS4-HMAC-SHA1"
+                    HmacSHA256 -> "AWS4-HMAC-SHA256"
+
+    -- create a new signing key
+    let key = let secretKey = secretAccessKey $ signatureCredentials sd
+                  kDate = mkHmac ("AWS4" <> secretKey) date
+                  kRegion = mkHmac kDate region
+                  kService = mkHmac kRegion service
+                  kSigning = mkHmac kService "aws4_request"
+               in kSigning
+
+    -- now do the signature
+    let canonicalRequestHash = Base16.encode $ mkHash canonicalRequest
+        stringToSign = B.concat [ alg
+                                , "\n"
+                                , fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
+                                , "\n"
+                                , date
+                                , "/"
+                                , region
+                                , "/"
+                                , service
+                                , "/aws4_request\n"
+                                , canonicalRequestHash
+                                ]
+        sig = Base16.encode $ mkHmac key stringToSign
+
+    -- finally, return the header
+    B.concat [ alg
+             , " Credential="
+             , credentialV4 sd region service
+             , ",SignedHeaders="
+             , headers
+             , ",Signature="
+             , sig
+             ]
 
 -- | Default configuration for a specific service.
 class DefaultServiceConfiguration config where
