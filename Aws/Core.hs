@@ -53,6 +53,7 @@ module Aws.Core
 , credentialV4
 , authorizationV4
 , authorizationV4'
+, signatureV4
   -- ** Query construction helpers
 , queryList
 , awsBool
@@ -689,18 +690,15 @@ authorizationV4 sd ah region service headers canonicalRequest = do
                       , sig
                       ]
 
--- | IO free version of @authorizationV4@, us this if you need
--- to compute the signature outside of IO.
-authorizationV4' :: SignatureData
-                 -> AuthorizationHash
-                 -> B.ByteString -- ^ region, e.g. us-east-1
-                 -> B.ByteString -- ^ service, e.g. dynamodb
-                 -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
-                 -> B.ByteString -- ^ canonicalRequest (before hashing)
-                 -> B.ByteString
-authorizationV4' sd ah region service headers canonicalRequest = do
-    let ref = v4SigningKeys $ signatureCredentials sd
-        date = fmtTime "%Y%m%d" $ signatureTime sd
+-- | Compute the signature for V4
+signatureV4 :: SignatureData
+            -> AuthorizationHash
+            -> B.ByteString -- ^ region, e.g. us-east-1
+            -> B.ByteString -- ^ service, e.g. dynamodb
+            -> B.ByteString -- ^ canonicalRequest (before hashing)
+            -> B.ByteString
+signatureV4 sd ah region service canonicalRequest = do
+    let date = fmtTime "%Y%m%d" $ signatureTime sd
         mkHmac k i = case ah of
                         HmacSHA1 -> toBytes (hmac k i :: HMAC SHA1)
                         HmacSHA256 -> toBytes (hmac k i :: HMAC SHA256)
@@ -733,7 +731,21 @@ authorizationV4' sd ah region service headers canonicalRequest = do
                                 , "/aws4_request\n"
                                 , canonicalRequestHash
                                 ]
-        sig = Base16.encode $ mkHmac key stringToSign
+    Base16.encode $ mkHmac key stringToSign
+
+-- | IO free version of @authorizationV4@, us this if you need
+-- to compute the signature outside of IO.
+authorizationV4' :: SignatureData
+                 -> AuthorizationHash
+                 -> B.ByteString -- ^ region, e.g. us-east-1
+                 -> B.ByteString -- ^ service, e.g. dynamodb
+                 -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
+                 -> B.ByteString -- ^ canonicalRequest (before hashing)
+                 -> B.ByteString
+authorizationV4' sd ah region service headers canonicalRequest = do
+    let alg = case ah of
+                    HmacSHA1 -> "AWS4-HMAC-SHA1"
+                    HmacSHA256 -> "AWS4-HMAC-SHA256"
 
     -- finally, return the header
     B.concat [ alg
@@ -742,7 +754,7 @@ authorizationV4' sd ah region service headers canonicalRequest = do
              , ",SignedHeaders="
              , headers
              , ",Signature="
-             , sig
+             , signatureV4 sd ah region service canonicalRequest
              ]
 
 -- | Default configuration for a specific service.
