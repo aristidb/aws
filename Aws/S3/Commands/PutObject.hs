@@ -7,6 +7,8 @@ import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow         (second)
 import           Crypto.Hash
+import           Data.Byteable
+import qualified Data.ByteString.Base64   as Base64
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
 import qualified Data.ByteString.Char8 as B
@@ -23,6 +25,7 @@ data PutObject = PutObject {
   poContentDisposition :: Maybe T.Text,
   poContentEncoding :: Maybe T.Text,
   poContentMD5 :: Maybe (Digest MD5),
+  poContentSHA256 :: Maybe (Digest SHA256),
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,
@@ -43,7 +46,7 @@ putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
 #else
 putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
 #endif
-putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False False
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False False
 
 data PutObjectResponse
   = PutObjectResponse {
@@ -61,13 +64,13 @@ instance SignQuery PutObject where
                                , s3QQuery = []
                                , s3QContentType = poContentType
                                , s3QContentMd5 = poContentMD5
-                               , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
+                               , s3QAmzHeaders = sha256Header:(map (second T.encodeUtf8) $ catMaybes [
                                               ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
                                             , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
                                             , ("x-amz-website-redirect-location",) <$> poWebsiteRedirectLocation
                                             , ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> poServerSideEncryption
 					    , if poAutoMakeBucket then Just ("x-amz-auto-make-bucket", "1")  else Nothing
-                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
+                                            ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata)
                                , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires
                                             , ("Cache-Control",) <$> poCacheControl
@@ -80,6 +83,7 @@ instance SignQuery PutObject where
                                , s3QRequestBody = Just poRequestBody
                                , s3QObject = Just $ T.encodeUtf8 poObjectName
                                }
+      where sha256Header = (hAmzContentSha256, fromMaybe "UNSIGNED-PAYLOAD" (Base64.encode . toBytes <$> poContentSHA256))
 
 instance ResponseConsumer PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
