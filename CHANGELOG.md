@@ -3,6 +3,8 @@
 
 NOTE: 0.13 brings breaking changes compared to 0.12.1!
 
+-   0.12.1
+    -   data-default 0.6 support
 -   0.13
     -   DDB: Add support for scanning an index
     -   DDB: Allow deleting an attribute on update
