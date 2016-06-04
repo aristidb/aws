@@ -1,3 +1,17 @@
+0.14 series
+
+NOTES: 0.14 brings potentially breaking changes
+
+-   0.14
+    -   transformers 0.5 support
+    -   data-default 0.6 support (also in 0.13.1)
+    -   time < 2.0 support
+    -   General: Use AWS_SESSION_TOKEN if in environment for loading credentials
+    -   General: loadCredentialsDefault fails gracefully if HOME is not set
+    -   DDB: Add parseAttr combinator for parsing an attribute into a FromDynItem
+    -   DDB: Expose the new DynBool type
+    -   S3: Add ETag fields to get/head object
+
 0.13 series
 -----------
 
