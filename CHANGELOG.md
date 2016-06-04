@@ -3,6 +3,11 @@
 
 NOTE: 0.13 brings breaking changes compared to 0.12.1!
 
+-   0.13.2
+    -   ghc 8 support, via:
+    -   time 1.6 support
+    -   transformers 0.5 support
+    -   cereal 0.6 support
 -   0.13.1
     -   data-default 0.6 support
 -   0.13
