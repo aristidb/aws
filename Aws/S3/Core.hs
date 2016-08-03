@@ -50,10 +50,17 @@ data RequestStyle
     | VHostStyle
     deriving (Show)
 
+-- identical to DynamoDb.Core.Region
+data Region = Region {
+    rUri  :: B.ByteString
+  , rName :: B.ByteString
+  } deriving (Eq,Show,Read,Typeable)
+
 data S3Configuration qt
     = S3Configuration {
         s3Protocol :: Protocol
-      , s3Endpoint :: B.ByteString
+      , s3Region :: Region
+      -- ^ The regional endpoint. Ex: 's3UsEast1'
       , s3RequestStyle :: RequestStyle
       , s3Port :: Int
       , s3ServerSideEncryption :: Maybe ServerSideEncryption
@@ -63,40 +70,51 @@ data S3Configuration qt
     deriving (Show)
 
 instance DefaultServiceConfiguration (S3Configuration NormalQuery) where
-  defServiceConfig = s3 HTTPS s3EndpointUsClassic False
-
-  debugServiceConfig = s3 HTTP s3EndpointUsClassic False
+  defServiceConfig = s3 HTTPS s3UsEast1 False
+  debugServiceConfig = s3 HTTP s3UsEast1 False
 
 instance DefaultServiceConfiguration (S3Configuration UriOnlyQuery) where
-  defServiceConfig = s3 HTTPS s3EndpointUsClassic True
-  debugServiceConfig = s3 HTTP s3EndpointUsClassic True
+  defServiceConfig = s3 HTTPS s3UsEast1 True
+  debugServiceConfig = s3 HTTP s3UsEast1 True
 
-s3EndpointUsClassic :: B.ByteString
-s3EndpointUsClassic = "s3.amazonaws.com"
+--------------------------------------------------------------------------------
+-- | S3 Regions
 
-s3EndpointUsWest :: B.ByteString
-s3EndpointUsWest = "s3-us-west-1.amazonaws.com"
+s3UsEast1 :: Region -- ^ US East (N. Virginia)
+s3UsEast1 = Region "s3-external-1.amazonaws.com" "us-east-1"
 
-s3EndpointUsWest2 :: B.ByteString
-s3EndpointUsWest2 = "s3-us-west-2.amazonaws.com"
+s3UsWest1 :: Region -- ^ US West (N. California)
+s3UsWest1 = Region "s3-us-west-1.amazonaws.com" "us-west-1"
 
-s3EndpointEu :: B.ByteString
-s3EndpointEu = "s3-eu-west-1.amazonaws.com"
+s3UsWest2 :: Region -- ^ US West (Oregon)
+s3UsWest2 = Region "s3-us-west-2.amazonaws.com" "us-west-2"
 
-s3EndpointApSouthEast :: B.ByteString
-s3EndpointApSouthEast = "s3-ap-southeast-1.amazonaws.com"
+s3EuWest1 :: Region -- ^ EU (Ireland)
+s3EuWest1 = Region "s3-eu-west-1.amazonaws.com" "eu-west-1"
 
-s3EndpointApSouthEast2 :: B.ByteString
-s3EndpointApSouthEast2 = "s3-ap-southeast-2.amazonaws.com"
+s3EuCentral1 :: Region -- ^ EU (Frankfurt)
+s3EuCentral1 = Region "s3-eu-central-1.amazonaws.com" "eu-central-1"
 
-s3EndpointApNorthEast :: B.ByteString
-s3EndpointApNorthEast = "s3-ap-northeast-1.amazonaws.com"
+s3ApNe1 :: Region -- ^ Asia Pacific (Tokyo)
+s3ApNe1 = Region "s3-ap-northeast-1.amazonaws.com" "ap-northeast-1"
 
-s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration qt
-s3 protocol endpoint uri
+s3ApNe2 :: Region -- ^ Asia Pacific (Seoul)
+s3ApNe2 = Region "s3-ap-northeast-2.amazonaws.com" "ap-northeast-2"
+
+s3ApSe1 :: Region -- ^ Asia Pacific (Singapore)
+s3ApSe1 = Region "s3-ap-southeast-1.amazonaws.com" "ap-southeast-1"
+
+s3ApSe2 :: Region -- ^ Asia Pacific (Sydney)
+s3ApSe2 = Region "s3-ap-southeast-2.amazonaws.com" "ap-southeast-2"
+
+s3SaEast1 :: Region -- ^ South America (São Paulo)
+s3SaEast1 = Region "s3-sa-east-1.amazonaws.com" "sa-east-1"
+
+s3 :: Protocol -> Region -> Bool -> S3Configuration qt
+s3 protocol region uri
     = S3Configuration {
          s3Protocol = protocol
-       , s3Endpoint = endpoint
+       , s3Region = region
        , s3RequestStyle = BucketStyle
        , s3Port = defaultPort protocol
        , s3ServerSideEncryption = Nothing
@@ -149,6 +167,7 @@ data S3Query
       , s3QQuery :: HTTP.Query
       , s3QContentType :: Maybe B.ByteString
       , s3QContentMd5 :: Maybe (Digest MD5)
+      -- ^ The Content-MD5 header value.
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
 #if MIN_VERSION_http_conduit(2, 0, 0)
@@ -167,15 +186,27 @@ instance Show S3Query where
                        " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++
                        "]"
 
+hAmzDate, hAmzContentSha256, hAmzAlgorithm, hAmzCredential, hAmzExpires, hAmzSignature, hAmzSecurityToken :: HTTP.HeaderName
+hAmzDate = "X-Amz-Date"
+hAmzContentSha256 = "X-Amz-content-Sha256"
+hAmzAlgorithm = "X-Amz-Algorithm"
+hAmzCredential = "X-Amz-Credential"
+hAmzExpires = "X-Amz-Expires"
+hAmzSignedHeaders = "X-Amz-SignedHeaders"
+hAmzSignature = "X-Amz-Signature"
+hAmzSecurityToken = "X-Amz-Security-Token"
+
+-- | For signature v4 signing see
+-- <http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html>
 s3SignQuery :: S3Query -> S3Configuration qt -> SignatureData -> SignedQuery
-s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
+s3SignQuery S3Query{..} S3Configuration{..} sd@SignatureData{..}
     = SignedQuery {
         sqMethod = s3QMethod
       , sqProtocol = s3Protocol
       , sqHost = B.intercalate "." $ catMaybes host
       , sqPort = s3Port
       , sqPath = mconcat $ catMaybes path
-      , sqQuery = sortedSubresources ++ s3QQuery ++ authQuery :: HTTP.Query
+      , sqQuery = sortedSubresources ++ s3QQuery ++ (fmap (\(x, y) -> (CI.original x, Just y)) authQuery) :: HTTP.Query
       , sqDate = Just signatureTime
       , sqAuthorization = authorization
       , sqContentType = s3QContentType
@@ -186,46 +217,102 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       , sqStringToSign = stringToSign
       }
     where
-      amzHeaders = merge $ sortBy (compare `on` fst) (s3QAmzHeaders ++ (fmap (\(k, v) -> (CI.mk k, v)) iamTok))
+      credentials = signatureCredentials
+
+      -- hash of an empty string
+      emptyBodyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+      -- needs to match th eone produces in the @authorizationV4@
+      sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime
+
+      -- inject date and an empty content sha256, if not given.
+      s3QAmzHeaders' = (hAmzDate, sigTime):case lookup hAmzContentSha256 s3QAmzHeaders of
+        Just _ -> s3QAmzHeaders
+        Nothing -> (hAmzContentSha256, emptyBodyHash):s3QAmzHeaders
+      
+      amzHeaders = merge $ sortBy (compare `on` fst) (s3QAmzHeaders' ++ iamTok)
           where merge (x1@(k1,v1):x2@(k2,v2):xs) | k1 == k2  = merge ((k1, B8.intercalate "," [v1, v2]) : xs)
                                                  | otherwise = x1 : merge (x2 : xs)
                 merge xs = xs
 
       urlEncodedS3QObject = HTTP.urlEncode False <$> s3QObject
       (host, path) = case s3RequestStyle of
-                       PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
-                       BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", urlEncodedS3QObject])
-                       VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/", urlEncodedS3QObject])
+                       PathStyle   -> ([Just (rUri s3Region)], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
+                       BucketStyle -> ([s3QBucket, Just (rUri s3Region)], [Just "/", urlEncodedS3QObject])
+                       VHostStyle  -> ([Just $ fromMaybe (rUri s3Region) s3QBucket], [Just "/", urlEncodedS3QObject])
       sortedSubresources = sort s3QSubresources
-      canonicalizedResource = Blaze8.fromChar '/' `mappend`
-                              maybe mempty (\s -> Blaze.copyByteString s `mappend` Blaze8.fromChar '/') s3QBucket `mappend`
-                              maybe mempty Blaze.copyByteString urlEncodedS3QObject `mappend`
-                              HTTP.renderQueryBuilder True sortedSubresources
+
       ti = case (s3UseUri, signatureTimeInfo) of
              (False, ti') -> ti'
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
              (True, AbsoluteExpires time) -> AbsoluteExpires time
-      sig = signature signatureCredentials HmacSHA1 stringToSign
-      iamTok = maybe [] (\x -> [("x-amz-security-token", x)]) (iamToken signatureCredentials)
-      stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
-                       [[Blaze.copyByteString $ httpMethod s3QMethod]
-                       , [maybe mempty (Blaze.copyByteString . Base64.encode . toBytes) s3QContentMd5]
-                       , [maybe mempty Blaze.copyByteString s3QContentType]
-                       , [Blaze.copyByteString $ case ti of
-                                                   AbsoluteTimestamp time -> fmtRfc822Time time
-                                                   AbsoluteExpires time -> fmtTimeEpochSeconds time]
-                       , map amzHeader amzHeaders
-                       , [canonicalizedResource]
+
+      iamTok = maybe [] (\x -> [(hAmzSecurityToken, x)]) (iamToken signatureCredentials)
+      
+      -- must provide host in the canonical headers.
+      canonicalHeaders = sortBy (compare `on` fst) $ amzHeaders ++ catMaybes
+                         [Just ("host", B.intercalate "." $ catMaybes host)
+                         , ("content-type",) <$> s3QContentType
+                         ]
+      -- string to sign depends on the use case:
+      -- The general structure is:
+      --    <method>
+      --    <path>
+      --    <query string>
+      --    <canonical headers - header1:value1\nheader2:value2...\n>
+      --    <signed headers - header1;header2...>
+      --    <hashed payload - sha256>
+      --
+      -- 1) Generate an Authentication Header <http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html>
+      --    GET
+      --    /text.txt
+      --
+      --    host:bucket.region.amazonaws.com
+      --    x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      --    x-amz-date:20130524T000000Z
+      --
+      --    host;x-amz-content-sha256;x-amz-date
+      --    e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      --
+      -- 2) Generating a signed link with an expirydate <http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html>
+      --    GET
+      --    /test.txt
+      --    X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20130524%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20130524T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host
+      --    host:examplebucket.s3.amazonaws.com
+      --
+      --    host
+      --    UNSIGNED-PAYLOAD
+      --
+      stringToSign = B.concat $ intercalate ["\n"] $
+                       [ [httpMethod s3QMethod]               -- method
+                       , [mconcat . catMaybes $ path]         -- path
+                       , [HTTP.renderQuery False queryString] -- query string
+                       ] ++
+                       map (\(a,b) -> [CI.foldedCase a,":",b]) headers ++
+                       [ [] -- end headers
+                       , intersperse ";" (map (CI.foldedCase . fst) headers)
+                       , [payloadHash]
                        ]
-          where amzHeader (k, v) = Blaze.copyByteString (CI.foldedCase k) `mappend` Blaze8.fromChar ':' `mappend` Blaze.copyByteString v
+
+      (payloadHash, queryString, headers) = case ti of
+        AbsoluteTimestamp _  -> (fromMaybe emptyBodyHash $ lookup hAmzContentSha256 amzHeaders, [], canonicalHeaders)
+        AbsoluteExpires time -> ("UNSIGNED-PAYLOAD", HTTP.toQuery . fmap (\(x,y) -> (CI.original x, y)) $ makeAuthQuery time, [("host", B.intercalate "." $ catMaybes host)])
+
+      auth = authorizationV4' sd HmacSHA256 (rName s3Region) "s3"
+                       (B.concat (intersperse ";" (map (CI.foldedCase . fst) canonicalHeaders)))
+                       stringToSign
+      sig  = signatureV4 sd HmacSHA256 (rName s3Region) "s3" stringToSign
+
       (authorization, authQuery) = case ti of
-                                 AbsoluteTimestamp _ -> (Just $ return $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
-                                 AbsoluteExpires time -> (Nothing, HTTP.toQuery $ makeAuthQuery time)
+        AbsoluteTimestamp _  -> (Just . return $ auth, [])
+        AbsoluteExpires time -> (Nothing, (hAmzSignature, sig):makeAuthQuery time)
+
       makeAuthQuery time
-          = [("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)
-            , ("AWSAccessKeyId", accessKeyID signatureCredentials)
-            , ("SignatureMethod", "HmacSHA256")
-            , ("Signature", sig)] ++ iamTok
+          = [ (hAmzAlgorithm, "AWS4-HMAC-SHA256")
+            , (hAmzCredential, credentialV4 sd (rName s3Region) "s3")
+            , (hAmzDate, sigTime)
+            , (hAmzExpires, B8.pack . show . floor $ diffUTCTime time signatureTime)
+            , (hAmzSignedHeaders, "host") ] ++ iamTok
 
 s3ResponseConsumer :: HTTPResponseConsumer a
                          -> IORef S3Metadata

@@ -50,7 +50,10 @@ module Aws.Core
 , AuthorizationHash(..)
 , amzHash
 , signature
+, credentialV4
 , authorizationV4
+, authorizationV4'
+, signatureV4
   -- ** Query construction helpers
 , queryList
 , awsBool
@@ -601,6 +604,23 @@ signature cr ah input = Base64.encode sig
       computeSig :: HashAlgorithm a => a -> ByteString
       computeSig t = toBytes (hmacAlg t (secretAccessKey cr) input)
 
+-- | Generates the Credential string, required for V4 signatures.
+credentialV4 :: SignatureData
+             -> B.ByteString -- ^ region, e.g. us-east-1
+             -> B.ByteString -- ^ service, e.g. dynamodb
+             -> B.ByteString
+credentialV4 sd region service =
+  B.concat [ accessKeyID (signatureCredentials sd)
+           , "/"
+           , date
+           , "/"
+           , region
+           , "/"
+           , service
+           , "/aws4_request"
+           ]
+  where date = fmtTime "%Y%m%d" $ signatureTime sd
+
 -- | Use this to create the Authorization header to set into 'sqAuthorization'.
 -- See <http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html>: you must create the
 -- canonical request as explained by Step 1 and this function takes care of Steps 2 and 3.
@@ -663,19 +683,79 @@ authorizationV4 sd ah region service headers canonicalRequest = do
     -- finally, return the header
     return $ B.concat [ alg
                       , " Credential="
-                      , accessKeyID (signatureCredentials sd)
-                      , "/"
-                      , date
-                      , "/"
-                      , region
-                      , "/"
-                      , service
-                      , "/aws4_request,"
-                      , "SignedHeaders="
+                      , credentialV4 sd region service
+                      , ",SignedHeaders="
                       , headers
                       , ",Signature="
                       , sig
                       ]
+
+-- | Compute the signature for V4
+signatureV4 :: SignatureData
+            -> AuthorizationHash
+            -> B.ByteString -- ^ region, e.g. us-east-1
+            -> B.ByteString -- ^ service, e.g. dynamodb
+            -> B.ByteString -- ^ canonicalRequest (before hashing)
+            -> B.ByteString
+signatureV4 sd ah region service canonicalRequest = do
+    let date = fmtTime "%Y%m%d" $ signatureTime sd
+        mkHmac k i = case ah of
+                        HmacSHA1 -> toBytes (hmac k i :: HMAC SHA1)
+                        HmacSHA256 -> toBytes (hmac k i :: HMAC SHA256)
+        mkHash i = case ah of
+                        HmacSHA1 -> toBytes (hash i :: Digest SHA1)
+                        HmacSHA256 -> toBytes (hash i :: Digest SHA256)
+        alg = case ah of
+                    HmacSHA1 -> "AWS4-HMAC-SHA1"
+                    HmacSHA256 -> "AWS4-HMAC-SHA256"
+
+    -- create a new signing key
+    let key = let secretKey = secretAccessKey $ signatureCredentials sd
+                  kDate = mkHmac ("AWS4" <> secretKey) date
+                  kRegion = mkHmac kDate region
+                  kService = mkHmac kRegion service
+                  kSigning = mkHmac kService "aws4_request"
+               in kSigning
+
+    -- now do the signature
+    let canonicalRequestHash = Base16.encode $ mkHash canonicalRequest
+        stringToSign = B.concat [ alg
+                                , "\n"
+                                , fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
+                                , "\n"
+                                , date
+                                , "/"
+                                , region
+                                , "/"
+                                , service
+                                , "/aws4_request\n"
+                                , canonicalRequestHash
+                                ]
+    Base16.encode $ mkHmac key stringToSign
+
+-- | IO free version of @authorizationV4@, us this if you need
+-- to compute the signature outside of IO.
+authorizationV4' :: SignatureData
+                 -> AuthorizationHash
+                 -> B.ByteString -- ^ region, e.g. us-east-1
+                 -> B.ByteString -- ^ service, e.g. dynamodb
+                 -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
+                 -> B.ByteString -- ^ canonicalRequest (before hashing)
+                 -> B.ByteString
+authorizationV4' sd ah region service headers canonicalRequest = do
+    let alg = case ah of
+                    HmacSHA1 -> "AWS4-HMAC-SHA1"
+                    HmacSHA256 -> "AWS4-HMAC-SHA256"
+
+    -- finally, return the header
+    B.concat [ alg
+             , " Credential="
+             , credentialV4 sd region service
+             , ",SignedHeaders="
+             , headers
+             , ",Signature="
+             , signatureV4 sd ah region service canonicalRequest
+             ]
 
 -- | Default configuration for a specific service.
 class DefaultServiceConfiguration config where
