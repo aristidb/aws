@@ -6,9 +6,7 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Data.Maybe
 import           Data.Time.Format
-#if MIN_VERSION_time(1,5,0)
-import           Data.Time.Format
-#else
+#if !MIN_VERSION_time(1,5,0)
 import           System.Locale
 #endif
 import           Text.XML.Cursor  (($/), ($//), (&|))
