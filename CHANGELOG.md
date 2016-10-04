@@ -4,6 +4,7 @@ NOTES: 0.14 brings potentially breaking changes
 
 -   0.14.1
     -   Eliminate orphan instance that conflicted with aeson-1.0
+    -   Add upper bound on http-client in testsuite
 -   0.14
     -   transformers 0.5 support
     -   data-default 0.6 support (also in 0.13.1)
