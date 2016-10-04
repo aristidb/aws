@@ -66,7 +66,7 @@ instance SignQuery PutObject where
                                             , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
                                             , ("x-amz-website-redirect-location",) <$> poWebsiteRedirectLocation
                                             , ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> poServerSideEncryption
-					    , if poAutoMakeBucket then Just ("x-amz-auto-make-bucket", "1")  else Nothing
+                                            , if poAutoMakeBucket then Just ("x-amz-auto-make-bucket", "1")  else Nothing
                                             ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
                                , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires
