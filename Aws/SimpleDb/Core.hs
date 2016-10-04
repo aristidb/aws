@@ -32,7 +32,7 @@ data SdbError
 
 instance C.Exception SdbError
 
-data SdbMetadata 
+data SdbMetadata
     = SdbMetadata {
         requestId :: Maybe T.Text
       , boxUsage :: Maybe T.Text
@@ -63,11 +63,11 @@ instance DefaultServiceConfiguration (SdbConfiguration NormalQuery) where
   debugServiceConfig = sdbHttpPost sdbUsEast
 
 instance DefaultServiceConfiguration (SdbConfiguration UriOnlyQuery) where
-  defServiceConfig = sdbHttpsGet sdbUsEast  
+  defServiceConfig = sdbHttpsGet sdbUsEast
   debugServiceConfig = sdbHttpGet sdbUsEast
-             
+
 sdbUsEast :: B.ByteString
-sdbUsEast = "sdb.amazonaws.com" 
+sdbUsEast = "sdb.amazonaws.com"
 
 sdbUsWest :: B.ByteString
 sdbUsWest = "sdb.us-west-1.amazonaws.com"
@@ -80,16 +80,16 @@ sdbApSoutheast = "sdb.ap-southeast-1.amazonaws.com"
 
 sdbApNortheast :: B.ByteString
 sdbApNortheast = "sdb.ap-northeast-1.amazonaws.com"
-             
+
 sdbHttpGet :: B.ByteString -> SdbConfiguration qt
 sdbHttpGet endpoint = SdbConfiguration HTTP Get endpoint (defaultPort HTTP)
-                          
+
 sdbHttpPost :: B.ByteString -> SdbConfiguration NormalQuery
 sdbHttpPost endpoint = SdbConfiguration HTTP PostQuery endpoint (defaultPort HTTP)
-              
+
 sdbHttpsGet :: B.ByteString -> SdbConfiguration qt
 sdbHttpsGet endpoint = SdbConfiguration HTTPS Get endpoint (defaultPort HTTPS)
-             
+
 sdbHttpsPost :: B.ByteString -> SdbConfiguration NormalQuery
 sdbHttpsPost endpoint = SdbConfiguration HTTPS PostQuery endpoint (defaultPort HTTPS)
 
@@ -122,13 +122,13 @@ sdbSignQuery q si sd
                   , ("AWSAccessKeyId", accessKeyID cr)
                   , ("SignatureMethod", amzHash ah)
                   , ("SignatureVersion", "2")]
-		  ++ maybe [] (\tok -> [("SecurityToken", tok)]) (iamToken cr)
+                  ++ maybe [] (\tok -> [("SecurityToken", tok)]) (iamToken cr)
       sq = ("Signature", Just sig) : q'
       method = sdbiHttpMethod si
       host = sdbiHost si
       path = "/"
       sig = signature cr ah stringToSign
-      stringToSign = Blaze.toByteString . mconcat $ 
+      stringToSign = Blaze.toByteString . mconcat $
                      intersperse (Blaze8.fromChar '\n')
                        [Blaze.copyByteString $ httpMethod method
                        , Blaze.copyByteString $ host
