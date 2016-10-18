@@ -200,7 +200,22 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       canonicalizedResource = Blaze8.fromChar '/' `mappend`
                               maybe mempty (\s -> Blaze.copyByteString s `mappend` Blaze8.fromChar '/') s3QBucket `mappend`
                               maybe mempty Blaze.copyByteString urlEncodedS3QObject `mappend`
-                              HTTP.renderQueryBuilder True sortedSubresources
+                              encodeQuerySign sortedSubresources
+      -- query parameters overriding response headers must not be URI encoded when calculating signature
+      -- http://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html#ConstructingTheCanonicalizedResourceElement
+      -- Note this is limited to amazon auth version 2 in the new auth version 4 this weird exception is not present
+      encodeQuerySign qs =
+          let ceq = Blaze8.fromChar '='
+              cqt = Blaze8.fromChar '?'
+              camp = Blaze8.fromChar '&'
+              overrideParams = map B8.pack ["response-content-type", "response-content-language", "response-expires", "response-cache-control", "response-content-disposition", "response-content-encoding"]
+              encItem (k, mv) =
+                  let enc = if k `elem` overrideParams then Blaze.copyByteString else HTTP.urlEncodeBuilder True
+                  in  enc k `mappend` maybe mempty (mappend ceq . enc) mv
+          in case intersperse camp (map encItem qs) of
+               [] -> mempty
+               qs' -> mconcat (cqt :qs')
+
       ti = case (s3UseUri, signatureTimeInfo) of
              (False, ti') -> ti'
              (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
