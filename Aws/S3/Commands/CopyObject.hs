@@ -15,9 +15,7 @@ import qualified Data.Text.Encoding as T
 import           Data.Time
 import qualified Network.HTTP.Conduit as HTTP
 import           Text.XML.Cursor (($/), (&|))
-#if MIN_VERSION_time(1,5,0)
-import           Data.Time.Format
-#else
+#if !MIN_VERSION_time(1,5,0)
 import           System.Locale
 #endif
 import           Prelude

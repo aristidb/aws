@@ -25,9 +25,7 @@ import           Data.Typeable
 import           Prelude
 import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
-#if MIN_VERSION_time(1,5,0)
-import           Data.Time.Format
-#else
+#if !MIN_VERSION_time(1,5,0)
 import           System.Locale
 #endif
 import qualified Text.XML                       as XML

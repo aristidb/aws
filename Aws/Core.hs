@@ -130,9 +130,7 @@ import qualified Network.HTTP.Types       as HTTP
 import           System.Directory
 import           System.Environment
 import           System.FilePath          ((</>))
-#if MIN_VERSION_time(1,5,0)
-import           Data.Time.Format
-#else
+#if !MIN_VERSION_time(1,5,0)
 import           System.Locale
 #endif
 import qualified Text.XML                 as XML
