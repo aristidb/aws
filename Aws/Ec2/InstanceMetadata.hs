@@ -8,6 +8,7 @@ import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.ByteString.Lazy.UTF8 as BU
 import           Data.Typeable
 import qualified Network.HTTP.Conduit as HTTP
+import           Prelude
 
 data InstanceMetadataException
   = MetadataNotFound String

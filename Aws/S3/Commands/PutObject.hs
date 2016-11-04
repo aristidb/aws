@@ -13,6 +13,7 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.CaseInsensitive  as CI
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
+import           Prelude
 import qualified Network.HTTP.Conduit  as HTTP
 
 data PutObject = PutObject {

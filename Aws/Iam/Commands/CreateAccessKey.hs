@@ -16,6 +16,7 @@ import           Data.Text           (Text)
 import qualified Data.Text           as Text
 import           Data.Time
 import           Data.Typeable
+import           Prelude
 import           Text.XML.Cursor     (($//))
 
 -- | Creates a new AWS secret access key and corresponding AWS access key ID

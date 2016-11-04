@@ -44,6 +44,7 @@ import           Data.Time.Clock.POSIX
 import           Data.Typeable
 import qualified Data.Vector           as V
 import           GHC.Generics          (Generic)
+import           Prelude
 -------------------------------------------------------------------------------
 import           Aws.Core
 import           Aws.DynamoDb.Core

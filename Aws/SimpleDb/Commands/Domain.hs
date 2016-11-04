@@ -6,6 +6,7 @@ import           Control.Applicative
 import           Data.Maybe
 import           Data.Time
 import           Data.Time.Clock.POSIX
+import           Prelude
 import           Text.XML.Cursor       (($//), (&|))
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T

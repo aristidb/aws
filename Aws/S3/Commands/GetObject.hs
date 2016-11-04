@@ -13,6 +13,7 @@ import qualified Data.Conduit.List     as CL
 import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
+import           Prelude
 import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
 

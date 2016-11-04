@@ -22,6 +22,7 @@ import qualified Data.Text.Encoding    as T
 import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
 import qualified Text.XML              as XML
+import           Prelude
 
 {-
 Aws supports following 6 api for Multipart-Upload.

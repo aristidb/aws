@@ -52,6 +52,7 @@ import qualified Data.Text.Encoding           as T
 import qualified Data.Text.IO                 as T
 import qualified Network.HTTP.Conduit         as HTTP
 import           System.IO                    (stderr)
+import           Prelude
 
 -- | The severity of a log message, in rising order.
 data LogLevel

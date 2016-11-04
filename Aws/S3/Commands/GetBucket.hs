@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import qualified Data.Traversable
+import           Prelude
 import qualified Network.HTTP.Types    as HTTP
 import qualified Text.XML.Cursor       as Cu
 

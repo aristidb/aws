@@ -39,6 +39,7 @@ import Data.Scientific
 import qualified Network.HTTP.Types as HTTP
 import Text.Read (readEither)
 import qualified Text.XML.Cursor as Cu
+import Prelude
 
 -- -------------------------------------------------------------------------- --
 -- User Message Attributes

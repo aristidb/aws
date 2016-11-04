@@ -14,6 +14,7 @@ import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Time
 import           Data.Typeable
+import           Prelude
 import           Text.XML.Cursor     (laxElement, ($/), ($//), (&|))
 
 -- | Returns the access keys associated with the specified user.

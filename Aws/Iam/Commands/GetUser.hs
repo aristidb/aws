@@ -13,6 +13,7 @@ import           Aws.Iam.Internal
 import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Typeable
+import           Prelude
 
 -- | Retreives information about the given user.
 --

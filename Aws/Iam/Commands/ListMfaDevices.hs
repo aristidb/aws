@@ -12,6 +12,7 @@ import Aws.Iam.Internal
 import Control.Applicative
 import Data.Text (Text)
 import Data.Typeable
+import Prelude
 import Text.XML.Cursor (laxElement, ($//), (&|))
 -- | Lists the MFA devices. If the request includes the user name,
 -- then this action lists all the MFA devices associated with the

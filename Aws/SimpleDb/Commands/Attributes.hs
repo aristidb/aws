@@ -5,6 +5,7 @@ import           Aws.SimpleDb.Core
 import           Control.Applicative
 import           Control.Monad
 import           Data.Maybe
+import           Prelude
 import           Text.XML.Cursor            (($//), (&|))
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T

@@ -26,6 +26,7 @@ import           Control.Applicative
 import           Data.Aeson
 import           Data.Default
 import qualified Data.Text           as T
+import           Prelude
 -------------------------------------------------------------------------------
 import           Aws.Core
 import           Aws.DynamoDb.Core

@@ -16,6 +16,7 @@ import qualified Data.Text.Encoding  as Text
 import           Data.Typeable
 import qualified Network.HTTP.Types  as HTTP
 import           Text.XML.Cursor     (($//))
+import           Prelude
 
 -- | Retreives the specified policy document for the specified user.
 --

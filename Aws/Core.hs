@@ -138,6 +138,7 @@ import           System.Locale
 import qualified Text.XML                 as XML
 import qualified Text.XML.Cursor          as Cu
 import           Text.XML.Cursor          hiding (force, forceM)
+import           Prelude
 -------------------------------------------------------------------------------
 
 -- | Types that can be logged (textually).

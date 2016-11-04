@@ -5,6 +5,7 @@ import           Aws.Core
 import           Aws.Sqs.Core
 import           Control.Applicative
 import           Data.Maybe
+import           Prelude
 import           Text.XML.Cursor       (($//), (&/))
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as TE

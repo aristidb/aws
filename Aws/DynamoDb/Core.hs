@@ -399,7 +399,7 @@ instance DynVal UTCTime where
 
 -------------------------------------------------------------------------------
 pico :: Rational
-pico = toRational $ 10 ^ (12 :: Integer)
+pico = toRational $ (10 :: Integer) ^ (12 :: Integer)
 
 
 -------------------------------------------------------------------------------
@@ -1142,6 +1142,7 @@ data QuerySelect
 instance Default QuerySelect where def = SelectAll
 
 -------------------------------------------------------------------------------
+querySelectJson :: KeyValue t => QuerySelect -> [t]
 querySelectJson (SelectSpecific as) =
     [ "Select" .= String "SPECIFIC_ATTRIBUTES"
     , "AttributesToGet" .= as]

@@ -15,6 +15,7 @@ import           Data.Monoid
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import           Data.Typeable
+import           Prelude
 import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
 import           Text.XML.Cursor                (($|), ($/), ($//), (&|))

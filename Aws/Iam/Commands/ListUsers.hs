@@ -14,6 +14,7 @@ import           Aws.Iam.Internal
 import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Typeable
+import           Prelude
 import           Text.XML.Cursor     (laxElement, ($//), (&|))
 
 -- | Lists users that have the specified path prefix.

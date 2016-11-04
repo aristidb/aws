@@ -20,6 +20,7 @@ import           Data.Time.Format
 #else
 import           System.Locale
 #endif
+import           Prelude
 
 data CopyMetadataDirective = CopyMetadata | ReplaceMetadata [(T.Text,T.Text)]
   deriving (Show)

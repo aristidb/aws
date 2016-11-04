@@ -13,6 +13,7 @@ import           Aws.Iam.Internal
 import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Typeable
+import           Prelude
 
 -- | Deletes the access key associated with the specified user.
 --
