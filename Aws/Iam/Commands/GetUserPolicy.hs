@@ -50,7 +50,7 @@ data GetUserPolicyResponse
 
 instance ResponseConsumer GetUserPolicy GetUserPolicyResponse where
     type ResponseMetadata GetUserPolicyResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer $ \cursor -> do
             let attr name = force ("Missing " ++ Text.unpack name) $
                             cursor $// elContent name

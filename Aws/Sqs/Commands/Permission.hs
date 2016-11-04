@@ -25,7 +25,7 @@ formatPermissions perms =
 
 instance ResponseConsumer r AddPermissionResponse where
     type ResponseMetadata AddPermissionResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
        where
          parse _ = do
            return AddPermissionResponse {}
@@ -55,7 +55,7 @@ data RemovePermissionResponse = RemovePermissionResponse
 
 instance ResponseConsumer r RemovePermissionResponse where
     type ResponseMetadata RemovePermissionResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where 
         parse _ = do
           return RemovePermissionResponse {}  

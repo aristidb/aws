@@ -201,14 +201,15 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
     -- metadata type for each AWS service.
     type ResponseMetadata resp
 
-    -- | Response parser. Takes the corresponding request, an 'IORef'
-    -- for metadata, and HTTP response data.
-    responseConsumer :: req -> IORef (ResponseMetadata resp) -> HTTPResponseConsumer resp
+    -- | Response parser. Takes the corresponding AWS request, the derived
+    -- @http-client@ request (for error reporting), an 'IORef' for metadata, and
+    -- HTTP response data.
+    responseConsumer :: HTTP.Request -> req -> IORef (ResponseMetadata resp) -> HTTPResponseConsumer resp
 
 -- | Does not parse response. For debugging.
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
-    responseConsumer _ _ resp = do
+    responseConsumer _ _ _ resp = do
         bss <- HTTP.responseBody resp $$+- CL.consume
         return resp
             { HTTP.responseBody = L.fromChunks bss

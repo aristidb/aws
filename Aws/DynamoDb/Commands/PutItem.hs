@@ -98,7 +98,7 @@ instance FromJSON PutItemResponse where
 
 instance ResponseConsumer r PutItemResponse where
     type ResponseMetadata PutItemResponse = DdbResponse
-    responseConsumer _ ref resp = ddbResponseConsumer ref resp
+    responseConsumer _ _ ref resp = ddbResponseConsumer ref resp
 
 
 instance AsMemoryResponse PutItemResponse where

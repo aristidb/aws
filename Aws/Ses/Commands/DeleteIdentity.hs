@@ -29,7 +29,8 @@ data DeleteIdentityResponse = DeleteIdentityResponse
 
 instance ResponseConsumer DeleteIdentity DeleteIdentityResponse where
     type ResponseMetadata DeleteIdentityResponse = SesMetadata
-    responseConsumer _ = sesResponseConsumer $ \_ -> return DeleteIdentityResponse
+    responseConsumer _ _
+        = sesResponseConsumer $ \_ -> return DeleteIdentityResponse
 
 
 instance Transaction DeleteIdentity DeleteIdentityResponse where

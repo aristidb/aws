@@ -33,8 +33,8 @@ data GetUserResponse = GetUserResponse User
 
 instance ResponseConsumer GetUser GetUserResponse where
     type ResponseMetadata GetUserResponse = IamMetadata
-    responseConsumer _ = iamResponseConsumer $
-                         fmap GetUserResponse . parseUser
+    responseConsumer _ _ = iamResponseConsumer $
+                           fmap GetUserResponse . parseUser
 
 instance Transaction GetUser GetUserResponse
 

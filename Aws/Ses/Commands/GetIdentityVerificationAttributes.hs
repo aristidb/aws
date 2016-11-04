@@ -45,7 +45,7 @@ data GetIdentityVerificationAttributesResponse =
 
 instance ResponseConsumer GetIdentityVerificationAttributes GetIdentityVerificationAttributesResponse where
     type ResponseMetadata GetIdentityVerificationAttributesResponse = SesMetadata
-    responseConsumer _ =
+    responseConsumer _ _ =
       sesResponseConsumer $ \cursor -> do
          let buildAttr e = do
                ivIdentity <- force "Missing Key" $ e $/ elContent "key"

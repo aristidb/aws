@@ -158,7 +158,7 @@ instance FromJSON UpdateItemResponse where
 
 instance ResponseConsumer r UpdateItemResponse where
     type ResponseMetadata UpdateItemResponse = DdbResponse
-    responseConsumer _ ref resp = ddbResponseConsumer ref resp
+    responseConsumer _ _ ref resp = ddbResponseConsumer ref resp
 
 
 instance AsMemoryResponse UpdateItemResponse where

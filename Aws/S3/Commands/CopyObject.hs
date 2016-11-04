@@ -94,7 +94,7 @@ instance SignQuery CopyObject where
 
 instance ResponseConsumer CopyObject CopyObjectResponse where
     type ResponseMetadata CopyObjectResponse = S3Metadata
-    responseConsumer _ mref = flip s3ResponseConsumer mref $ \resp -> do
+    responseConsumer _ _ mref = flip s3ResponseConsumer mref $ \resp -> do
         let vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
         (lastMod, etag) <- xmlCursorConsumer parse mref resp
         return $ CopyObjectResponse vid lastMod etag

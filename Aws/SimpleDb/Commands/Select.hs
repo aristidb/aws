@@ -42,7 +42,7 @@ instance SignQuery Select where
 
 instance ResponseConsumer r SelectResponse where
     type ResponseMetadata SelectResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer parse
+    responseConsumer _ _ = sdbResponseConsumer parse
         where parse cursor = do
                 sdbCheckResponseType () "SelectResponse" cursor
                 items <- sequence $ cursor $// Cu.laxElement "Item" &| readItem

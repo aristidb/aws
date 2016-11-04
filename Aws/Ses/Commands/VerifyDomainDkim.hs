@@ -28,7 +28,7 @@ data VerifyDomainDkimResponse = VerifyDomainDkimResponse [Text]
 
 instance ResponseConsumer VerifyDomainDkim VerifyDomainDkimResponse where
     type ResponseMetadata VerifyDomainDkimResponse = SesMetadata
-    responseConsumer _ =
+    responseConsumer _ _ =
       sesResponseConsumer $ \cursor -> do
         let tokens = cursor $// laxElement "DkimTokens" &/ elContent "member"
         return (VerifyDomainDkimResponse tokens)

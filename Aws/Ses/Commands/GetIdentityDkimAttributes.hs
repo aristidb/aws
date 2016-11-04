@@ -44,7 +44,7 @@ data GetIdentityDkimAttributesResponse =
 
 instance ResponseConsumer GetIdentityDkimAttributes GetIdentityDkimAttributesResponse where
     type ResponseMetadata GetIdentityDkimAttributesResponse = SesMetadata
-    responseConsumer _ = sesResponseConsumer $ \cursor -> do
+    responseConsumer _ _ = sesResponseConsumer $ \cursor -> do
         let buildAttr e = do
               idIdentity <- force "Missing Key" $ e $/ elContent "key"
               enabled <- force "Missing DkimEnabled" $ e $// elContent "DkimEnabled"

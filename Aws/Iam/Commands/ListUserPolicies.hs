@@ -52,7 +52,7 @@ data ListUserPoliciesResponse
 
 instance ResponseConsumer ListUserPolicies ListUserPoliciesResponse where
     type ResponseMetadata ListUserPoliciesResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer $ \cursor -> do
             (luprIsTruncated, luprMarker) <- markedIterResponse cursor
             let luprPolicyNames = cursor $// laxElement "member" &/ content

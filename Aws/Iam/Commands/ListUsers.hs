@@ -55,7 +55,7 @@ data ListUsersResponse
 
 instance ResponseConsumer ListUsers ListUsersResponse where
     type ResponseMetadata ListUsersResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer $ \cursor -> do
             (lurIsTruncated, lurMarker) <- markedIterResponse cursor
             lurUsers <- sequence $

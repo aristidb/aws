@@ -83,7 +83,7 @@ instance SignQuery PutObject where
 
 instance ResponseConsumer PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
-    responseConsumer _ = s3ResponseConsumer $ \resp -> do
+    responseConsumer _ _ = s3ResponseConsumer $ \resp -> do
       let vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
       return $ PutObjectResponse vid
 

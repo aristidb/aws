@@ -58,7 +58,7 @@ data CreateAccessKeyResponse
 
 instance ResponseConsumer CreateAccessKey CreateAccessKeyResponse where
     type ResponseMetadata CreateAccessKeyResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer $ \cursor -> do
             let attr name = force ("Missing " ++ Text.unpack name) $
                             cursor $// elContent name

@@ -37,7 +37,8 @@ data DeleteUserPolicyResponse = DeleteUserPolicyResponse
 
 instance ResponseConsumer DeleteUserPolicy DeleteUserPolicyResponse where
     type ResponseMetadata DeleteUserPolicyResponse = IamMetadata
-    responseConsumer _ = iamResponseConsumer (const $ return DeleteUserPolicyResponse)
+    responseConsumer _ _ =
+        iamResponseConsumer (const $ return DeleteUserPolicyResponse)
 
 instance Transaction DeleteUserPolicy DeleteUserPolicyResponse
 

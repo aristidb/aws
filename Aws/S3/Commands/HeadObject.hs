@@ -60,7 +60,7 @@ instance SignQuery HeadObject where
 
 instance ResponseConsumer HeadObject HeadObjectResponse where
     type ResponseMetadata HeadObjectResponse = S3Metadata
-    responseConsumer HeadObject{..} _ resp
+    responseConsumer _ HeadObject{..} _ resp
         | status == HTTP.status200 = HeadObjectResponse . Just <$> parseObjectMetadata headers
         | status == HTTP.status404 = return $ HeadObjectResponse Nothing
         | otherwise = throwM $ HTTP.StatusCodeException status headers cookies

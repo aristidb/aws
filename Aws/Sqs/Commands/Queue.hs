@@ -23,7 +23,7 @@ data CreateQueueResponse = CreateQueueResponse {
 
 instance ResponseConsumer r CreateQueueResponse where
     type ResponseMetadata CreateQueueResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where
         parse el = do
           url <- force "Missing Queue Url" $ el $// Cu.laxElement "QueueUrl" &/ Cu.content
@@ -55,7 +55,7 @@ data DeleteQueueResponse = DeleteQueueResponse
 
 instance ResponseConsumer r DeleteQueueResponse where
     type ResponseMetadata DeleteQueueResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where
         parse _ = do return DeleteQueueResponse{}
           
@@ -82,7 +82,7 @@ data ListQueuesResponse = ListQueuesResponse {
 
 instance ResponseConsumer r ListQueuesResponse where
     type ResponseMetadata ListQueuesResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where
         parse el = do
             let queues = el $// Cu.laxElement "QueueUrl" &/ Cu.content

@@ -60,7 +60,7 @@ data ListMfaDevicesResponse = ListMfaDevicesResponse
 
 instance ResponseConsumer ListMfaDevices ListMfaDevicesResponse where
   type ResponseMetadata ListMfaDevicesResponse = IamMetadata
-  responseConsumer _req =
+  responseConsumer _ _req =
     iamResponseConsumer $ \ cursor -> do
       (lmfarIsTruncated, lmfarMarker) <- markedIterResponse cursor
       lmfarMfaDevices <-

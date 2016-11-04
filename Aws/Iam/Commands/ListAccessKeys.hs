@@ -71,7 +71,7 @@ data ListAccessKeysResponse
 
 instance ResponseConsumer ListAccessKeys ListAccessKeysResponse where
     type ResponseMetadata ListAccessKeysResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer $ \cursor -> do
             (lakrIsTruncated, lakrMarker) <- markedIterResponse cursor
             lakrAccessKeyMetadata <- sequence $

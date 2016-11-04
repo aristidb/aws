@@ -42,7 +42,7 @@ data UpdateUserResponse = UpdateUserResponse
 
 instance ResponseConsumer UpdateUser UpdateUserResponse where
     type ResponseMetadata UpdateUserResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer (const $ return UpdateUserResponse)
 
 instance Transaction UpdateUser UpdateUserResponse

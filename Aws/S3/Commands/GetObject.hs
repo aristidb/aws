@@ -79,7 +79,7 @@ instance SignQuery GetObject where
 
 instance ResponseConsumer GetObject GetObjectResponse where
     type ResponseMetadata GetObjectResponse = S3Metadata
-    responseConsumer GetObject{..} metadata resp
+    responseConsumer _ GetObject{..} metadata resp
         | status == HTTP.status200 = do
             rsp <- s3BinaryResponseConsumer return metadata resp
             om <- parseObjectMetadata (HTTP.responseHeaders resp)

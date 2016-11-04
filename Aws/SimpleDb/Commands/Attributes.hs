@@ -39,7 +39,8 @@ instance SignQuery GetAttributes where
 
 instance ResponseConsumer r GetAttributesResponse where
     type ResponseMetadata GetAttributesResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer parse
+    responseConsumer _ _
+        = sdbResponseConsumer parse
         where parse cursor = do
                 sdbCheckResponseType () "GetAttributesResponse" cursor
                 attributes <- sequence $ cursor $// Cu.laxElement "Attribute" &| readAttribute
@@ -83,7 +84,8 @@ instance SignQuery PutAttributes where
 
 instance ResponseConsumer r PutAttributesResponse where
     type ResponseMetadata PutAttributesResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType PutAttributesResponse "PutAttributesResponse"
+    responseConsumer _ _
+        = sdbResponseConsumer $ sdbCheckResponseType PutAttributesResponse "PutAttributesResponse"
 
 instance Transaction PutAttributes PutAttributesResponse
 
@@ -123,7 +125,8 @@ instance SignQuery DeleteAttributes where
 
 instance ResponseConsumer r DeleteAttributesResponse where
     type ResponseMetadata DeleteAttributesResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType DeleteAttributesResponse "DeleteAttributesResponse"
+    responseConsumer _ _
+        = sdbResponseConsumer $ sdbCheckResponseType DeleteAttributesResponse "DeleteAttributesResponse"
 
 instance Transaction DeleteAttributes DeleteAttributesResponse
 
@@ -156,7 +159,8 @@ instance SignQuery BatchPutAttributes where
 
 instance ResponseConsumer r BatchPutAttributesResponse where
     type ResponseMetadata BatchPutAttributesResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType BatchPutAttributesResponse "BatchPutAttributesResponse"
+    responseConsumer _ _
+        = sdbResponseConsumer $ sdbCheckResponseType BatchPutAttributesResponse "BatchPutAttributesResponse"
 
 instance Transaction BatchPutAttributes BatchPutAttributesResponse
 
@@ -189,7 +193,8 @@ instance SignQuery BatchDeleteAttributes where
 
 instance ResponseConsumer r BatchDeleteAttributesResponse where
     type ResponseMetadata BatchDeleteAttributesResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
+    responseConsumer _ _
+        = sdbResponseConsumer $ sdbCheckResponseType BatchDeleteAttributesResponse "BatchDeleteAttributesResponse"
 
 instance Transaction BatchDeleteAttributes BatchDeleteAttributesResponse
 

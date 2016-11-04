@@ -72,7 +72,7 @@ instance SignQuery GetBucket where
 instance ResponseConsumer r GetBucketResponse where
     type ResponseMetadata GetBucketResponse = S3Metadata
 
-    responseConsumer _ = s3XmlResponseConsumer parse
+    responseConsumer _ _ = s3XmlResponseConsumer parse
         where parse cursor
                   = do name <- force "Missing Name" $ cursor $/ elContent "Name"
                        let delimiter = listToMaybe $ cursor $/ elContent "Delimiter"

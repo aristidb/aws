@@ -135,7 +135,8 @@ instance SignQuery Query where
 
 instance ResponseConsumer r QueryResponse where
     type ResponseMetadata QueryResponse = DdbResponse
-    responseConsumer _ ref resp = ddbResponseConsumer ref resp
+    responseConsumer _ _ ref resp
+        = ddbResponseConsumer ref resp
 
 
 instance AsMemoryResponse QueryResponse where

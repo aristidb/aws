@@ -39,7 +39,8 @@ data DeleteAccessKeyResponse = DeleteAccessKeyResponse
 
 instance ResponseConsumer DeleteAccessKey DeleteAccessKeyResponse where
     type ResponseMetadata DeleteAccessKeyResponse = IamMetadata
-    responseConsumer _ = iamResponseConsumer (const $ return DeleteAccessKeyResponse)
+    responseConsumer _ _
+        = iamResponseConsumer (const $ return DeleteAccessKeyResponse)
 
 instance Transaction DeleteAccessKey DeleteAccessKeyResponse
 

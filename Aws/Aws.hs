@@ -247,7 +247,7 @@ unsafeAwsRef cfg info manager metadataRef request = do
   logDebug $ "Response status: " ++ show (HTTP.responseStatus hresp)
   forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
     logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
-  {-# SCC "unsafeAwsRef:responseConsumer" #-} responseConsumer request metadataRef hresp
+  {-# SCC "unsafeAwsRef:responseConsumer" #-} responseConsumer httpRequest request metadataRef hresp
 
 -- | Run a URI-only AWS transaction. Returns a URI that can be sent anywhere. Does not work with all requests.
 --
