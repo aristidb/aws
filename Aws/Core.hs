@@ -22,6 +22,7 @@ module Aws.Core
 , HeaderException(..)
 , FormException(..)
 , NoCredentialsException(..)
+, throwStatusCodeException
   -- ** Response deconstruction helpers
 , readHex2
   -- *** XML
@@ -111,8 +112,10 @@ import qualified Data.ByteString.UTF8     as BU
 import           Data.Char
 import           Data.Conduit             (($$+-))
 import qualified Data.Conduit             as C
+#if MIN_VERSION_http_conduit(2,2,0)
+import qualified Data.Conduit.Binary      as CB
+#endif
 import qualified Data.Conduit.List        as CL
-import           Data.Default             (def)
 import           Data.IORef
 import           Data.List
 import qualified Data.Map                 as M
@@ -462,7 +465,7 @@ queryToHttpRequest :: SignedQuery -> IO (HTTP.Request (C.ResourceT IO))
 #endif
 queryToHttpRequest SignedQuery{..} =  do
     mauth <- maybe (return Nothing) (Just<$>) sqAuthorization
-    return $ def {
+    return $ HTTP.defaultRequest {
         HTTP.method = httpMethod sqMethod
       , HTTP.secure = case sqProtocol of
                         HTTP -> False
@@ -494,7 +497,11 @@ queryToHttpRequest SignedQuery{..} =  do
               _         -> HTTP.RequestBodyBuilder 0 mempty
 
       , HTTP.decompress = HTTP.alwaysDecompress
-      , HTTP.checkStatus = \_ _ _ -> Nothing
+#if MIN_VERSION_http_conduit(2,2,0)
+      , HTTP.checkResponse = \_ _ -> return ()
+#else
+      , HTTP.checkStatus = \_ _ _-> Nothing
+#endif
 
       , HTTP.redirectCount = 10
       }
@@ -792,6 +799,24 @@ newtype NoCredentialsException = NoCredentialsException { noCredentialsErrorMess
 
 instance E.Exception NoCredentialsException
 
+-- | A helper to throw an 'HTTP.StatusCodeException'.
+throwStatusCodeException :: HTTP.Request
+                         -> HTTP.Response (C.ResumableSource (ResourceT IO) ByteString)
+                         -> ResourceT IO a
+#if MIN_VERSION_http_conduit(2,2,0)
+throwStatusCodeException req resp = do
+    let resp' = fmap (const ()) resp
+    -- only take first 10kB of error response
+    body <- HTTP.responseBody resp C.$$+- CB.take (10*1024)
+    let sce = HTTP.StatusCodeException resp' (L.toStrict body)
+    throwM $ HTTP.HttpExceptionRequest req sce
+#else
+throwStatusCodeException _req resp = do
+    let cookies = HTTP.responseCookieJar resp
+        headers = HTTP.responseHeaders   resp
+        status  = HTTP.responseStatus    resp
+    throwM $ HTTP.StatusCodeException status headers cookies
+#endif
 
 -- | A specific element (case-insensitive, ignoring namespace - sadly necessary), extracting only the textual contents.
 elContent :: T.Text -> Cursor -> [T.Text]
