@@ -319,8 +319,8 @@ loadCredentialsFromEnv = liftIO $ do
   Traversable.sequence $ makeCredentials' <$> keyID <*> secret
 
 loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
-loadCredentialsFromInstanceMetadata = liftIO $ HTTP.withManager $ \mgr ->
-  do
+loadCredentialsFromInstanceMetadata = do
+    mgr <- liftIO $ HTTP.newManager HTTP.tlsManagerSettings
     -- check if the path is routable
     avail <- liftIO $ hostAvailable "169.254.169.254"
     if not avail

@@ -190,9 +190,9 @@ simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
             -> ServiceConfiguration r NormalQuery
             -> r
             -> io (MemoryResponse a)
-simpleAws cfg scfg request
-  = liftIO $ HTTP.withManager $ \manager ->
-      loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
+simpleAws cfg scfg request = liftIO $ runResourceT $ do
+    manager <- liftIO $ HTTP.newManager HTTP.tlsManagerSettings
+    loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
 --
