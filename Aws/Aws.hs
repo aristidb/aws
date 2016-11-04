@@ -203,7 +203,6 @@ simpleAws cfg scfg request = liftIO $ runResourceT $ do
 -- Metadata is wrapped in the Response, and also logged at level 'Info'.
 unsafeAws
   :: (ResponseConsumer r a,
-      Monoid (ResponseMetadata a),
       Loggable (ResponseMetadata a),
       SignQuery r) =>
      Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> r -> ResourceT IO (Response (ResponseMetadata a) a)
@@ -228,7 +227,6 @@ unsafeAws cfg scfg manager request = do
 -- Metadata is put in the 'IORef', but not logged.
 unsafeAwsRef
   :: (ResponseConsumer r a,
-      Monoid (ResponseMetadata a),
       SignQuery r) =>
      Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> ResourceT IO a
 unsafeAwsRef cfg info manager metadataRef request = do
