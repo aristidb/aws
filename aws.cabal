@@ -184,6 +184,23 @@ Executable GetObject
 
   Default-Language: Haskell2010
 
+Executable GetObjectGoogle
+  Main-is: GetObjectGoogle.hs
+  Hs-source-dirs: Examples
+
+  if !flag(Examples)
+    Buildable: False
+  else
+    Buildable: True
+    Build-depends:
+                       base == 4.*,
+                       aws,
+                       http-conduit,
+                       conduit,
+                       conduit-extra
+
+  Default-Language: Haskell2010
+
 Executable MultipartUpload
   Main-is: MultipartUpload.hs
   Hs-source-dirs: Examples
