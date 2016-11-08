@@ -13,6 +13,7 @@ import           Aws.Iam.Internal
 import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Typeable
+import           Prelude
 
 -- | Deletes the access key associated with the specified user.
 --
@@ -39,7 +40,8 @@ data DeleteAccessKeyResponse = DeleteAccessKeyResponse
 
 instance ResponseConsumer DeleteAccessKey DeleteAccessKeyResponse where
     type ResponseMetadata DeleteAccessKeyResponse = IamMetadata
-    responseConsumer _ = iamResponseConsumer (const $ return DeleteAccessKeyResponse)
+    responseConsumer _ _
+        = iamResponseConsumer (const $ return DeleteAccessKeyResponse)
 
 instance Transaction DeleteAccessKey DeleteAccessKeyResponse
 

@@ -36,6 +36,7 @@ import           Data.Monoid
 import           Data.Text                      (Text)
 import qualified Data.Text.Encoding             as TE
 import           Data.Typeable
+import           Prelude
 import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
 import           Text.XML.Cursor                (($/), ($//))

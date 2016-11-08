@@ -45,7 +45,7 @@ data SendRawEmailResponse =
 
 instance ResponseConsumer SendRawEmail SendRawEmailResponse where
     type ResponseMetadata SendRawEmailResponse = SesMetadata
-    responseConsumer _ =
+    responseConsumer _ _ =
       sesResponseConsumer $ \cursor -> do
         messageId <- force "MessageId not found" $ cursor $// elContent "MessageId"
         return (SendRawEmailResponse messageId)

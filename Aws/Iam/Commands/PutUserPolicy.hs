@@ -41,7 +41,7 @@ data PutUserPolicyResponse = PutUserPolicyResponse
 
 instance ResponseConsumer PutUserPolicy PutUserPolicyResponse where
     type ResponseMetadata PutUserPolicyResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer (const $ return PutUserPolicyResponse)
 
 instance Transaction PutUserPolicy PutUserPolicyResponse

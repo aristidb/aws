@@ -15,11 +15,10 @@ import qualified Data.Text.Encoding as T
 import           Data.Time
 import qualified Network.HTTP.Conduit as HTTP
 import           Text.XML.Cursor (($/), (&|))
-#if MIN_VERSION_time(1,5,0)
-import           Data.Time.Format
-#else
+#if !MIN_VERSION_time(1,5,0)
 import           System.Locale
 #endif
+import           Prelude
 
 data CopyMetadataDirective = CopyMetadata | ReplaceMetadata [(T.Text,T.Text)]
   deriving (Show)
@@ -94,7 +93,7 @@ instance SignQuery CopyObject where
 
 instance ResponseConsumer CopyObject CopyObjectResponse where
     type ResponseMetadata CopyObjectResponse = S3Metadata
-    responseConsumer _ mref = flip s3ResponseConsumer mref $ \resp -> do
+    responseConsumer _ _ mref = flip s3ResponseConsumer mref $ \resp -> do
         let vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
         (lastMod, etag) <- xmlCursorConsumer parse mref resp
         return $ CopyObjectResponse vid lastMod etag

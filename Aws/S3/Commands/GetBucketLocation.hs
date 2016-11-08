@@ -44,7 +44,7 @@ instance SignQuery GetBucketLocation where
 instance ResponseConsumer r GetBucketLocationResponse where
   type ResponseMetadata GetBucketLocationResponse = S3Metadata
 
-  responseConsumer _ = s3XmlResponseConsumer parse
+  responseConsumer _ _ = s3XmlResponseConsumer parse
     where parse cursor = do
             locationConstraint <- force "Missing Location" $ cursor $.// elContent "LocationConstraint"
             return GetBucketLocationResponse { gblrLocationConstraint = normaliseLocation locationConstraint }

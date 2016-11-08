@@ -43,7 +43,7 @@ data GetIdentityNotificationAttributesResponse =
 
 instance ResponseConsumer GetIdentityNotificationAttributes GetIdentityNotificationAttributesResponse where
     type ResponseMetadata GetIdentityNotificationAttributesResponse = SesMetadata
-    responseConsumer _ = sesResponseConsumer $ \cursor -> do
+    responseConsumer _ _ = sesResponseConsumer $ \cursor -> do
         let buildAttr e = do
               inIdentity <- force "Missing Key" $ e $/ elContent "key"
               fwdText <- force "Missing ForwardingEnabled" $ e $// elContent "ForwardingEnabled"

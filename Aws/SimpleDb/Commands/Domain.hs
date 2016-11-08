@@ -6,6 +6,7 @@ import           Control.Applicative
 import           Data.Maybe
 import           Data.Time
 import           Data.Time.Clock.POSIX
+import           Prelude
 import           Text.XML.Cursor       (($//), (&|))
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
@@ -30,7 +31,8 @@ instance SignQuery CreateDomain where
 
 instance ResponseConsumer r CreateDomainResponse where
     type ResponseMetadata CreateDomainResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType CreateDomainResponse "CreateDomainResponse"
+    responseConsumer _ _
+        = sdbResponseConsumer $ sdbCheckResponseType CreateDomainResponse "CreateDomainResponse"
 
 instance Transaction CreateDomain CreateDomainResponse
 
@@ -58,7 +60,8 @@ instance SignQuery DeleteDomain where
 
 instance ResponseConsumer r DeleteDomainResponse where
     type ResponseMetadata DeleteDomainResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer $ sdbCheckResponseType DeleteDomainResponse "DeleteDomainResponse"
+    responseConsumer _ _
+        = sdbResponseConsumer $ sdbCheckResponseType DeleteDomainResponse "DeleteDomainResponse"
 
 instance Transaction DeleteDomain DeleteDomainResponse
 
@@ -95,7 +98,8 @@ instance SignQuery DomainMetadata where
 instance ResponseConsumer r DomainMetadataResponse where
     type ResponseMetadata DomainMetadataResponse = SdbMetadata
 
-    responseConsumer _ = sdbResponseConsumer parse
+    responseConsumer _ _
+        = sdbResponseConsumer parse
         where parse cursor = do
                 sdbCheckResponseType () "DomainMetadataResponse" cursor
                 dmrTimestamp <- forceM "Timestamp expected" $ cursor $// elCont "Timestamp" &| (fmap posixSecondsToUTCTime . readInt)
@@ -141,7 +145,7 @@ instance SignQuery ListDomains where
 
 instance ResponseConsumer r ListDomainsResponse where
     type ResponseMetadata ListDomainsResponse = SdbMetadata
-    responseConsumer _ = sdbResponseConsumer parse
+    responseConsumer _ _ = sdbResponseConsumer parse
         where parse cursor = do
                 sdbCheckResponseType () "ListDomainsResponse" cursor
                 let names = cursor $// elContent "DomainName"

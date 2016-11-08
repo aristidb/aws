@@ -14,6 +14,7 @@ import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Time
 import           Data.Typeable
+import           Prelude
 import           Text.XML.Cursor     (laxElement, ($/), ($//), (&|))
 
 -- | Returns the access keys associated with the specified user.
@@ -71,7 +72,7 @@ data ListAccessKeysResponse
 
 instance ResponseConsumer ListAccessKeys ListAccessKeysResponse where
     type ResponseMetadata ListAccessKeysResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer $ \cursor -> do
             (lakrIsTruncated, lakrMarker) <- markedIterResponse cursor
             lakrAccessKeyMetadata <- sequence $

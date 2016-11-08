@@ -25,7 +25,7 @@ data GetServiceResponse
 instance ResponseConsumer r GetServiceResponse where
     type ResponseMetadata GetServiceResponse = S3Metadata
 
-    responseConsumer _ = s3XmlResponseConsumer parse
+    responseConsumer _ _ = s3XmlResponseConsumer parse
         where
           parse el = do
             owner <- forceM "Missing Owner" $ el $/ Cu.laxElement "Owner" &| parseUserInfo

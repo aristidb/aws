@@ -8,6 +8,7 @@ import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.ByteString.Lazy.UTF8 as BU
 import           Data.Typeable
 import qualified Network.HTTP.Conduit as HTTP
+import           Prelude
 
 data InstanceMetadataException
   = MetadataNotFound String
@@ -16,8 +17,9 @@ data InstanceMetadataException
 instance Exception InstanceMetadataException
 
 getInstanceMetadata :: HTTP.Manager -> String -> String -> IO L.ByteString
-getInstanceMetadata mgr p x = do req <- HTTP.parseUrl ("http://169.254.169.254/" ++ p ++ '/' : x)
-                                 HTTP.responseBody <$> HTTP.httpLbs req mgr
+getInstanceMetadata mgr p x = do
+    req <- HTTP.parseUrlThrow ("http://169.254.169.254/" ++ p ++ '/' : x)
+    HTTP.responseBody <$> HTTP.httpLbs req mgr
 
 getInstanceMetadataListing :: HTTP.Manager -> String -> IO [String]
 getInstanceMetadataListing mgr p = map BU.toString . B8.split '\n' <$> getInstanceMetadata mgr p ""

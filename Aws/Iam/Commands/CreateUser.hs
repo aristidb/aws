@@ -14,6 +14,7 @@ import           Aws.Iam.Internal
 import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Typeable
+import           Prelude
 
 -- | Creates a new user.
 --
@@ -41,8 +42,9 @@ data CreateUserResponse = CreateUserResponse User
 
 instance ResponseConsumer CreateUser CreateUserResponse where
     type ResponseMetadata CreateUserResponse = IamMetadata
-    responseConsumer _ = iamResponseConsumer $
-                         fmap CreateUserResponse . parseUser
+    responseConsumer _ _
+        = iamResponseConsumer $
+          fmap CreateUserResponse . parseUser
 
 instance Transaction CreateUser CreateUserResponse
 

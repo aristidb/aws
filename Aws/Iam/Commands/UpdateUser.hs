@@ -13,6 +13,7 @@ import           Aws.Iam.Internal
 import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Typeable
+import           Prelude
 
 -- | Updates the name and/or path of the specified user.
 --
@@ -42,7 +43,7 @@ data UpdateUserResponse = UpdateUserResponse
 
 instance ResponseConsumer UpdateUser UpdateUserResponse where
     type ResponseMetadata UpdateUserResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer (const $ return UpdateUserResponse)
 
 instance Transaction UpdateUser UpdateUserResponse

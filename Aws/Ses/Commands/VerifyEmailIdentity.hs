@@ -29,7 +29,8 @@ data VerifyEmailIdentityResponse = VerifyEmailIdentityResponse
 
 instance ResponseConsumer VerifyEmailIdentity VerifyEmailIdentityResponse where
     type ResponseMetadata VerifyEmailIdentityResponse = SesMetadata
-    responseConsumer _ = sesResponseConsumer $ \_ -> return VerifyEmailIdentityResponse
+    responseConsumer _ _
+        = sesResponseConsumer $ \_ -> return VerifyEmailIdentityResponse
 
 
 instance Transaction VerifyEmailIdentity VerifyEmailIdentityResponse where

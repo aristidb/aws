@@ -48,7 +48,8 @@ data SetIdentityNotificationTopicResponse = SetIdentityNotificationTopicResponse
 
 instance ResponseConsumer SetIdentityNotificationTopic SetIdentityNotificationTopicResponse where
     type ResponseMetadata SetIdentityNotificationTopicResponse = SesMetadata
-    responseConsumer _ = sesResponseConsumer $ \_ -> return SetIdentityNotificationTopicResponse 
+    responseConsumer _ _
+        = sesResponseConsumer $ \_ -> return SetIdentityNotificationTopicResponse
 
 instance Transaction SetIdentityNotificationTopic SetIdentityNotificationTopicResponse
 

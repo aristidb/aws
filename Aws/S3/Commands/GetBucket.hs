@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import qualified Data.Traversable
+import           Prelude
 import qualified Network.HTTP.Types    as HTTP
 import qualified Text.XML.Cursor       as Cu
 
@@ -72,7 +73,7 @@ instance SignQuery GetBucket where
 instance ResponseConsumer r GetBucketResponse where
     type ResponseMetadata GetBucketResponse = S3Metadata
 
-    responseConsumer _ = s3XmlResponseConsumer parse
+    responseConsumer _ _ = s3XmlResponseConsumer parse
         where parse cursor
                   = do name <- force "Missing Name" $ cursor $/ elContent "Name"
                        let delimiter = listToMaybe $ cursor $/ elContent "Delimiter"

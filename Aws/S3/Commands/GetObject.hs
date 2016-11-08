@@ -1,10 +1,12 @@
+{-# LANGUAGE CPP #-}
+
 module Aws.S3.Commands.GetObject
 where
 
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Monad.Trans.Resource (ResourceT, throwM)
+import           Control.Monad.Trans.Resource (ResourceT)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as L
@@ -13,6 +15,7 @@ import qualified Data.Conduit.List     as CL
 import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
+import           Prelude
 import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
 
@@ -79,16 +82,14 @@ instance SignQuery GetObject where
 
 instance ResponseConsumer GetObject GetObjectResponse where
     type ResponseMetadata GetObjectResponse = S3Metadata
-    responseConsumer GetObject{..} metadata resp
+    responseConsumer httpReq GetObject{..} metadata resp
         | status == HTTP.status200 = do
             rsp <- s3BinaryResponseConsumer return metadata resp
             om <- parseObjectMetadata (HTTP.responseHeaders resp)
             return $ GetObjectResponse om rsp
-        | otherwise = throwM $ HTTP.StatusCodeException status headers cookies
+        | otherwise = throwStatusCodeException httpReq resp
       where
         status  = HTTP.responseStatus    resp
-        headers = HTTP.responseHeaders   resp
-        cookies = HTTP.responseCookieJar resp
 
 instance Transaction GetObject GetObjectResponse
 

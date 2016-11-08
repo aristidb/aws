@@ -22,6 +22,7 @@ import qualified Data.Text.Encoding    as T
 import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
 import qualified Text.XML              as XML
+import           Prelude
 
 {-
 Aws supports following 6 api for Multipart-Upload.
@@ -99,7 +100,7 @@ instance SignQuery InitiateMultipartUpload where
 instance ResponseConsumer r InitiateMultipartUploadResponse where
     type ResponseMetadata InitiateMultipartUploadResponse = S3Metadata
 
-    responseConsumer _ = s3XmlResponseConsumer parse
+    responseConsumer _ _ = s3XmlResponseConsumer parse
         where parse cursor
                   = do bucket <- force "Missing Bucket Name" $ cursor $/ elContent "Bucket"
                        key <- force "Missing Key" $ cursor $/ elContent "Key"
@@ -172,7 +173,7 @@ instance SignQuery UploadPart where
 
 instance ResponseConsumer UploadPart UploadPartResponse where
     type ResponseMetadata UploadPartResponse = S3Metadata
-    responseConsumer _ = s3ResponseConsumer $ \resp -> do
+    responseConsumer _ _ = s3ResponseConsumer $ \resp -> do
       let vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
       let etag = fromMaybe "" $ T.decodeUtf8 `fmap` lookup "ETag" (HTTP.responseHeaders resp)
       return $ UploadPartResponse vid etag
@@ -259,7 +260,7 @@ instance SignQuery CompleteMultipartUpload where
 instance ResponseConsumer r CompleteMultipartUploadResponse where
     type ResponseMetadata CompleteMultipartUploadResponse = S3Metadata
 
-    responseConsumer _ = s3XmlResponseConsumer parse
+    responseConsumer _ _ = s3XmlResponseConsumer parse
         where parse cursor
                   = do location <- force "Missing Location" $ cursor $/ elContent "Location"
                        bucket <- force "Missing Bucket Name" $ cursor $/ elContent "Bucket"
@@ -318,7 +319,7 @@ instance SignQuery AbortMultipartUpload where
 instance ResponseConsumer r AbortMultipartUploadResponse where
     type ResponseMetadata AbortMultipartUploadResponse = S3Metadata
 
-    responseConsumer _ = s3XmlResponseConsumer parse
+    responseConsumer _ _ = s3XmlResponseConsumer parse
         where parse _cursor
                   = return AbortMultipartUploadResponse {}
 

@@ -27,7 +27,7 @@ parseAttributes el = do
 
 instance ResponseConsumer r GetQueueAttributesResponse where
     type ResponseMetadata GetQueueAttributesResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where
         parse el = do
           let attributes = concat $ el $// Cu.laxElement "Attribute" &| parseAttributes
@@ -64,7 +64,7 @@ data SetQueueAttributesResponse = SetQueueAttributesResponse{
 
 instance ResponseConsumer r SetQueueAttributesResponse where
     type ResponseMetadata SetQueueAttributesResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where 
         parse _ = do
           return SetQueueAttributesResponse {}

@@ -52,6 +52,7 @@ import qualified Data.Text.Encoding           as T
 import qualified Data.Text.IO                 as T
 import qualified Network.HTTP.Conduit         as HTTP
 import           System.IO                    (stderr)
+import           Prelude
 
 -- | The severity of a log message, in rising order.
 data LogLevel
@@ -189,9 +190,9 @@ simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
             -> ServiceConfiguration r NormalQuery
             -> r
             -> io (MemoryResponse a)
-simpleAws cfg scfg request
-  = liftIO $ HTTP.withManager $ \manager ->
-      loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
+simpleAws cfg scfg request = liftIO $ runResourceT $ do
+    manager <- liftIO $ HTTP.newManager HTTP.tlsManagerSettings
+    loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
 --
@@ -202,7 +203,6 @@ simpleAws cfg scfg request
 -- Metadata is wrapped in the Response, and also logged at level 'Info'.
 unsafeAws
   :: (ResponseConsumer r a,
-      Monoid (ResponseMetadata a),
       Loggable (ResponseMetadata a),
       SignQuery r) =>
      Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> r -> ResourceT IO (Response (ResponseMetadata a) a)
@@ -227,7 +227,6 @@ unsafeAws cfg scfg manager request = do
 -- Metadata is put in the 'IORef', but not logged.
 unsafeAwsRef
   :: (ResponseConsumer r a,
-      Monoid (ResponseMetadata a),
       SignQuery r) =>
      Configuration -> ServiceConfiguration r NormalQuery -> HTTP.Manager -> IORef (ResponseMetadata a) -> r -> ResourceT IO a
 unsafeAwsRef cfg info manager metadataRef request = do
@@ -247,7 +246,7 @@ unsafeAwsRef cfg info manager metadataRef request = do
   logDebug $ "Response status: " ++ show (HTTP.responseStatus hresp)
   forM_ (HTTP.responseHeaders hresp) $ \(hname,hvalue) -> liftIO $
     logger cfg Debug $ T.decodeUtf8 $ "Response header '" `mappend` CI.original hname `mappend` "': '" `mappend` hvalue `mappend` "'"
-  {-# SCC "unsafeAwsRef:responseConsumer" #-} responseConsumer request metadataRef hresp
+  {-# SCC "unsafeAwsRef:responseConsumer" #-} responseConsumer httpRequest request metadataRef hresp
 
 -- | Run a URI-only AWS transaction. Returns a URI that can be sent anywhere. Does not work with all requests.
 --

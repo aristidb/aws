@@ -13,6 +13,7 @@ import           Aws.Iam.Internal
 import           Control.Applicative
 import           Data.Text           (Text)
 import           Data.Typeable
+import           Prelude
 
 -- | Changes the status of the specified access key.
 --
@@ -47,7 +48,7 @@ data UpdateAccessKeyResponse = UpdateAccessKeyResponse
 
 instance ResponseConsumer UpdateAccessKey UpdateAccessKeyResponse where
     type ResponseMetadata UpdateAccessKeyResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer (const $ return UpdateAccessKeyResponse)
 
 instance Transaction UpdateAccessKey UpdateAccessKeyResponse

@@ -29,7 +29,7 @@ data VerifyDomainIdentityResponse = VerifyDomainIdentityResponse Text
 
 instance ResponseConsumer VerifyDomainIdentity VerifyDomainIdentityResponse where
     type ResponseMetadata VerifyDomainIdentityResponse = SesMetadata
-    responseConsumer _ =
+    responseConsumer _ _ =
       sesResponseConsumer $ \cursor -> do
         token <- force "Verification token not found" $ cursor $// elContent "VerificationToken"
         return (VerifyDomainIdentityResponse token)

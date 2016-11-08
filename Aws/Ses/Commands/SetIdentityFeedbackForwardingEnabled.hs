@@ -34,7 +34,8 @@ data SetIdentityFeedbackForwardingEnabledResponse = SetIdentityFeedbackForwardin
 
 instance ResponseConsumer SetIdentityFeedbackForwardingEnabled SetIdentityFeedbackForwardingEnabledResponse where
     type ResponseMetadata SetIdentityFeedbackForwardingEnabledResponse = SesMetadata
-    responseConsumer _ = sesResponseConsumer $ \_ -> return SetIdentityFeedbackForwardingEnabledResponse 
+    responseConsumer _ _
+        = sesResponseConsumer $ \_ -> return SetIdentityFeedbackForwardingEnabledResponse
 
 instance Transaction SetIdentityFeedbackForwardingEnabled SetIdentityFeedbackForwardingEnabledResponse
 

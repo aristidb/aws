@@ -16,6 +16,7 @@ import           Data.Text           (Text)
 import qualified Data.Text           as Text
 import           Data.Time
 import           Data.Typeable
+import           Prelude
 import           Text.XML.Cursor     (($//))
 
 -- | Creates a new AWS secret access key and corresponding AWS access key ID
@@ -58,7 +59,7 @@ data CreateAccessKeyResponse
 
 instance ResponseConsumer CreateAccessKey CreateAccessKeyResponse where
     type ResponseMetadata CreateAccessKeyResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer $ \cursor -> do
             let attr name = force ("Missing " ++ Text.unpack name) $
                             cursor $// elContent name

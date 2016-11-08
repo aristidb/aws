@@ -4,12 +4,12 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Monad.Trans.Resource (throwM)
 import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import           Data.Maybe
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
+import           Prelude
 import qualified Network.HTTP.Conduit  as HTTP
 import qualified Network.HTTP.Types    as HTTP
 
@@ -60,14 +60,13 @@ instance SignQuery HeadObject where
 
 instance ResponseConsumer HeadObject HeadObjectResponse where
     type ResponseMetadata HeadObjectResponse = S3Metadata
-    responseConsumer HeadObject{..} _ resp
+    responseConsumer httpReq HeadObject{..} _ resp
         | status == HTTP.status200 = HeadObjectResponse . Just <$> parseObjectMetadata headers
         | status == HTTP.status404 = return $ HeadObjectResponse Nothing
-        | otherwise = throwM $ HTTP.StatusCodeException status headers cookies
+        | otherwise = throwStatusCodeException httpReq resp
       where
         status  = HTTP.responseStatus    resp
         headers = HTTP.responseHeaders   resp
-        cookies = HTTP.responseCookieJar resp
 
 instance Transaction HeadObject HeadObjectResponse
 

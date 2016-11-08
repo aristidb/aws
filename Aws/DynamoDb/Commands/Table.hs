@@ -44,6 +44,7 @@ import           Data.Time.Clock.POSIX
 import           Data.Typeable
 import qualified Data.Vector           as V
 import           GHC.Generics          (Generic)
+import           Prelude
 -------------------------------------------------------------------------------
 import           Aws.Core
 import           Aws.DynamoDb.Core
@@ -293,7 +294,7 @@ instance A.FromJSON TableDescription where
 {- Can't derive these instances onto the return values
 instance ResponseConsumer r TableDescription where
     type ResponseMetadata TableDescription = DyMetadata
-    responseConsumer _ _ = ddbResponseConsumer
+    responseConsumer _ _ _ = ddbResponseConsumer
 instance AsMemoryResponse TableDescription where
     type MemoryResponse TableDescription = TableDescription
     loadToMemory = return
@@ -351,7 +352,7 @@ newtype CreateTableResult = CreateTableResult { ctStatus :: TableDescription }
 -- ResponseConsumer and AsMemoryResponse can't be derived
 instance ResponseConsumer r CreateTableResult where
     type ResponseMetadata CreateTableResult = DdbResponse
-    responseConsumer _ = ddbResponseConsumer
+    responseConsumer _ _ = ddbResponseConsumer
 instance AsMemoryResponse CreateTableResult where
     type MemoryResponse CreateTableResult = TableDescription
     loadToMemory = return . ctStatus
@@ -376,7 +377,7 @@ newtype DescribeTableResult = DescribeTableResult { dtStatus :: TableDescription
 -- ResponseConsumer can't be derived
 instance ResponseConsumer r DescribeTableResult where
     type ResponseMetadata DescribeTableResult = DdbResponse
-    responseConsumer _ = ddbResponseConsumer
+    responseConsumer _ _ = ddbResponseConsumer
 instance AsMemoryResponse DescribeTableResult where
     type MemoryResponse DescribeTableResult = TableDescription
     loadToMemory = return . dtStatus
@@ -408,7 +409,7 @@ newtype UpdateTableResult = UpdateTableResult { uStatus :: TableDescription }
 -- ResponseConsumer can't be derived
 instance ResponseConsumer r UpdateTableResult where
     type ResponseMetadata UpdateTableResult = DdbResponse
-    responseConsumer _ = ddbResponseConsumer
+    responseConsumer _ _ = ddbResponseConsumer
 instance AsMemoryResponse UpdateTableResult where
     type MemoryResponse UpdateTableResult = TableDescription
     loadToMemory = return . uStatus
@@ -433,7 +434,7 @@ newtype DeleteTableResult = DeleteTableResult { dStatus :: TableDescription }
 -- ResponseConsumer can't be derived
 instance ResponseConsumer r DeleteTableResult where
     type ResponseMetadata DeleteTableResult = DdbResponse
-    responseConsumer _ = ddbResponseConsumer
+    responseConsumer _ _ = ddbResponseConsumer
 instance AsMemoryResponse DeleteTableResult where
     type MemoryResponse DeleteTableResult = TableDescription
     loadToMemory = return . dStatus
@@ -459,7 +460,7 @@ instance A.FromJSON ListTablesResult where
     parseJSON = A.genericParseJSON capitalizeOpt
 instance ResponseConsumer r ListTablesResult where
     type ResponseMetadata ListTablesResult = DdbResponse
-    responseConsumer _ = ddbResponseConsumer
+    responseConsumer _ _ = ddbResponseConsumer
 instance AsMemoryResponse ListTablesResult where
     type MemoryResponse ListTablesResult = [T.Text]
     loadToMemory = return . tableNames

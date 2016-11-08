@@ -103,7 +103,7 @@ instance SignQuery DeleteObjects where
 instance ResponseConsumer DeleteObjects DeleteObjectsResponse where
     type ResponseMetadata DeleteObjectsResponse = S3Metadata
 
-    responseConsumer _ = s3XmlResponseConsumer parse
+    responseConsumer _ _ = s3XmlResponseConsumer parse
         where parse cursor = do
                   dorDeleted <- sequence $ cursor $/ Cu.laxElement "Deleted" &| parseDeleted
                   dorErrors  <- sequence $ cursor $/ Cu.laxElement "Error" &| parseErrors

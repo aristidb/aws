@@ -114,7 +114,7 @@ instance SignQuery Scan where
 
 instance ResponseConsumer r ScanResponse where
     type ResponseMetadata ScanResponse = DdbResponse
-    responseConsumer _ ref resp = ddbResponseConsumer ref resp
+    responseConsumer _ _ ref resp = ddbResponseConsumer ref resp
 
 
 instance AsMemoryResponse ScanResponse where

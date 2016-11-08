@@ -26,6 +26,7 @@ import           Control.Applicative
 import           Data.Aeson
 import           Data.Default
 import qualified Data.Text           as T
+import           Prelude
 -------------------------------------------------------------------------------
 import           Aws.Core
 import           Aws.DynamoDb.Core
@@ -97,7 +98,7 @@ instance FromJSON DeleteItemResponse where
 
 instance ResponseConsumer r DeleteItemResponse where
     type ResponseMetadata DeleteItemResponse = DdbResponse
-    responseConsumer _ ref resp = ddbResponseConsumer ref resp
+    responseConsumer _ _ ref resp = ddbResponseConsumer ref resp
 
 
 instance AsMemoryResponse DeleteItemResponse where

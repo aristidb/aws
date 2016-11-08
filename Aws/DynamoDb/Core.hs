@@ -399,7 +399,7 @@ instance DynVal UTCTime where
 
 -------------------------------------------------------------------------------
 pico :: Rational
-pico = toRational $ 10 ^ (12 :: Integer)
+pico = toRational $ (10 :: Integer) ^ (12 :: Integer)
 
 
 -------------------------------------------------------------------------------
@@ -1142,6 +1142,7 @@ data QuerySelect
 instance Default QuerySelect where def = SelectAll
 
 -------------------------------------------------------------------------------
+querySelectJson :: KeyValue t => QuerySelect -> [t]
 querySelectJson (SelectSpecific as) =
     [ "Select" .= String "SPECIFIC_ATTRIBUTES"
     , "AttributesToGet" .= as]
@@ -1338,7 +1339,7 @@ getAttr k m = do
 -- | Parse attribute if it's present in the 'Item'. Fail if attribute
 -- is present but conversion fails.
 getAttr'
-    :: forall a. (Typeable a, DynVal a)
+    :: forall a. (DynVal a)
     => T.Text
     -- ^ Attribute name
     -> Item

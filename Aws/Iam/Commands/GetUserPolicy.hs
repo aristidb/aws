@@ -16,6 +16,7 @@ import qualified Data.Text.Encoding  as Text
 import           Data.Typeable
 import qualified Network.HTTP.Types  as HTTP
 import           Text.XML.Cursor     (($//))
+import           Prelude
 
 -- | Retreives the specified policy document for the specified user.
 --
@@ -50,7 +51,7 @@ data GetUserPolicyResponse
 
 instance ResponseConsumer GetUserPolicy GetUserPolicyResponse where
     type ResponseMetadata GetUserPolicyResponse = IamMetadata
-    responseConsumer _
+    responseConsumer _ _
         = iamResponseConsumer $ \cursor -> do
             let attr name = force ("Missing " ++ Text.unpack name) $
                             cursor $// elContent name

@@ -13,6 +13,7 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.CaseInsensitive  as CI
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
+import           Prelude
 import qualified Network.HTTP.Conduit  as HTTP
 
 data PutObject = PutObject {
@@ -83,7 +84,7 @@ instance SignQuery PutObject where
 
 instance ResponseConsumer PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
-    responseConsumer _ = s3ResponseConsumer $ \resp -> do
+    responseConsumer _ _ = s3ResponseConsumer $ \resp -> do
       let vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
       return $ PutObjectResponse vid
 

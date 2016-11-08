@@ -50,7 +50,7 @@ data ListIdentitiesResponse = ListIdentitiesResponse [Text]
 
 instance ResponseConsumer ListIdentities ListIdentitiesResponse where
     type ResponseMetadata ListIdentitiesResponse = SesMetadata
-    responseConsumer _ =
+    responseConsumer _ _ =
       sesResponseConsumer $ \cursor -> do
          let ids = cursor $// laxElement "Identities" &/ elContent "member"
          return $ ListIdentitiesResponse ids

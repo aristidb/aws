@@ -4,7 +4,6 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Data.ByteString.Char8      ({- IsString -})
-import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as T
 
 data DeleteBucket = DeleteBucket { dbBucket :: Bucket }
@@ -31,7 +30,7 @@ instance SignQuery DeleteBucket where
 
 instance ResponseConsumer DeleteBucket DeleteBucketResponse where
     type ResponseMetadata DeleteBucketResponse = S3Metadata
-    responseConsumer _ = s3ResponseConsumer $ \_ -> return DeleteBucketResponse
+    responseConsumer _ _ = s3ResponseConsumer $ \_ -> return DeleteBucketResponse
 
 instance Transaction DeleteBucket DeleteBucketResponse
 

@@ -18,9 +18,7 @@ import           Data.Monoid
 import           Control.Applicative            ((<|>))
 import           Data.Time
 import           Data.Typeable
-#if MIN_VERSION_time(1,5,0)
-import           Data.Time.Format
-#else
+#if !MIN_VERSION_time(1,5,0)
 import           System.Locale
 #endif
 import           Text.XML.Cursor                (($/), (&|))
@@ -38,6 +36,7 @@ import qualified Network.HTTP.Conduit           as HTTP
 import qualified Network.HTTP.Types             as HTTP
 import qualified Text.XML                       as XML
 import qualified Text.XML.Cursor                as Cu
+import           Prelude
 
 data S3Authorization
     = S3AuthorizationHeader

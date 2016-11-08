@@ -39,6 +39,7 @@ import Data.Scientific
 import qualified Network.HTTP.Types as HTTP
 import Text.Read (readEither)
 import qualified Text.XML.Cursor as Cu
+import Prelude
 
 -- -------------------------------------------------------------------------- --
 -- User Message Attributes
@@ -216,7 +217,7 @@ data SendMessageResponse = SendMessageResponse
 
 instance ResponseConsumer r SendMessageResponse where
     type ResponseMetadata SendMessageResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where
         parse el = SendMessageResponse
             <$> force "Missing MD5 Signature"
@@ -287,7 +288,7 @@ data DeleteMessageResponse = DeleteMessageResponse {}
 
 instance ResponseConsumer r DeleteMessageResponse where
     type ResponseMetadata DeleteMessageResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where
         parse _ = return DeleteMessageResponse {}
 
@@ -559,7 +560,7 @@ formatUserMessageAttributes attrs = case attrs of
 
 instance ResponseConsumer r ReceiveMessageResponse where
     type ResponseMetadata ReceiveMessageResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where
         parse el = do
             result <- force "Missing ReceiveMessageResult"
@@ -660,7 +661,7 @@ data ChangeMessageVisibilityResponse = ChangeMessageVisibilityResponse {}
 
 instance ResponseConsumer r ChangeMessageVisibilityResponse where
     type ResponseMetadata ChangeMessageVisibilityResponse = SqsMetadata
-    responseConsumer _ = sqsXmlResponseConsumer parse
+    responseConsumer _ _ = sqsXmlResponseConsumer parse
       where
         parse _ = return ChangeMessageVisibilityResponse {}
 

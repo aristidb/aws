@@ -19,6 +19,7 @@ import           Control.Applicative
 import           Data.Aeson
 import           Data.Default
 import qualified Data.Text           as T
+import           Prelude
 -------------------------------------------------------------------------------
 import           Aws.Core
 import           Aws.DynamoDb.Core
@@ -84,7 +85,7 @@ instance FromJSON GetItemResponse where
 
 instance ResponseConsumer r GetItemResponse where
     type ResponseMetadata GetItemResponse = DdbResponse
-    responseConsumer _ ref resp = ddbResponseConsumer ref resp
+    responseConsumer _ _ ref resp = ddbResponseConsumer ref resp
 
 
 instance AsMemoryResponse GetItemResponse where

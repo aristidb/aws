@@ -32,7 +32,8 @@ data SetIdentityDkimEnabledResponse = SetIdentityDkimEnabledResponse
 
 instance ResponseConsumer SetIdentityDkimEnabled SetIdentityDkimEnabledResponse where
     type ResponseMetadata SetIdentityDkimEnabledResponse = SesMetadata
-    responseConsumer _ = sesResponseConsumer $ \_ -> return SetIdentityDkimEnabledResponse
+    responseConsumer _ _
+        = sesResponseConsumer $ \_ -> return SetIdentityDkimEnabledResponse
 
 instance Transaction SetIdentityDkimEnabled SetIdentityDkimEnabledResponse
 
