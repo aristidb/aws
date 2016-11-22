@@ -329,88 +329,88 @@ Executable Sqs
 
   Default-Language: Haskell2010
 
-test-suite sqs-tests
-    type: exitcode-stdio-1.0
-    default-language: Haskell2010
-    hs-source-dirs: tests
-    main-is: Sqs/Main.hs
+-- test-suite sqs-tests
+--     type: exitcode-stdio-1.0
+--     default-language: Haskell2010
+--     hs-source-dirs: tests
+--     main-is: Sqs/Main.hs
 
-    other-modules:
-        Utils
+--     other-modules:
+--         Utils
 
-    build-depends:
-        QuickCheck >= 2.7,
-        aeson >= 0.7,
-        aws,
-        base == 4.*,
-        bytestring >= 0.10,
-        errors >= 2.0,
-        http-client >= 0.3 && < 0.5,
-        lifted-base >= 0.2,
-        monad-control >= 0.3,
-        mtl >= 2.1,
-        quickcheck-instances >= 0.3,
-        resourcet >= 1.1,
-        tagged >= 0.7,
-        tasty >= 0.8,
-        tasty-quickcheck >= 0.8,
-        text >= 1.1,
-        time,
-        transformers >= 0.3,
-        transformers-base >= 0.4
+--     build-depends:
+--         QuickCheck >= 2.7,
+--         aeson >= 0.7,
+--         aws,
+--         base == 4.*,
+--         bytestring >= 0.10,
+--         errors >= 2.0,
+--         http-client >= 0.3 && < 0.5,
+--         lifted-base >= 0.2,
+--         monad-control >= 0.3,
+--         mtl >= 2.1,
+--         quickcheck-instances >= 0.3,
+--         resourcet >= 1.1,
+--         tagged >= 0.7,
+--         tasty >= 0.8,
+--         tasty-quickcheck >= 0.8,
+--         text >= 1.1,
+--         time,
+--         transformers >= 0.3,
+--         transformers-base >= 0.4
 
-    ghc-options: -Wall -threaded
+--     ghc-options: -Wall -threaded
 
-test-suite dynamodb-tests
-    type: exitcode-stdio-1.0
-    default-language: Haskell2010
-    hs-source-dirs: tests
-    main-is: DynamoDb/Main.hs
+-- test-suite dynamodb-tests
+--     type: exitcode-stdio-1.0
+--     default-language: Haskell2010
+--     hs-source-dirs: tests
+--     main-is: DynamoDb/Main.hs
 
-    other-modules:
-        Utils
-        DynamoDb.Utils
+--     other-modules:
+--         Utils
+--         DynamoDb.Utils
 
-    build-depends:
-        QuickCheck >= 2.7,
-        aeson >= 0.7,
-        aws,
-        base == 4.*,
-        bytestring >= 0.10,
-        errors >= 2.0,
-        http-client >= 0.3,
-        lifted-base >= 0.2,
-        monad-control >= 0.3,
-        mtl >= 2.1,
-        quickcheck-instances >= 0.3,
-        resourcet >= 1.1,
-        tagged >= 0.7,
-        tasty >= 0.8,
-        tasty-quickcheck >= 0.8,
-        text >= 1.1,
-        time,
-        transformers >= 0.3,
-        transformers-base >= 0.4
+--     build-depends:
+--         QuickCheck >= 2.7,
+--         aeson >= 0.7,
+--         aws,
+--         base == 4.*,
+--         bytestring >= 0.10,
+--         errors >= 2.0,
+--         http-client >= 0.3,
+--         lifted-base >= 0.2,
+--         monad-control >= 0.3,
+--         mtl >= 2.1,
+--         quickcheck-instances >= 0.3,
+--         resourcet >= 1.1,
+--         tagged >= 0.7,
+--         tasty >= 0.8,
+--         tasty-quickcheck >= 0.8,
+--         text >= 1.1,
+--         time,
+--         transformers >= 0.3,
+--         transformers-base >= 0.4
 
 
-test-suite s3-tests
-    type: exitcode-stdio-1.0
-    default-language: Haskell2010
-    hs-source-dirs: tests
-    main-is: S3/Main.hs
+-- test-suite s3-tests
+--     type: exitcode-stdio-1.0
+--     default-language: Haskell2010
+--     hs-source-dirs: tests
+--     main-is: S3/Main.hs
 
-    other-modules:
-        Utils
+--     other-modules:
+--         Utils
 
-    build-depends:
-        aws,
-        base == 4.*,
-        bytestring,
-        http-client < 0.5,
-        http-client-tls < 0.5,
-        http-types,
-        resourcet,
-        tasty >= 0.8,
-        tasty-hunit >= 0.8,
-        text,
-        tagged >= 0.7
+--     build-depends:
+--         aws,
+--         base == 4.*,
+--         bytestring,
+--         http-client < 0.5,
+--         http-client-tls < 0.5,
+--         http-types,
+--         resourcet,
+--         tasty >= 0.8,
+--         tasty-hunit >= 0.8,
+--         text,
+--         tagged >= 0.7
