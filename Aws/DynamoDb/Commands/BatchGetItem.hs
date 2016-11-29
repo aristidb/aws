@@ -32,12 +32,13 @@ import           Prelude
 -------------------------------------------------------------------------------
 import           Aws.Core
 import           Aws.DynamoDb.Core
+import           Aws.DynamoDb.Commands.GetItem
 -------------------------------------------------------------------------------
 
 
 data GetRequestItem = GetRequestItem{
          griTable  :: T.Text
-       , griProjExpr :: T.Text
+       , griProjExpr :: Maybe T.Text
        , griConsistent ::Bool
        , griKeys :: [PrimaryKey]  
      } deriving (Eq,Show,Read,Ord)
@@ -49,7 +50,7 @@ data BatchGetItem = BatchGetItem {
     } deriving (Eq,Show,Read,Ord)
 
 
-data BatchResponse = BatchResponse {
+data BatchGetResponse = BatchGetResponse {
     brTable :: T.Text
   , brItems :: [Item]
   } deriving (Eq,Show,Read,Ord)
@@ -58,7 +59,7 @@ data BatchResponse = BatchResponse {
 -- | Construct a RequestItem .
 batchGetRequestItem :: T.Text
                -- ^ A Dynamo table name
-               -> T.Text
+               -> Maybe T.Text
                -- ^ Projection Expression
                -> Bool
                -- ^ Consistent Read
@@ -67,6 +68,23 @@ batchGetRequestItem :: T.Text
                -> GetRequestItem
 batchGetRequestItem tn expr consistent keys = GetRequestItem tn expr consistent keys
 
+toBatchGet :: [GetItem] -> BatchGetItem
+toBatchGet gs = BatchGetItem (convert gs) def
+
+  where
+    groupItems :: [GetItem]-> HM.HashMap T.Text [GetItem] -> HM.HashMap T.Text [GetItem]
+    groupItems [] hm = hm
+    groupItems (x:xs) hm = let key = giTableName x
+                             in groupItems xs (HM.insert key (x : (HM.lookupDefault [] key hm)) hm)
+    
+    convert :: [GetItem] -> [GetRequestItem] 
+    convert gs' = let l = HM.toList $ groupItems gs' HM.empty
+                    -- Uses one GetItem to specify ProjectionExpression
+                    -- and ConsistentRead for the entire batch
+                    in map (\(table,items@(i:_)) ->GetRequestItem table
+                                                    (T.intercalate "," <$> giAttrs i)
+                                                    (giConsistent i)
+                                                    (map giKey items) ) l
 -- | Construct a BatchGetItem
 batchGetItem :: [GetRequestItem]
                -> BatchGetItem
@@ -76,8 +94,8 @@ batchGetItem reqs = BatchGetItem reqs def
 instance ToJSON GetRequestItem where
    toJSON GetRequestItem{..} =
        object $
-         [ griTable .= (object $ [ "ProjectionExpression" .= griProjExpr
-                                , "ConsistentRead" .= griConsistent
+         [ griTable .= (object $ maybe [] (return . ("ProjectionExpression" .=)) griProjExpr ++
+                                ["ConsistentRead" .= griConsistent
                                 , "Keys" .= griKeys])
          ]
 
@@ -91,21 +109,21 @@ instance ToJSON BatchGetItem where
 instance FromJSON GetRequestItem where
     parseJSON p = do
                  [(table,Object o)] <- HM.toList <$> parseJSON p 
-                 (GetRequestItem table) <$> o .: "ProjectionExpression"
+                 (GetRequestItem table) <$> o .:? "ProjectionExpression"
                                         <*> o .: "ConsistentRead"
                                         <*> o .: "Keys"
 
-instance FromJSON BatchResponse where
+instance FromJSON BatchGetResponse where
   parseJSON p = do
               l <- listRqItem p
               case length l of
                 1 -> return $ head l
-                _ -> fail "unable to parse BatchResponse"
+                _ -> fail "unable to parse BatchGetResponse"
        where
-         listRqItem p' = map (\(txt,req) -> BatchResponse txt req) . HM.toList <$> parseJSON p'
+         listRqItem p' = map (\(txt,req) -> BatchGetResponse txt req) . HM.toList <$> parseJSON p'
          
 data BatchGetItemResponse = BatchGetItemResponse {
-      bgResponses :: [BatchResponse]
+      bgResponses :: [BatchGetResponse]
     , bgUnprocessed    :: Maybe [GetRequestItem]
     -- ^ Unprocessed Requests on failure
     , bgConsumed :: Maybe ConsumedCapacity
