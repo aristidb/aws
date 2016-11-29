@@ -37,14 +37,13 @@ import           Aws.DynamoDb.Commands.GetItem
 
 
 data GetRequestItem = GetRequestItem{
-         griTable  :: T.Text
-       , griProjExpr :: Maybe T.Text
+         griProjExpr :: Maybe T.Text
        , griConsistent ::Bool
        , griKeys :: [PrimaryKey]  
      } deriving (Eq,Show,Read,Ord)
 
 data BatchGetItem = BatchGetItem {
-      bgRequests :: [GetRequestItem]
+      bgRequests :: [(T.Text,GetRequestItem)]
     -- ^ Get Requests for a specified table
     , bgRetCons :: ReturnConsumption
     } deriving (Eq,Show,Read,Ord)
@@ -57,16 +56,14 @@ data BatchGetResponse = BatchGetResponse {
 -------------------------------------------------------------------------------
 
 -- | Construct a RequestItem .
-batchGetRequestItem :: T.Text
-               -- ^ A Dynamo table name
-               -> Maybe T.Text
+batchGetRequestItem :: Maybe T.Text
                -- ^ Projection Expression
                -> Bool
                -- ^ Consistent Read
                -> [PrimaryKey]
                -- ^ Items to be deleted
                -> GetRequestItem
-batchGetRequestItem tn expr consistent keys = GetRequestItem tn expr consistent keys
+batchGetRequestItem expr consistent keys = GetRequestItem expr consistent keys
 
 toBatchGet :: [GetItem] -> BatchGetItem
 toBatchGet gs = BatchGetItem (convert gs) def
@@ -77,42 +74,42 @@ toBatchGet gs = BatchGetItem (convert gs) def
     groupItems (x:xs) hm = let key = giTableName x
                              in groupItems xs (HM.insert key (x : (HM.lookupDefault [] key hm)) hm)
     
-    convert :: [GetItem] -> [GetRequestItem] 
+    convert :: [GetItem] -> [(T.Text,GetRequestItem)] 
     convert gs' = let l = HM.toList $ groupItems gs' HM.empty
                     -- Uses one GetItem to specify ProjectionExpression
                     -- and ConsistentRead for the entire batch
-                    in map (\(table,items@(i:_)) ->GetRequestItem table
+                    in map (\(table,items@(i:_)) ->(table,GetRequestItem 
                                                     (T.intercalate "," <$> giAttrs i)
                                                     (giConsistent i)
-                                                    (map giKey items) ) l
+                                                    (map giKey items)) ) l
+
 -- | Construct a BatchGetItem
-batchGetItem :: [GetRequestItem]
+batchGetItem :: [(T.Text,GetRequestItem)]
                -> BatchGetItem
 batchGetItem reqs = BatchGetItem reqs def
 
 
 instance ToJSON GetRequestItem where
    toJSON GetRequestItem{..} =
-       object $
-         [ griTable .= (object $ maybe [] (return . ("ProjectionExpression" .=)) griProjExpr ++
-                                ["ConsistentRead" .= griConsistent
-                                , "Keys" .= griKeys])
-         ]
+       (object $ maybe [] (return . ("ProjectionExpression" .=)) griProjExpr ++
+                 ["ConsistentRead" .= griConsistent
+                 , "Keys" .= griKeys])
+         
 
 instance ToJSON BatchGetItem where
     toJSON BatchGetItem{..} =
         object $
-          [ "RequestItems" .= bgRequests
+          [ "RequestItems" .= HM.fromList bgRequests
           , "ReturnConsumedCapacity" .= bgRetCons
           ]
 
 instance FromJSON GetRequestItem where
-    parseJSON p = do
-                 [(table,Object o)] <- HM.toList <$> parseJSON p 
-                 (GetRequestItem table) <$> o .:? "ProjectionExpression"
-                                        <*> o .: "ConsistentRead"
-                                        <*> o .: "Keys"
-
+    parseJSON (Object p) = do
+                 GetRequestItem <$> p .:? "ProjectionExpression"
+                                <*> p .: "ConsistentRead"
+                                <*> p .: "Keys"
+    parseJSON _ = fail "unable to parse GetRequestItem"
+    
 instance FromJSON BatchGetResponse where
   parseJSON p = do
               l <- listRqItem p
