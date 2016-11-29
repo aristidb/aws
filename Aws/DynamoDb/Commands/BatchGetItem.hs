@@ -48,11 +48,6 @@ data BatchGetItem = BatchGetItem {
     , bgRetCons :: ReturnConsumption
     } deriving (Eq,Show,Read,Ord)
 
-
-data BatchGetResponse = BatchGetResponse {
-    brTable :: T.Text
-  , brItems :: [Item]
-  } deriving (Eq,Show,Read,Ord)
 -------------------------------------------------------------------------------
 
 -- | Construct a RequestItem .
@@ -110,17 +105,9 @@ instance FromJSON GetRequestItem where
                                 <*> p .: "Keys"
     parseJSON _ = fail "unable to parse GetRequestItem"
     
-instance FromJSON BatchGetResponse where
-  parseJSON p = do
-              l <- listRqItem p
-              case length l of
-                1 -> return $ head l
-                _ -> fail "unable to parse BatchGetResponse"
-       where
-         listRqItem p' = map (\(txt,req) -> BatchGetResponse txt req) . HM.toList <$> parseJSON p'
          
 data BatchGetItemResponse = BatchGetItemResponse {
-      bgResponses :: [BatchGetResponse]
+      bgResponses :: [(T.Text, [Item])]
     , bgUnprocessed    :: Maybe [GetRequestItem]
     -- ^ Unprocessed Requests on failure
     , bgConsumed :: Maybe ConsumedCapacity
