@@ -25,7 +25,6 @@ module Aws.DynamoDb.Commands.BatchGetItem where
 import           Control.Applicative
 import           Data.Aeson
 import           Data.Default
-import           Data.Foldable (asum)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text           as T
 import           Prelude
@@ -126,7 +125,7 @@ instance SignQuery BatchGetItem where
 
 instance FromJSON BatchGetItemResponse where
     parseJSON (Object v) = BatchGetItemResponse
-        <$> v .: "Responses"
+        <$> (HM.toList <$> (v .: "Responses"))
         <*> v .:? "UnprocessedItems"
         <*> v .:? "ConsumedCapacity"
 
