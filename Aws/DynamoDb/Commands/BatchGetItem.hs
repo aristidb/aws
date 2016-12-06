@@ -107,7 +107,7 @@ instance FromJSON GetRequestItem where
          
 data BatchGetItemResponse = BatchGetItemResponse {
       bgResponses :: [(T.Text, [Item])]
-    , bgUnprocessed    :: Maybe [GetRequestItem]
+    , bgUnprocessed    :: Maybe [(T.Text,[GetRequestItem])]
     -- ^ Unprocessed Requests on failure
     , bgConsumed :: Maybe ConsumedCapacity
     -- ^ Amount of capacity consumed
