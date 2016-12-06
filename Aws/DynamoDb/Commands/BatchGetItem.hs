@@ -78,7 +78,7 @@ toBatchGet gs = BatchGetItem (convert gs) def
                                                     (map giKey items)) ) l
 
 -- | Construct a BatchGetItem
-batchGetItem :: [(T.Text,GetRequestItem)]
+batchGetItem :: [(T.Text, GetRequestItem)]
                -> BatchGetItem
 batchGetItem reqs = BatchGetItem reqs def
 
@@ -107,7 +107,7 @@ instance FromJSON GetRequestItem where
          
 data BatchGetItemResponse = BatchGetItemResponse {
       bgResponses :: [(T.Text, [Item])]
-    , bgUnprocessed    :: Maybe [(T.Text,[GetRequestItem])]
+    , bgUnprocessed    :: Maybe [(T.Text,GetRequestItem)]
     -- ^ Unprocessed Requests on failure
     , bgConsumed :: Maybe ConsumedCapacity
     -- ^ Amount of capacity consumed
