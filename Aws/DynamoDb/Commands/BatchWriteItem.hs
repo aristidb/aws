@@ -32,6 +32,8 @@ import           Prelude
 -------------------------------------------------------------------------------
 import           Aws.Core
 import           Aws.DynamoDb.Core
+import           Aws.DynamoDb.Commands.PutItem
+import           Aws.DynamoDb.Commands.DeleteItem
 -------------------------------------------------------------------------------
 
 
@@ -39,13 +41,8 @@ data Request = PutRequest { prItem :: Item }
              | DeleteRequest {drKey :: PrimaryKey}
      deriving (Eq,Show,Read,Ord)
 
-data RequestItem = RequestItem{
-         reqTable  :: T.Text
-       , reqItems  :: [Request]
-     } deriving (Eq,Show,Read,Ord)
-
 data BatchWriteItem = BatchWriteItem {
-      bwRequests :: [RequestItem]
+      bwRequests :: [(T.Text,[Request])]
     -- ^ Put or Delete Requests for a specified table
     , bwRetCons :: ReturnConsumption
     , bwRetMet  :: ReturnItemCollectionMetrics
@@ -54,18 +51,19 @@ data BatchWriteItem = BatchWriteItem {
 
 -------------------------------------------------------------------------------
 
--- | Construct a RequestItem .
-batchRequestItem :: T.Text
-               -- ^ A Dynamo table name
-               -> [Item]
-               -- ^ Items to be saved
-               -> [PrimaryKey]
-               -- ^ Items to be deleted
-               -> RequestItem
-batchRequestItem tn its keys = RequestItem tn ((map PutRequest its)++(map DeleteRequest keys))
-
+toBatchWrite :: [PutItem]
+           -> [DeleteItem]
+           -> BatchWriteItem
+toBatchWrite ps ds =BatchWriteItem maps def def  
+      where
+        maps :: [(T.Text,[Request])]
+        maps = let pMap = foldl (\acc p -> let key = piTable p
+                                             in HM.insert key (PutRequest (piItem p) : (HM.lookupDefault [] key acc)) acc) HM.empty ps 
+                   totalMap = foldl (\acc d -> let key = diTable d
+                                                 in  HM.insert key (DeleteRequest (diKey d) : (HM.lookupDefault [] key acc)) acc) pMap ds
+                 in  HM.toList totalMap
 -- | Construct a BatchWriteItem
-batchWriteItem :: [RequestItem]
+batchWriteItem :: [(T.Text,[Request])]
                -> BatchWriteItem
 batchWriteItem reqs = BatchWriteItem reqs def def
 
@@ -80,15 +78,10 @@ instance ToJSON Request where
          [ "DeleteRequest" .=  (object $ ["Key" .= drKey])
          ]
 
-instance ToJSON RequestItem where
-   toJSON RequestItem{..} =
-       object $
-         [ reqTable .= reqItems]
-
 instance ToJSON BatchWriteItem where
     toJSON BatchWriteItem{..} =
         object $
-          [ "RequestItems" .= bwRequests
+          [ "RequestItems" .= HM.fromList bwRequests
           , "ReturnConsumedCapacity" .= bwRetCons
           , "ReturnItemCollectionMetrics" .= bwRetMet
           ]
@@ -107,18 +100,8 @@ instance FromJSON Request where
              return $ DeleteRequest pk
           ]
     
-
-instance FromJSON RequestItem where
-    parseJSON p = do
-                 l <- listRqItem p
-                 case length l of
-                   1 -> return $ head l
-                   _ -> fail "Unable to parse RequestItem"
-       where
-         listRqItem p' = map (\(txt,req) -> RequestItem txt req) . HM.toList <$> parseJSON p'
-
 data BatchWriteItemResponse = BatchWriteItemResponse {
-      bwUnprocessed    :: Maybe [RequestItem]
+      bwUnprocessed    :: Maybe [(T.Text,Request)]
     -- ^ Unprocessed Requests on failure
     , bwConsumed :: Maybe ConsumedCapacity
     -- ^ Amount of capacity consumed
