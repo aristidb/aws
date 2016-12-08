@@ -121,7 +121,7 @@ instance SignQuery BatchWriteItem where
 
 instance FromJSON BatchWriteItemResponse where
     parseJSON (Object v) = BatchWriteItemResponse
-        <$> (HM.toList <$> (v .:? "UnprocessedItems"))
+        <$> v .:? "UnprocessedItems"
         <*> v .:? "ConsumedCapacity"
         <*> v .:? "ItemCollectionMetrics"
     parseJSON _ = fail "BatchWriteItemResponse must be an object."

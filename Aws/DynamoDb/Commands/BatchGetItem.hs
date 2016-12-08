@@ -126,7 +126,7 @@ instance SignQuery BatchGetItem where
 instance FromJSON BatchGetItemResponse where
     parseJSON (Object v) = BatchGetItemResponse
         <$> (HM.toList <$> (v .: "Responses"))
-        <*> (HM.toList <$> (v .:? "UnprocessedItems"))
+        <*> v .:? "UnprocessedItems"
         <*> v .:? "ConsumedCapacity"
 
     parseJSON _ = fail "BatchGetItemResponse must be an object."
