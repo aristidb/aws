@@ -101,7 +101,7 @@ instance FromJSON Request where
           ]
     
 data BatchWriteItemResponse = BatchWriteItemResponse {
-      bwUnprocessed    :: Maybe [(T.Text,Request)]
+      bwUnprocessed    :: Maybe [(T.Text,[Request])]
     -- ^ Unprocessed Requests on failure
     , bwConsumed :: Maybe ConsumedCapacity
     -- ^ Amount of capacity consumed
