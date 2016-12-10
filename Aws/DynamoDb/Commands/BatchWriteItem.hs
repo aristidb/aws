@@ -101,7 +101,7 @@ instance FromJSON Request where
           ]
     
 data BatchWriteItemResponse = BatchWriteItemResponse {
-      bwUnprocessed    :: Maybe [(T.Text,[Request])]
+      bwUnprocessed    :: [(T.Text,[Request])]
     -- ^ Unprocessed Requests on failure
     , bwConsumed :: Maybe ConsumedCapacity
     -- ^ Amount of capacity consumed
@@ -121,7 +121,7 @@ instance SignQuery BatchWriteItem where
 
 instance FromJSON BatchWriteItemResponse where
     parseJSON (Object v) = BatchWriteItemResponse
-        <$> v .:? "UnprocessedItems"
+        <$> HM.toList <$> (v .: "UnprocessedItems")
         <*> v .:? "ConsumedCapacity"
         <*> v .:? "ItemCollectionMetrics"
     parseJSON _ = fail "BatchWriteItemResponse must be an object."
