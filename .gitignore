@@ -4,3 +4,4 @@ dist/*
 /.cabal-sandbox
 /cabal.sandbox.config
 cloud-remote.pdf
+/.stack-work/
