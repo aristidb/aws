@@ -30,6 +30,7 @@ module Aws.Core
 , elCont
 , force
 , forceM
+, textReadBool
 , textReadInt
 , readInt
 , xmlCursorConsumer
@@ -833,6 +834,13 @@ force = Cu.force . XmlException
 -- | Extract the first element from a monadic parser result list, and throw an 'XmlException' if the list is empty.
 forceM :: MonadThrow m => String -> [m a] -> m a
 forceM = Cu.forceM . XmlException
+
+-- | Read a boolean from a 'T.Text', throwing an 'XmlException' on failure.
+textReadBool :: MonadThrow m => T.Text -> m Bool
+textReadBool s = case T.unpack s of
+                  "true"  -> return True
+                  "false" -> return False
+                  _        -> throwM $ XmlException "Invalid Bool"
 
 -- | Read an integer from a 'T.Text', throwing an 'XmlException' on failure.
 textReadInt :: (MonadThrow m, Num a) => T.Text -> m a
