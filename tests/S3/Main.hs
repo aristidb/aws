@@ -97,7 +97,7 @@ tests :: TestTree
 tests = testGroup "S3 Tests"
     [ test_head
     , test_get
-    , test_get_versions
+    , test_versioning
     ]
 
 
@@ -180,30 +180,41 @@ test_get_caching bucket = withResource mkSetup teardown $ \setup -> testGroup "C
     teardown (cfg, s3cfg, mgr) =
       void (runResourceT (pureAws cfg s3cfg mgr (DeleteObject k bucket)))
 
+
 -------------------------------------------------------------------------------
 -- GetBucketObjectVersions Tests
 -------------------------------------------------------------------------------
 
 
-test_get_versions :: TestTree
-test_get_versions = askOption $ \(BucketOption bucket) -> testGroup "GetBucketObjectVersions"
-  [ test_get_versions_caching bucket
-  ]
+test_versioning :: TestTree
+test_versioning = askOption $ \(BucketOption bucket) ->
+  withResource (mkSetup bucket) (teardown bucket) $ \setup -> testGroup "Versioning"
+    [ testCase "GetBucketObjectVersions succeeds" $ do
+        (cfg, s3cfg, mgr) <- setup
+        resp <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
+          { gbvPrefix = Just k
+          }
+        let [o1, o2, o3, o4] = take 4 $ gbvrContents resp
+        checkObject True o1
+        checkDeleteMarker False o2
+        checkObject False o3
+        checkObject False o4
+      , testCase "DeleteObjectVersion succeeds" $ do
+        (cfg, s3cfg, mgr) <- setup
+        resp <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
+          { gbvPrefix = Just k
+          }
+        let [v1, v2, v3, v4] = map oviVersionId $ take 4 $ gbvrContents resp
+        void (runResourceT (pureAws cfg s3cfg mgr (DeleteObjectVersion k bucket v2)))
+        void (runResourceT (pureAws cfg s3cfg mgr (DeleteObjectVersion k bucket v3)))
 
-
-test_get_versions_caching :: Bucket -> TestTree
-test_get_versions_caching bucket = withResource mkSetup teardown $ \setup -> testGroup "Caches"
-  [ testCase "If-Matches match succeeds" $ do
-      (cfg, s3cfg, mgr) <- setup
-      resp <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
-        { gbvPrefix = Just k
-        }
-      let [o1, o2, o3, o4] = take 4 $ gbvrContents resp
-      checkObject True o1
-      checkDeleteMarker False o2
-      checkObject False o3
-      checkObject False o4
-  ]
+        resp' <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
+          { gbvPrefix = Just k
+          }
+        let [v1', v4'] = map oviVersionId $ take 2 $ gbvrContents resp'
+        assertEqual "invalid v1 version" v1 v1'
+        assertEqual "invalid v4 version" v4 v4'
+    ]
   where
     k = "s3-test-object"
     content = "example"
@@ -217,7 +228,7 @@ test_get_versions_caching bucket = withResource mkSetup teardown $ \setup -> tes
         assertEqual "invalid object key" k (oviKey obj)
         assertEqual "invalid isLatest flag" marker (oviIsLatest obj)
     checkDeleteMarker _ obj = assertFailure $ "Invalid object type " <> show obj
-    mkSetup = do
+    mkSetup bucket = do
       cfg <- baseConfiguration
       let s3cfg = defServiceConfig
       mgr <- newManager tlsManagerSettings
@@ -226,7 +237,7 @@ test_get_versions_caching bucket = withResource mkSetup teardown $ \setup -> tes
       void (runResourceT (pureAws cfg s3cfg mgr (DeleteObject k bucket)))
       void (runResourceT (pureAws cfg s3cfg mgr (putObject bucket k (RequestBodyBS content))))
       return (cfg, s3cfg, mgr)
-    teardown (cfg, s3cfg, mgr) =
+    teardown bucket (cfg, s3cfg, mgr) =
       void (runResourceT (pureAws cfg s3cfg mgr (DeleteObject k bucket)))
 
 
