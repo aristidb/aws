@@ -13,6 +13,14 @@ data DeleteObjectVersion = DeleteObjectVersion {
   dovVersionId :: T.Text
 }
 
+deleteObjectVersion :: Bucket -> T.Text -> T.Text -> DeleteObjectVersion
+deleteObjectVersion bucket object version
+    = DeleteObjectVersion {
+          dovObjectName = object
+        , dovBucket = bucket
+        , dovVersionId = version
+        }
+
 data DeleteObjectVersionResponse = DeleteObjectVersionResponse {
 }
 
