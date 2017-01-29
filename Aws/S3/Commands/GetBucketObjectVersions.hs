@@ -18,39 +18,39 @@ import qualified Text.XML              as XML
 
 data GetBucketObjectVersions
     = GetBucketObjectVersions {
-        gbvBucket          :: Bucket
-      , gbvDelimiter       :: Maybe T.Text
-      , gbvKeyMarker       :: Maybe T.Text
-      , gbvMaxKeys         :: Maybe Int
-      , gbvPrefix          :: Maybe T.Text
-      , gbvVersionIdMarker :: Maybe T.Text
+        gbovBucket          :: Bucket
+      , gbovDelimiter       :: Maybe T.Text
+      , gbovKeyMarker       :: Maybe T.Text
+      , gbovMaxKeys         :: Maybe Int
+      , gbovPrefix          :: Maybe T.Text
+      , gbovVersionIdMarker :: Maybe T.Text
       }
     deriving (Show)
 
 getBucketObjectVersions :: Bucket -> GetBucketObjectVersions
 getBucketObjectVersions bucket
     = GetBucketObjectVersions {
-        gbvBucket          = bucket
-      , gbvDelimiter       = Nothing
-      , gbvKeyMarker       = Nothing
-      , gbvMaxKeys         = Nothing
-      , gbvPrefix          = Nothing
-      , gbvVersionIdMarker = Nothing
+        gbovBucket          = bucket
+      , gbovDelimiter       = Nothing
+      , gbovKeyMarker       = Nothing
+      , gbovMaxKeys         = Nothing
+      , gbovPrefix          = Nothing
+      , gbovVersionIdMarker = Nothing
       }
 
 data GetBucketObjectVersionsResponse
     = GetBucketObjectVersionsResponse {
-        gbvrName                :: Bucket
-      , gbvrDelimiter           :: Maybe T.Text
-      , gbvrKeyMarker           :: Maybe T.Text
-      , gbvrMaxKeys             :: Maybe Int
-      , gbvrPrefix              :: Maybe T.Text
-      , gbvrVersionIdMarker     :: Maybe T.Text
-      , gbvrContents            :: [ObjectVersionInfo]
-      , gbvrCommonPrefixes      :: [T.Text]
-      , gbvrIsTruncated         :: Bool
-      , gbvrNextKeyMarker       :: Maybe T.Text
-      , gbvrNextVersionIdMarker :: Maybe T.Text
+        gbovrName                :: Bucket
+      , gbovrDelimiter           :: Maybe T.Text
+      , gbovrKeyMarker           :: Maybe T.Text
+      , gbovrMaxKeys             :: Maybe Int
+      , gbovrPrefix              :: Maybe T.Text
+      , gbovrVersionIdMarker     :: Maybe T.Text
+      , gbovrContents            :: [ObjectVersionInfo]
+      , gbovrCommonPrefixes      :: [T.Text]
+      , gbovrIsTruncated         :: Bool
+      , gbovrNextKeyMarker       :: Maybe T.Text
+      , gbovrNextVersionIdMarker :: Maybe T.Text
       }
     deriving (Show)
 
@@ -59,15 +59,15 @@ instance SignQuery GetBucketObjectVersions where
     type ServiceConfiguration GetBucketObjectVersions = S3Configuration
     signQuery GetBucketObjectVersions {..} = s3SignQuery S3Query {
                                  s3QMethod = Get
-                               , s3QBucket = Just $ T.encodeUtf8 gbvBucket
+                               , s3QBucket = Just $ T.encodeUtf8 gbovBucket
                                , s3QObject = Nothing
                                , s3QSubresources = [ ("versions", Nothing) ]
                                , s3QQuery = HTTP.toQuery [
-                                              ("delimiter" :: B8.ByteString ,) <$> gbvDelimiter
-                                            , ("key-marker",) <$> gbvKeyMarker
-                                            , ("max-keys",) . T.pack . show <$> gbvMaxKeys
-                                            , ("prefix",) <$> gbvPrefix
-                                            , ("version-id-marker",) <$> gbvVersionIdMarker
+                                              ("delimiter" :: B8.ByteString ,) <$> gbovDelimiter
+                                            , ("key-marker",) <$> gbovKeyMarker
+                                            , ("max-keys",) . T.pack . show <$> gbovMaxKeys
+                                            , ("prefix",) <$> gbovPrefix
+                                            , ("version-id-marker",) <$> gbovVersionIdMarker
                                             ]
                                , s3QContentType = Nothing
                                , s3QContentMd5 = Nothing
@@ -93,17 +93,17 @@ instance ResponseConsumer r GetBucketObjectVersionsResponse where
                        contents <- sequence $ cursor $/ Cu.checkName objectNodeName &| parseObjectVersionInfo
                        let commonPrefixes = cursor $/ Cu.laxElement "CommonPrefixes" &// Cu.content
                        return GetBucketObjectVersionsResponse{
-                                                gbvrName                = name
-                                              , gbvrDelimiter           = delimiter
-                                              , gbvrKeyMarker           = keyMarker
-                                              , gbvrMaxKeys             = maxKeys
-                                              , gbvrPrefix              = prefix
-                                              , gbvrVersionIdMarker     = versionMarker
-                                              , gbvrContents            = contents
-                                              , gbvrCommonPrefixes      = commonPrefixes
-                                              , gbvrIsTruncated         = truncated
-                                              , gbvrNextKeyMarker       = nextKeyMarker
-                                              , gbvrNextVersionIdMarker = nextVersionMarker
+                                                gbovrName                = name
+                                              , gbovrDelimiter           = delimiter
+                                              , gbovrKeyMarker           = keyMarker
+                                              , gbovrMaxKeys             = maxKeys
+                                              , gbovrPrefix              = prefix
+                                              , gbovrVersionIdMarker     = versionMarker
+                                              , gbovrContents            = contents
+                                              , gbovrCommonPrefixes      = commonPrefixes
+                                              , gbovrIsTruncated         = truncated
+                                              , gbovrNextKeyMarker       = nextKeyMarker
+                                              , gbovrNextVersionIdMarker = nextVersionMarker
                                               }
               objectNodeName n = let fn = T.toCaseFold $ XML.nameLocalName n
                                   in fn == T.toCaseFold "Version" || fn == T.toCaseFold "DeleteMarker"
@@ -112,13 +112,13 @@ instance Transaction GetBucketObjectVersions GetBucketObjectVersionsResponse
 
 instance IteratedTransaction GetBucketObjectVersions GetBucketObjectVersionsResponse where
     nextIteratedRequest request response
-        = case (gbvrIsTruncated response, gbvrNextKeyMarker response, gbvrNextVersionIdMarker response, gbvrContents response) of
-            (True, Just keyMarker, Just versionMarker, _             ) -> Just $ request { gbvKeyMarker = Just keyMarker, gbvVersionIdMarker = Just versionMarker }
-            (True, Nothing,        Nothing,            contents@(_:_)) -> Just $ request { gbvKeyMarker = Just $ oviKey $ last contents, gbvVersionIdMarker = Just $ oviVersionId $ last contents }
+        = case (gbovrIsTruncated response, gbovrNextKeyMarker response, gbovrNextVersionIdMarker response, gbovrContents response) of
+            (True, Just keyMarker, Just versionMarker, _             ) -> Just $ request { gbovKeyMarker = Just keyMarker, gbovVersionIdMarker = Just versionMarker }
+            (True, Nothing,        Nothing,            contents@(_:_)) -> Just $ request { gbovKeyMarker = Just $ oviKey $ last contents, gbovVersionIdMarker = Just $ oviVersionId $ last contents }
             (_,    _,              _,                  _             ) -> Nothing
 
 instance ListResponse GetBucketObjectVersionsResponse ObjectVersionInfo where
-    listResponse = gbvrContents
+    listResponse = gbovrContents
 
 instance AsMemoryResponse GetBucketObjectVersionsResponse where
     type MemoryResponse GetBucketObjectVersionsResponse = GetBucketObjectVersionsResponse

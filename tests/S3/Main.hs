@@ -192,26 +192,27 @@ test_versioning = askOption $ \(BucketOption bucket) ->
     [ testCase "GetBucketObjectVersions succeeds" $ do
         (cfg, s3cfg, mgr) <- setup
         resp <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
-          { gbvPrefix = Just k
+          { gbovPrefix = Just k
           }
-        let [o1, o2, o3, o4] = take 4 $ gbvrContents resp
+        let [o1, o2, o3, o4] = take 4 $ gbovrContents resp
         checkObject True o1
         checkDeleteMarker False o2
         checkObject False o3
         checkObject False o4
-      , testCase "DeleteObjectVersion succeeds" $ do
+    , testCase "DeleteObjectVersion succeeds" $ do
+        -- Note: this test requires bucket with versioning enabled
         (cfg, s3cfg, mgr) <- setup
         resp <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
-          { gbvPrefix = Just k
+          { gbovPrefix = Just k
           }
-        let [v1, v2, v3, v4] = map oviVersionId $ take 4 $ gbvrContents resp
-        void (runResourceT (pureAws cfg s3cfg mgr (DeleteObjectVersion k bucket v2)))
-        void (runResourceT (pureAws cfg s3cfg mgr (DeleteObjectVersion k bucket v3)))
+        let [v1, v2, v3, v4] = map oviVersionId $ take 4 $ gbovrContents resp
+        void (runResourceT (pureAws cfg s3cfg mgr (deleteObjectVersion bucket k v2)))
+        void (runResourceT (pureAws cfg s3cfg mgr (deleteObjectVersion bucket k v3)))
 
         resp' <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
-          { gbvPrefix = Just k
+          { gbovPrefix = Just k
           }
-        let [v1', v4'] = map oviVersionId $ take 2 $ gbvrContents resp'
+        let [v1', v4'] = map oviVersionId $ take 2 $ gbovrContents resp'
         assertEqual "invalid v1 version" v1 v1'
         assertEqual "invalid v4 version" v4 v4'
     ]
