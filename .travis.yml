@@ -1,6 +1,15 @@
 sudo: false
-language: haskell
+addons:
+  apt:
+    sources:
+        - hvr-ghc
+    packages:
+        - libgmp-dev
+        - ghc-8.0.1
+        - cabal-install-1.24
 install:
+        - export PATH=/opt/cabal/1.24/bin:/opt/ghc/8.0.1/bin:$PATH
+        - travis_retry cabal update
         - cabal install --only-dependencies -fexamples --enable-tests
 script:
         - cabal configure -fexamples --enable-tests && cabal build
