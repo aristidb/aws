@@ -5,6 +5,7 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow         (second)
+import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Crypto.Hash
@@ -141,7 +142,6 @@ uploadPart bucket obj p i body =
 
 data UploadPartResponse
   = UploadPartResponse {
-      uprVersionId :: !(Maybe T.Text),
       uprETag :: !T.Text
     }
   deriving (Show)
@@ -174,9 +174,8 @@ instance SignQuery UploadPart where
 instance ResponseConsumer UploadPart UploadPartResponse where
     type ResponseMetadata UploadPartResponse = S3Metadata
     responseConsumer _ _ = s3ResponseConsumer $ \resp -> do
-      let vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
       let etag = fromMaybe "" $ T.decodeUtf8 `fmap` lookup "ETag" (HTTP.responseHeaders resp)
-      return $ UploadPartResponse vid etag
+      return $ UploadPartResponse etag
 
 instance Transaction UploadPart UploadPartResponse
 
@@ -197,12 +196,11 @@ data CompleteMultipartUpload
     , cmuExpiration :: Maybe T.Text
     , cmuServerSideEncryption :: Maybe T.Text
     , cmuServerSideEncryptionCustomerAlgorithm :: Maybe T.Text
-    , cmuVersionId :: Maybe T.Text
     }
   deriving (Show)
 
 postCompleteMultipartUpload :: Bucket -> T.Text -> T.Text -> [(Integer,T.Text)]-> CompleteMultipartUpload
-postCompleteMultipartUpload b o i p = CompleteMultipartUpload b o i p Nothing  Nothing  Nothing  Nothing
+postCompleteMultipartUpload b o i p = CompleteMultipartUpload b o i p Nothing  Nothing  Nothing
 
 data CompleteMultipartUploadResponse
   = CompleteMultipartUploadResponse {
@@ -210,6 +208,7 @@ data CompleteMultipartUploadResponse
     , cmurBucket   :: !Bucket
     , cmurKey      :: !T.Text
     , cmurETag     :: !T.Text
+    , cmurVersionId :: !(Maybe T.Text)
     }
 
 -- | ServiceConfiguration: 'S3Configuration'
@@ -229,7 +228,6 @@ instance SignQuery CompleteMultipartUpload where
                                   , ("x-amz-server-side-encryption",) <$> (T.encodeUtf8 <$> cmuServerSideEncryption)
                                   , ("x-amz-server-side-encryption-customer-algorithm",)
                                     <$> (T.encodeUtf8 <$> cmuServerSideEncryptionCustomerAlgorithm)
-                                  , ("x-amz-version-id",) <$> (T.encodeUtf8 <$> cmuVersionId)
                                   ]
       , s3QOtherHeaders = []
       , s3QRequestBody  = Just $ HTTP.RequestBodyLBS reqBody
@@ -260,8 +258,9 @@ instance SignQuery CompleteMultipartUpload where
 instance ResponseConsumer r CompleteMultipartUploadResponse where
     type ResponseMetadata CompleteMultipartUploadResponse = S3Metadata
 
-    responseConsumer _ _ = s3XmlResponseConsumer parse
-        where parse cursor
+    responseConsumer _ _ metadata resp = s3XmlResponseConsumer parse metadata resp
+        where vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
+              parse cursor
                   = do location <- force "Missing Location" $ cursor $/ elContent "Location"
                        bucket <- force "Missing Bucket Name" $ cursor $/ elContent "Bucket"
                        key <- force "Missing Key" $ cursor $/ elContent "Key"
@@ -271,6 +270,7 @@ instance ResponseConsumer r CompleteMultipartUploadResponse where
                                               , cmurBucket         = bucket
                                               , cmurKey            = key
                                               , cmurETag           = etag
+                                              , cmurVersionId      = vid
                                               }
 
 instance Transaction CompleteMultipartUpload CompleteMultipartUploadResponse
@@ -357,11 +357,10 @@ sendEtag  ::
   -> T.Text
   -> T.Text
   -> [T.Text]
-  -> IO ()
+  -> IO CompleteMultipartUploadResponse
 sendEtag cfg s3cfg mgr bucket object uploadId etags = do
-  _ <- memoryAws cfg s3cfg mgr $
+  memoryAws cfg s3cfg mgr $
        postCompleteMultipartUpload bucket object uploadId (zip [1..] etags)
-  return ()
 
 putConduit ::
   MonadResource m =>
@@ -378,7 +377,7 @@ putConduit cfg s3cfg mgr bucket object uploadId = loop 1
       v' <- await
       case v' of
         Just v -> do
-          UploadPartResponse _ etag <- memoryAws cfg s3cfg mgr $
+          UploadPartResponse etag <- memoryAws cfg s3cfg mgr $
             uploadPart bucket object n uploadId (HTTP.RequestBodyLBS v)
           yield etag
           loop (n+1)
@@ -416,7 +415,7 @@ multipartUpload cfg s3cfg mgr bucket object src chunkSize = do
            $= chunkedConduit chunkSize
            $= putConduit cfg s3cfg mgr bucket object uploadId
            $$ CL.consume
-  liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
+  void $ liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
 
 multipartUploadSink :: MonadResource m
   => Configuration
@@ -444,7 +443,7 @@ multipartUploadWithInitiator cfg s3cfg initiator mgr bucket object src chunkSize
            $= chunkedConduit chunkSize
            $= putConduit cfg s3cfg mgr bucket object uploadId
            $$ CL.consume
-  liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
+  void $ liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
 
 multipartUploadSinkWithInitiator :: MonadResource m
   => Configuration
@@ -460,4 +459,4 @@ multipartUploadSinkWithInitiator cfg s3cfg initiator mgr bucket object chunkSize
   etags <- chunkedConduit chunkSize
            $= putConduit cfg s3cfg mgr bucket object uploadId
            $= CL.consume
-  liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
+  void $ liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
