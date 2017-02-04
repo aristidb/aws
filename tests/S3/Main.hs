@@ -16,6 +16,8 @@ module Main
 
 import           Control.Applicative
 import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Lazy         as BL
+import           Conduit
 import           Control.Arrow                (second)
 import           Control.Exception
 import           Control.Monad
@@ -26,7 +28,8 @@ import qualified Data.Text                    as T
 import           Data.Typeable
 import           Data.Proxy
 import           Network.HTTP.Client          (HttpException (..),
-                                               RequestBody (..), newManager)
+                                               RequestBody (..), newManager,
+                                               responseBody)
 import           Network.HTTP.Client.TLS      (tlsManagerSettings)
 import           Network.HTTP.Types.Status
 import           System.Environment
@@ -215,8 +218,25 @@ test_versioning = askOption $ \(BucketOption bucket) ->
         let [v1', v4'] = map oviVersionId $ take 2 $ gbovrContents resp'
         assertEqual "invalid v1 version" v1 v1'
         assertEqual "invalid v4 version" v4 v4'
+    , testCase "Multipart upload succeeds" $ do
+        -- Note: this test requires bucket with versioning enabled
+        (cfg, s3cfg, mgr) <- setup
+        resp <- runResourceT $ do
+            uploadId <- liftIO $ getUploadId cfg s3cfg mgr bucket k
+            etags <- sourceLazy testStr
+                $= chunkedConduit 65536
+                $= putConduit cfg s3cfg mgr bucket k uploadId
+                $$ sinkList
+            liftIO $ sendEtag cfg s3cfg mgr bucket k uploadId etags
+        let Just vid = cmurVersionId resp
+        bs <- runResourceT $ do
+            gor <- pureAws cfg s3cfg mgr (getObject bucket k) { goVersionId = Just vid }
+            responseBody (gorResponse gor) $$+- sinkLazy
+
+        assertEqual "data do not match" testStr bs
     ]
   where
+    testStr = "foobar" :: BL.ByteString
     k = "s3-test-object"
     content = "example"
     payloadMD5 = "1a79a4d60de6718e8e5b326e338ae533"

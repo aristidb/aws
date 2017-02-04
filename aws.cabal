@@ -406,6 +406,7 @@ test-suite s3-tests
         aws,
         base == 4.*,
         bytestring,
+        conduit-combinators,
         http-client < 0.5,
         http-client-tls < 0.5,
         http-types,
