@@ -4,6 +4,9 @@
 NOTES: 0.15 brings technically breaking changes, but should not affect
 most users.
 
+-   0.15.1
+    -   Support xml-conduit 1.4
+
 -   0.15
     -   Drop support for time <1.5
     -   Support http-client 2.2
