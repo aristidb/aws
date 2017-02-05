@@ -1,8 +1,23 @@
+0.16 series
+-----------
+
+NOTES: 0.16 brings technically breaking changes, which should not affect
+most users. I recommend using smart constructors and {} matching syntax
+whenever possible when interacting with aws types.
+
+-   0.16
+    -   S3: Add support for versioning
+    -   S3: [breaking change] Move version ID from UploadPartResponse to
+        CompleteMultipartUpload.
+
 0.15 series
 -----------
 
 NOTES: 0.15 brings technically breaking changes, but should not affect
 most users.
+
+-   0.15.1
+    -   Support xml-conduit 1.4
 
 -   0.15
     -   Drop support for time <1.5
