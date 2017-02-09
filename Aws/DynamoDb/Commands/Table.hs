@@ -38,6 +38,7 @@ import qualified Data.Aeson            as A
 import qualified Data.Aeson.Types      as A
 import           Data.Char             (toUpper)
 import qualified Data.HashMap.Strict   as M
+import           Data.Scientific       (Scientific)
 import qualified Data.Text             as T
 import           Data.Time
 import           Data.Time.Clock.POSIX
@@ -283,7 +284,7 @@ instance A.FromJSON TableDescription where
         TableDescription <$> t .: "TableName"
                          <*> t .: "TableSizeBytes"
                          <*> t .: "TableStatus"
-                         <*> (fmap (posixSecondsToUTCTime . fromInteger) <$> t .:? "CreationDateTime")
+                         <*> (fmap (posixSecondsToUTCTime . fromInteger . (round :: Scientific -> Integer)) <$> t .:? "CreationDateTime")
                          <*> t .: "ItemCount"
                          <*> t .:? "AttributeDefinitions" .!= []
                          <*> t .:? "KeySchema"
