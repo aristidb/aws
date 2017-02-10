@@ -64,6 +64,10 @@ dropOpt :: Int -> A.Options
 dropOpt d = A.defaultOptions { A.fieldLabelModifier = drop d }
 
 
+convertToUTCTime :: Scientific -> UTCTime
+convertToUTCTime = posixSecondsToUTCTime . fromInteger . round
+
+
 -- | The type of a key attribute that appears in the table key or as a
 -- key in one of the indices.
 data AttributeType = AttrString | AttrNumber | AttrBinary
@@ -212,8 +216,8 @@ data ProvisionedThroughputStatus
 instance A.FromJSON ProvisionedThroughputStatus where
     parseJSON = A.withObject "Throughput status must be an object" $ \o ->
         ProvisionedThroughputStatus
-            <$> (posixSecondsToUTCTime . fromInteger <$> o .:? "LastDecreaseDateTime" .!= 0)
-            <*> (posixSecondsToUTCTime . fromInteger <$> o .:? "LastIncreaseDateTime" .!= 0)
+            <$> (convertToUTCTime <$> o .:? "LastDecreaseDateTime" .!= 0)
+            <*> (convertToUTCTime <$> o .:? "LastIncreaseDateTime" .!= 0)
             <*> o .:? "NumberOfDecreasesToday" .!= 0
             <*> o .: "ReadCapacityUnits"
             <*> o .: "WriteCapacityUnits"
@@ -284,7 +288,7 @@ instance A.FromJSON TableDescription where
         TableDescription <$> t .: "TableName"
                          <*> t .: "TableSizeBytes"
                          <*> t .: "TableStatus"
-                         <*> (fmap (posixSecondsToUTCTime . fromInteger . (round :: Scientific -> Integer)) <$> t .:? "CreationDateTime")
+                         <*> (fmap convertToUTCTime <$> t .:? "CreationDateTime")
                          <*> t .: "ItemCount"
                          <*> t .:? "AttributeDefinitions" .!= []
                          <*> t .:? "KeySchema"
