@@ -15,7 +15,9 @@ module Main
     ) where
 
 import           Control.Applicative
-import Data.ByteString (ByteString)
+import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Lazy         as BL
+import           Conduit
 import           Control.Arrow                (second)
 import           Control.Exception
 import           Control.Monad
@@ -26,7 +28,8 @@ import qualified Data.Text                    as T
 import           Data.Typeable
 import           Data.Proxy
 import           Network.HTTP.Client          (HttpException (..),
-                                               RequestBody (..), newManager)
+                                               RequestBody (..), newManager,
+                                               responseBody)
 import           Network.HTTP.Client.TLS      (tlsManagerSettings)
 import           Network.HTTP.Types.Status
 import           System.Environment
@@ -97,6 +100,7 @@ tests :: TestTree
 tests = testGroup "S3 Tests"
     [ test_head
     , test_get
+    , test_versioning
     ]
 
 
@@ -177,6 +181,84 @@ test_get_caching bucket = withResource mkSetup teardown $ \setup -> testGroup "C
       void (runResourceT (pureAws cfg s3cfg mgr (putObject bucket k (RequestBodyBS content))))
       return (cfg, s3cfg, mgr)
     teardown (cfg, s3cfg, mgr) =
+      void (runResourceT (pureAws cfg s3cfg mgr (DeleteObject k bucket)))
+
+
+-------------------------------------------------------------------------------
+-- GetBucketObjectVersions Tests
+-------------------------------------------------------------------------------
+
+
+test_versioning :: TestTree
+test_versioning = askOption $ \(BucketOption bucket) ->
+  withResource (mkSetup bucket) (teardown bucket) $ \setup -> testGroup "Versioning"
+    [ testCase "GetBucketObjectVersions succeeds" $ do
+        (cfg, s3cfg, mgr) <- setup
+        resp <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
+          { gbovPrefix = Just k
+          }
+        let [o1, o2, o3, o4] = take 4 $ gbovrContents resp
+        checkObject True o1
+        checkDeleteMarker False o2
+        checkObject False o3
+        checkObject False o4
+    , testCase "DeleteObjectVersion succeeds" $ do
+        -- Note: this test requires bucket with versioning enabled
+        (cfg, s3cfg, mgr) <- setup
+        resp <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
+          { gbovPrefix = Just k
+          }
+        let [v1, v2, v3, v4] = map oviVersionId $ take 4 $ gbovrContents resp
+        void (runResourceT (pureAws cfg s3cfg mgr (deleteObjectVersion bucket k v2)))
+        void (runResourceT (pureAws cfg s3cfg mgr (deleteObjectVersion bucket k v3)))
+
+        resp' <- runResourceT $ pureAws cfg s3cfg mgr $ (getBucketObjectVersions bucket)
+          { gbovPrefix = Just k
+          }
+        let [v1', v4'] = map oviVersionId $ take 2 $ gbovrContents resp'
+        assertEqual "invalid v1 version" v1 v1'
+        assertEqual "invalid v4 version" v4 v4'
+    , testCase "Multipart upload succeeds" $ do
+        -- Note: this test requires bucket with versioning enabled
+        (cfg, s3cfg, mgr) <- setup
+        resp <- runResourceT $ do
+            uploadId <- liftIO $ getUploadId cfg s3cfg mgr bucket k
+            etags <- sourceLazy testStr
+                $= chunkedConduit 65536
+                $= putConduit cfg s3cfg mgr bucket k uploadId
+                $$ sinkList
+            liftIO $ sendEtag cfg s3cfg mgr bucket k uploadId etags
+        let Just vid = cmurVersionId resp
+        bs <- runResourceT $ do
+            gor <- pureAws cfg s3cfg mgr (getObject bucket k) { goVersionId = Just vid }
+            responseBody (gorResponse gor) $$+- sinkLazy
+
+        assertEqual "data do not match" testStr bs
+    ]
+  where
+    testStr = "foobar" :: BL.ByteString
+    k = "s3-test-object"
+    content = "example"
+    payloadMD5 = "1a79a4d60de6718e8e5b326e338ae533"
+    checkObject marker obj@ObjectVersion{} = do
+        assertEqual "invalid object key" k (oviKey obj)
+        assertEqual "invalid isLatest flag" marker (oviIsLatest obj)
+        assertEqual "invalid object size" (fromIntegral $ BS.length content) (oviSize obj)
+    checkObject _ obj = assertFailure $ "Invalid object type " <> show obj
+    checkDeleteMarker marker obj@DeleteMarker{} = do
+        assertEqual "invalid object key" k (oviKey obj)
+        assertEqual "invalid isLatest flag" marker (oviIsLatest obj)
+    checkDeleteMarker _ obj = assertFailure $ "Invalid object type " <> show obj
+    mkSetup bucket = do
+      cfg <- baseConfiguration
+      let s3cfg = defServiceConfig
+      mgr <- newManager tlsManagerSettings
+      void (runResourceT (pureAws cfg s3cfg mgr (putObject bucket k (RequestBodyBS content))))
+      void (runResourceT (pureAws cfg s3cfg mgr (putObject bucket k (RequestBodyBS content))))
+      void (runResourceT (pureAws cfg s3cfg mgr (DeleteObject k bucket)))
+      void (runResourceT (pureAws cfg s3cfg mgr (putObject bucket k (RequestBodyBS content))))
+      return (cfg, s3cfg, mgr)
+    teardown bucket (cfg, s3cfg, mgr) =
       void (runResourceT (pureAws cfg s3cfg mgr (DeleteObject k bucket)))
 
 

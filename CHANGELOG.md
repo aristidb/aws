@@ -1,15 +1,44 @@
+0.16 series
+-----------
+
+NOTES: 0.16 brings technically breaking changes, which should not affect
+most users. I recommend using smart constructors and {} matching syntax
+whenever possible when interacting with aws types.
+
+-   0.16
+    -   S3: Add support for versioning
+    -   S3: [breaking change] Move version ID from UploadPartResponse to
+        CompleteMultipartUpload.
+
+0.15 series
+-----------
+
+NOTES: 0.15 brings technically breaking changes, but should not affect
+most users.
+
+-   0.15.1
+    -   Support xml-conduit 1.4
+
+-   0.15
+    -   Drop support for time <1.5
+    -   Support http-client 2.2
+    -   Support directory 1.3
+    -   Add upper bound on http-client in testsuite
+    -   DynamoDB: Eliminate orphan instance that conflicted with aeson-1.0
+    -   S3: Don't URI encode response header override query params when signing
+    -   Use HTTP.newManager instead of deprecated HTTP.withManager
+    -   Signing: Change date format from space-padding to zero-padding
+
 0.14 series
+-----------
 
 NOTES: 0.14 brings potentially breaking changes
 
--   0.14.1
-    -   Eliminate orphan instance that conflicted with aeson-1.0
-    -   Add upper bound on http-client in testsuite
 -   0.14
     -   transformers 0.5 support
     -   data-default 0.6 support (also in 0.13.1)
     -   time < 2.0 support
-    -   General: Use AWS_SESSION_TOKEN if in environment for loading credentials
+    -   General: Use `AWS_SESSION_TOKEN` if in environment for loading credentials
     -   General: loadCredentialsDefault fails gracefully if HOME is not set
     -   DDB: Add parseAttr combinator for parsing an attribute into a FromDynItem
     -   DDB: Expose the new DynBool type
