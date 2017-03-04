@@ -36,6 +36,8 @@ Library
                        Aws.Core
                        Aws.DynamoDb
                        Aws.DynamoDb.Commands
+                       Aws.DynamoDb.Commands.BatchGetItem
+                       Aws.DynamoDb.Commands.BatchWriteItem
                        Aws.DynamoDb.Commands.DeleteItem
                        Aws.DynamoDb.Commands.GetItem
                        Aws.DynamoDb.Commands.PutItem

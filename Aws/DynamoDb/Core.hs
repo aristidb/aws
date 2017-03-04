@@ -532,6 +532,15 @@ instance ToJSON PrimaryKey where
           Object p2 = toJSON r
       in Object (p1 `HM.union` p2)
 
+instance FromJSON PrimaryKey where
+    parseJSON p = do
+       l <- listPKey p
+       case length l of
+          1 -> return $ head l 
+          _ -> fail "Unable to parse PrimaryKey"     
+      where listPKey p'= map (\(txt,dval)-> hk txt dval)
+                          . HM.toList <$> parseJSON p'
+
 
 -- | A key-value pair
 data Attribute = Attribute {
