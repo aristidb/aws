@@ -38,6 +38,7 @@ import qualified Data.Aeson            as A
 import qualified Data.Aeson.Types      as A
 import           Data.Char             (toUpper)
 import qualified Data.HashMap.Strict   as M
+import           Data.Scientific       (Scientific)
 import qualified Data.Text             as T
 import           Data.Time
 import           Data.Time.Clock.POSIX
@@ -61,6 +62,10 @@ capitalizeOpt = A.defaultOptions
 
 dropOpt :: Int -> A.Options
 dropOpt d = A.defaultOptions { A.fieldLabelModifier = drop d }
+
+
+convertToUTCTime :: Scientific -> UTCTime
+convertToUTCTime = posixSecondsToUTCTime . fromInteger . round
 
 
 -- | The type of a key attribute that appears in the table key or as a
@@ -211,8 +216,8 @@ data ProvisionedThroughputStatus
 instance A.FromJSON ProvisionedThroughputStatus where
     parseJSON = A.withObject "Throughput status must be an object" $ \o ->
         ProvisionedThroughputStatus
-            <$> (posixSecondsToUTCTime . fromInteger <$> o .:? "LastDecreaseDateTime" .!= 0)
-            <*> (posixSecondsToUTCTime . fromInteger <$> o .:? "LastIncreaseDateTime" .!= 0)
+            <$> (convertToUTCTime <$> o .:? "LastDecreaseDateTime" .!= 0)
+            <*> (convertToUTCTime <$> o .:? "LastIncreaseDateTime" .!= 0)
             <*> o .:? "NumberOfDecreasesToday" .!= 0
             <*> o .: "ReadCapacityUnits"
             <*> o .: "WriteCapacityUnits"
@@ -283,7 +288,7 @@ instance A.FromJSON TableDescription where
         TableDescription <$> t .: "TableName"
                          <*> t .: "TableSizeBytes"
                          <*> t .: "TableStatus"
-                         <*> (fmap (posixSecondsToUTCTime . fromInteger) <$> t .:? "CreationDateTime")
+                         <*> (fmap convertToUTCTime <$> t .:? "CreationDateTime")
                          <*> t .: "ItemCount"
                          <*> t .:? "AttributeDefinitions" .!= []
                          <*> t .:? "KeySchema"
