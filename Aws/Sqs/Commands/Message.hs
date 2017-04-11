@@ -133,9 +133,9 @@ userMessageAttributesQuery :: [UserMessageAttribute] -> HTTP.Query
 userMessageAttributesQuery = concat . zipWith msgAttrQuery [1 :: Int ..]
   where
     msgAttrQuery i (name, value) =
-        [ ( pre <> ".Name", Just $ TE.encodeUtf8 name )
-        , ( pre <> ".Value.DataType", Just typ )
-        , ( pre <> ".Value." <> valueKey, Just encodedValue )
+        [ ( pre <> "Name", Just $ TE.encodeUtf8 name )
+        , ( pre <> "Value.DataType", Just typ )
+        , ( pre <> "Value." <> valueKey, Just encodedValue )
         ]
       where
         pre = "MessageAttribute." <> B.pack (show i) <> "."
