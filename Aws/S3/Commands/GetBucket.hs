@@ -14,6 +14,7 @@ import qualified Data.Traversable
 import           Prelude
 import qualified Network.HTTP.Types    as HTTP
 import qualified Text.XML.Cursor       as Cu
+import qualified Control.Monad.Trans.Resource as R
 
 data GetBucket
     = GetBucket {
@@ -34,6 +35,34 @@ getBucket bucket
       , gbMaxKeys   = Nothing
       , gbPrefix    = Nothing
       }
+
+-- | Get the ObjectInfo for all objects in a GetBucket request.
+-- 
+-- This will paginate through the markers while the request is truncated.
+-- 
+-- This considers if a delimiter was set.
+-- 
+-- Note that this will take a long time for requests that match lots of objects.
+-- 
+-- Usage:
+-- @
+--     cfg <- Aws.baseConfiguration;
+--     let s3cfg = Aws.defServiceConfig :: S3Configuration Aws.NormalQuery;
+--     rsp <- withManager $ \mgr ->
+--       getAllObjects (Aws.pureAws cfg s3cfg mgr) (getBucket name)
+-- @
+getAllObjects :: (GetBucket -> R.ResourceT IO GetBucketResponse)
+                 -> GetBucket
+                 -> R.ResourceT IO [ObjectInfo]
+getAllObjects env r = fmap (concat . reverse) $ go r []
+  where
+    go req xs = do
+      gbr :: GetBucketResponse <- env req
+      -- nextMarker is set if a delimiter was used
+      let next = maybe (objectKey (last (gbrContents gbr))) id (gbrNextMarker gbr)
+      if gbrIsTruncated gbr == True
+        then go (req { gbMarker = Just next }) ((gbrContents gbr) : xs)
+        else return ((gbrContents gbr) : xs)
 
 data GetBucketResponse
     = GetBucketResponse {
@@ -78,6 +107,7 @@ instance ResponseConsumer r GetBucketResponse where
                   = do name <- force "Missing Name" $ cursor $/ elContent "Name"
                        let delimiter = listToMaybe $ cursor $/ elContent "Delimiter"
                        let marker = listToMaybe $ cursor $/ elContent "Marker"
+                       let nextMarker = listToMaybe $ cursor $/ elContent "NextMarker"
                        maxKeys <- Data.Traversable.sequence . listToMaybe $ cursor $/ elContent "MaxKeys" &| textReadInt
                        let truncated = maybe True (/= "false") $ listToMaybe $ cursor $/ elContent "IsTruncated"
                        let nextMarker = listToMaybe $ cursor $/ elContent "NextMarker"
