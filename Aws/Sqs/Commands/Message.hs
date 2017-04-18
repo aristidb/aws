@@ -488,22 +488,22 @@ readUserMessageAttributeValue
     -> Response SqsMetadata UserMessageAttributeValue
 readUserMessageAttributeValue cursor = do
     typStr <- force "Missing DataType"
-        $ cursor $/ Cu.laxElement "DataType" &/ Cu.content
+        $ cursor $// Cu.laxElement "DataType" &/ Cu.content
     case parseType typStr of
         ("String", c) -> do
             val <- force "Missing StringValue"
-                $ cursor $/ Cu.laxElement "StringValue" &/ Cu.content
+                $ cursor $// Cu.laxElement "StringValue" &/ Cu.content
             return $ UserMessageAttributeString c val
 
         ("Number", c) -> do
             valStr <- force "Missing StringValue"
-                $ cursor $/ Cu.laxElement "StringValue" &/ Cu.content
+                $ cursor $// Cu.laxElement "StringValue" &/ Cu.content
             val <- tryXml . readEither $ T.unpack valStr
             return $ UserMessageAttributeNumber c val
 
         ("Binary", c) -> do
-            val64 <- force "Missing StringValue"
-                $ cursor $/ Cu.laxElement "StringValue" &/ Cu.content
+            val64 <- force "Missing BinaryValue"
+                $ cursor $// Cu.laxElement "BinaryValue" &/ Cu.content
             val <- tryXml . B64.decode $ TE.encodeUtf8 val64
             return $ UserMessageAttributeBinary c val
 
