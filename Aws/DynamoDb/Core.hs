@@ -152,6 +152,7 @@ import           Data.Tagged
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
+import           Data.Traversable             (traverse)
 import           Data.Typeable
 import qualified Data.Vector                  as V
 import           Data.Word
@@ -379,6 +380,18 @@ instance DynVal Double where
     type DynRep Double = DynNumber
     fromRep (DynNumber i) = Just $ toRealFloat i
     toRep i = DynNumber (fromFloatDigits i)
+
+instance DynVal a => DynVal (V.Vector a) where
+  type DynRep (V.Vector a) = DValue
+  toRep v = DList $ fmap toValue v
+  fromRep (DList l) = traverse fromValue l
+  fromRep _         = Nothing
+
+instance DynVal a => DynVal (M.Map T.Text a) where
+  type DynRep (M.Map T.Text a) = DValue
+  toRep m = DMap $ fmap toValue m
+  fromRep (DMap m) = traverse fromValue m
+  fromRep _        = Nothing
 
 
 -------------------------------------------------------------------------------
