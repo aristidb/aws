@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -30,6 +31,10 @@ import           Data.Proxy
 import           Network.HTTP.Client          (HttpException (..),
                                                RequestBody (..), newManager,
                                                responseBody)
+#if MIN_VERSION_http_client(0, 5, 0)
+import           Network.HTTP.Client          (HttpExceptionContent (..),
+                                               responseStatus)
+#endif
 import           Network.HTTP.Client.TLS      (tlsManagerSettings)
 import           Network.HTTP.Types.Status
 import           System.Environment
@@ -271,7 +276,13 @@ assertStatus expectedStatus f = do
     Right _ -> assertFailure ("Expected error with status " <> show expectedStatus <> ", but got success.")
     Left _ -> return ()
   where
+#if MIN_VERSION_http_client(0, 5, 0)
+    selector (HttpExceptionRequest _ (StatusCodeException res _))
+      | statusCode (responseStatus res) == expectedStatus = Just ()
+    selector _ = Nothing
+#else
     selector (StatusCodeException s _ _)
       | statusCode s == expectedStatus = Just ()
       | otherwise = Nothing
     selector  _ = Nothing
+#endif
