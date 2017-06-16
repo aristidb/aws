@@ -147,7 +147,7 @@ Library
                        unordered-containers >= 0.2,
                        utf8-string          >= 0.3     && < 1.1,
                        vector               >= 0.10,
-                       xml-conduit          >= 1.2     && <1.5
+                       xml-conduit          >= 1.2     && <1.6
  
   if !impl(ghc >= 7.6)
     Build-depends: ghc-prim
@@ -347,7 +347,7 @@ test-suite sqs-tests
         base == 4.*,
         bytestring >= 0.10,
         errors >= 2.0,
-        http-client >= 0.3 && < 0.5,
+        http-client >= 0.3 && < 0.6,
         lifted-base >= 0.2,
         monad-control >= 0.3,
         mtl >= 2.1,
@@ -409,7 +409,7 @@ test-suite s3-tests
         base == 4.*,
         bytestring,
         conduit-combinators,
-        http-client < 0.5,
+        http-client < 0.6,
         http-client-tls < 0.5,
         http-types,
         resourcet,
