@@ -82,6 +82,7 @@ data Configuration
       , credentials :: Credentials
         -- | The error / message logger.
       , logger      :: Logger
+      , proxy       :: Maybe HTTP.Proxy
       }
 
 -- | The default configuration, with credentials loaded from environment variable or configuration file
@@ -95,6 +96,7 @@ baseConfiguration = liftIO $ do
                       timeInfo = Timestamp
                     , credentials = cr'
                     , logger = defaultLog Warning
+                    , proxy = Nothing
                     }
 
 -- | Debug configuration, which logs much more verbosely.
@@ -234,7 +236,9 @@ unsafeAwsRef cfg info manager metadataRef request = do
   let !q = {-# SCC "unsafeAwsRef:signQuery" #-} signQuery request info sd
   let logDebug = liftIO . logger cfg Debug . T.pack
   logDebug $ "String to sign: " ++ show (sqStringToSign q)
-  !httpRequest <- {-# SCC "unsafeAwsRef:httpRequest" #-} liftIO $ queryToHttpRequest q
+  !httpRequest <- {-# SCC "unsafeAwsRef:httpRequest" #-} liftIO $ do
+    req <- queryToHttpRequest q
+    return $ req { HTTP.proxy = proxy cfg }
   logDebug $ "Host: " ++ show (HTTP.host httpRequest)
   logDebug $ "Path: " ++ show (HTTP.path httpRequest)
   logDebug $ "Query string: " ++ show (HTTP.queryString httpRequest)
