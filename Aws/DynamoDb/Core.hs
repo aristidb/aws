@@ -120,14 +120,14 @@ import qualified Control.Exception            as C
 import           Control.Monad
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource (throwM)
-import           Crypto.Hash
+import qualified Crypto.Hash                  as CH
 import           Data.Aeson
 import qualified Data.Aeson                   as A
 import           Data.Aeson.Types             (Pair, parseEither)
 import qualified Data.Aeson.Types             as A
 import qualified Data.Attoparsec.ByteString   as AttoB (endOfInput)
 import qualified Data.Attoparsec.Text         as Atto
-import           Data.Byteable
+import qualified Data.ByteArray               as ByteArray
 import qualified Data.ByteString.Base16       as Base16
 import qualified Data.ByteString.Base64       as Base64
 import qualified Data.ByteString.Char8        as B
@@ -848,7 +848,7 @@ ddbSignQuery target body di sd
         sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
 
         bodyLBS = A.encode body
-        bodyHash = Base16.encode $ toBytes (hashlazy bodyLBS :: Digest SHA256)
+        bodyHash = Base16.encode $ ByteArray.convert (CH.hashlazy bodyLBS :: CH.Digest CH.SHA256)
 
         -- for some reason AWS doesn't want the x-amz-security-token in the canonical request
         amzHeaders = [ ("x-amz-date", sigTime)

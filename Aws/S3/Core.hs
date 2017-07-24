@@ -6,8 +6,6 @@ import           Control.Arrow                  ((***))
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
-import           Crypto.Hash
-import           Data.Byteable
 import           Data.Conduit                   (($$+-))
 import           Data.Function
 import           Data.Functor                   ((<$>))
@@ -25,6 +23,8 @@ import           Text.XML.Cursor                (($/), (&|))
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
+import qualified Crypto.Hash                    as CH
+import qualified Data.ByteArray                 as ByteArray
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
 import qualified Data.ByteString.Base64         as Base64
@@ -147,7 +147,7 @@ data S3Query
       , s3QSubresources :: HTTP.Query
       , s3QQuery :: HTTP.Query
       , s3QContentType :: Maybe B.ByteString
-      , s3QContentMd5 :: Maybe (Digest MD5)
+      , s3QContentMd5 :: Maybe (CH.Digest CH.MD5)
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
 #if MIN_VERSION_http_conduit(2, 0, 0)
@@ -223,7 +223,7 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
       iamTok = maybe [] (\x -> [("x-amz-security-token", x)]) (iamToken signatureCredentials)
       stringToSign = Blaze.toByteString . mconcat . intersperse (Blaze8.fromChar '\n') . concat  $
                        [[Blaze.copyByteString $ httpMethod s3QMethod]
-                       , [maybe mempty (Blaze.copyByteString . Base64.encode . toBytes) s3QContentMd5]
+                       , [maybe mempty (Blaze.copyByteString . Base64.encode . ByteArray.convert) s3QContentMd5]
                        , [maybe mempty Blaze.copyByteString s3QContentType]
                        , [Blaze.copyByteString $ case ti of
                                                    AbsoluteTimestamp time -> fmtRfc822Time time
