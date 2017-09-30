@@ -1,3 +1,11 @@
+0.17 series
+-----------
+
+-   0.17
+    -   HTTP proxy support
+    -   DDB: Support for additional interfaces, bug fixes
+    -   Relax version bounds
+
 0.16 series
 -----------
 
