@@ -1,5 +1,5 @@
 with (import <nixpkgs> {}).pkgs;
 let
-  pkg = haskellPackages.callPackage ./. {};
+  pkg = haskell.packages.ghc821.callPackage ./. {};
 in
   pkg.env
