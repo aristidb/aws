@@ -6,6 +6,9 @@
     -   DDB: Support for additional interfaces, bug fixes
     -   Relax version bounds
 
+-   0.17.1
+    -   Fix testsuite build
+
 0.16 series
 -----------
 
