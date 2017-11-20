@@ -6,7 +6,7 @@ import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
 import           Control.Arrow         (second)
-import           Crypto.Hash
+import qualified Crypto.Hash           as CH
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Maybe
 import qualified Data.ByteString.Char8 as B
@@ -23,7 +23,7 @@ data PutObject = PutObject {
   poCacheControl :: Maybe T.Text,
   poContentDisposition :: Maybe T.Text,
   poContentEncoding :: Maybe T.Text,
-  poContentMD5 :: Maybe (Digest MD5),
+  poContentMD5 :: Maybe (CH.Digest CH.MD5),
   poExpires :: Maybe Int,
   poAcl :: Maybe CannedAcl,
   poStorageClass :: Maybe StorageClass,

@@ -2,6 +2,7 @@ module Aws.S3.Commands.DeleteObjects where
 
 import           Aws.Core
 import           Aws.S3.Core
+import qualified Crypto.Hash          as CH
 import qualified Data.Map             as M
 import           Data.Maybe
 import qualified Data.Text            as T
@@ -11,7 +12,6 @@ import qualified Network.HTTP.Types   as HTTP
 import qualified Text.XML             as XML
 import qualified Text.XML.Cursor      as Cu
 import           Text.XML.Cursor      (($/), (&|))
-import           Crypto.Hash
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 ({- IsString -})
 import           Control.Applicative     ((<$>))
@@ -70,7 +70,7 @@ instance SignQuery DeleteObjects where
       , s3QSubresources = HTTP.toQuery [("delete" :: B.ByteString, Nothing :: Maybe B.ByteString)]
       , s3QQuery        = []
       , s3QContentType  = Nothing
-      , s3QContentMd5   = Just $ hashlazy dosBody
+      , s3QContentMd5   = Just $ CH.hashlazy dosBody
       , s3QObject       = Nothing
       , s3QAmzHeaders   = maybeToList $ (("x-amz-mfa", ) . T.encodeUtf8) <$> dosMultiFactorAuthentication
       , s3QOtherHeaders = []

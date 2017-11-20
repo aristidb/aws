@@ -8,7 +8,7 @@ import           Control.Arrow         (second)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
-import           Crypto.Hash
+import qualified Crypto.Hash           as CH
 import           Data.ByteString.Char8 ({- IsString -})
 import           Data.Conduit
 import qualified Data.Conduit.List     as CL
@@ -129,7 +129,7 @@ data UploadPart = UploadPart {
   , upPartNumber :: Integer
   , upUploadId :: T.Text
   , upContentType :: Maybe B8.ByteString
-  , upContentMD5 :: Maybe (Digest MD5)
+  , upContentMD5 :: Maybe (CH.Digest CH.MD5)
   , upServerSideEncryption :: Maybe ServerSideEncryption
   , upRequestBody  :: HTTP.RequestBody
   , upExpect100Continue :: Bool -- ^ Note: Requires http-client >= 0.4.10
