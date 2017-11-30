@@ -1,3 +1,10 @@
+0.18 series
+-----------
+
+-   0.18
+    -   Switch from cryptohash to cryptonite
+    -   Loosen boundaries for http-types and conduit-extra
+
 0.17 series
 -----------
 
