@@ -49,6 +49,16 @@ data RequestStyle
     | VHostStyle
     deriving (Show)
 
+data S3SignPayloadMode
+    = AlwaysUnsigned -- ^ Always use the "UNSIGNED-PAYLOAD" option.
+    | SignWithEffort -- ^ Sign the payload when 'HTTP.RequestBody' is a on-memory one ('HTTP.RequestBodyLBS' or 'HTTP.RequestBodyBS'). Otherwise use the "UNSINGED-PAYLOAD" option.
+    deriving (Eq, Show, Read, Typeable)
+
+data S3SignVersion
+    = S3SignV2
+    | S3SignV4 { _s3SignPayloadMode :: S3SignPayloadMode }
+    deriving (Eq, Show, Read, Typeable)
+
 data S3Configuration qt
     = S3Configuration {
         s3Protocol :: Protocol
@@ -58,6 +68,7 @@ data S3Configuration qt
       , s3ServerSideEncryption :: Maybe ServerSideEncryption
       , s3UseUri :: Bool
       , s3DefaultExpiry :: NominalDiffTime
+      , s3SignVersion :: S3SignVersion
       }
     deriving (Show)
 
@@ -101,7 +112,22 @@ s3 protocol endpoint uri
        , s3ServerSideEncryption = Nothing
        , s3UseUri = uri
        , s3DefaultExpiry = 15*60
+       , s3SignVersion = S3SignV2
        }
+
+s3v4 :: Protocol -> B.ByteString -> Bool -> S3SignPayloadMode -> S3Configuration qt
+s3v4 protocol endpoint uri payload
+    = S3Configuration
+    { s3Protocol = protocol
+    , s3Endpoint = endpoint
+    , s3RequestStyle = BucketStyle
+    , s3Port = defaultPort protocol
+    , s3ServerSideEncryption = Nothing
+    , s3UseUri = uri
+    , s3DefaultExpiry = 15*60
+    , s3SignVersion = S3SignV4 payload
+    }
+
 
 type ErrorCode = T.Text
 
