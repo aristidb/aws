@@ -2,10 +2,11 @@
 module Aws.S3.Core where
 
 import           Aws.Core
-import           Control.Arrow                  ((***))
+import           Control.Arrow                  (first, (***))
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
+import           Data.Char                      (isAscii, isAlphaNum, toUpper, ord)
 import           Data.Conduit                   (($$+-))
 import           Data.Function
 import           Data.Functor                   ((<$>))
@@ -16,6 +17,7 @@ import           Data.Monoid
 import           Control.Applicative            ((<|>))
 import           Data.Time
 import           Data.Typeable
+import           Numeric                        (showHex)
 #if !MIN_VERSION_time(1,5,0)
 import           System.Locale
 #endif
@@ -27,9 +29,11 @@ import qualified Crypto.Hash                    as CH
 import qualified Data.ByteArray                 as ByteArray
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
+import qualified Data.ByteString.Base16         as Base16
 import qualified Data.ByteString.Base64         as Base64
 import qualified Data.CaseInsensitive           as CI
 import qualified Data.Conduit                   as C
+import qualified Data.Map                       as Map
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import qualified Network.HTTP.Conduit           as HTTP
@@ -188,8 +192,18 @@ instance Show S3Query where
                        " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++
                        "]"
 
+hAmzDate, hAmzContentSha256, hAmzAlgorithm, hAmzCredential, hAmzExpires, hAmzSignedHeaders, hAmzSignature, hAmzSecurityToken :: HTTP.HeaderName
+hAmzDate          = "X-Amz-Date"
+hAmzContentSha256 = "X-Amz-Content-Sha256"
+hAmzAlgorithm     = "X-Amz-Algorithm"
+hAmzCredential    = "X-Amz-Credential"
+hAmzExpires       = "X-Amz-Expires"
+hAmzSignedHeaders = "X-Amz-SignedHeaders"
+hAmzSignature     = "X-Amz-Signature"
+hAmzSecurityToken = "X-Amz-Security-Token"
+
 s3SignQuery :: S3Query -> S3Configuration qt -> SignatureData -> SignedQuery
-s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
+s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV2, .. } SignatureData{..}
     = SignedQuery {
         sqMethod = s3QMethod
       , sqProtocol = s3Protocol
@@ -262,6 +276,178 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
             , ("AWSAccessKeyId", accessKeyID signatureCredentials)
             , ("SignatureMethod", "HmacSHA256")
             , ("Signature", sig)] ++ iamTok
+s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV4 signpayload, .. } sd@SignatureData{..}
+    = SignedQuery
+    { sqMethod = s3QMethod
+    , sqProtocol = s3Protocol
+    , sqHost = B.intercalate "." $ catMaybes host
+    , sqPort = s3Port
+    , sqPath = mconcat $ catMaybes path
+    , sqQuery = queryString ++ signatureQuery :: HTTP.Query
+    , sqDate = Just signatureTime
+    , sqAuthorization = authorization
+    , sqContentType = s3QContentType
+    , sqContentMd5 = s3QContentMd5
+    , sqAmzHeaders = Map.toList amzHeaders
+    , sqOtherHeaders = s3QOtherHeaders
+    , sqBody = s3QRequestBody
+    , sqStringToSign = stringToSign
+    }
+    where
+        -- V4 signing
+        -- * <http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html>
+        -- * <http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html>
+        -- * <http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html>
+
+        iamTok = maybe [] (\x -> [(hAmzSecurityToken, x)]) $ iamToken signatureCredentials
+
+        amzHeaders = Map.fromList $ (hAmzDate, sigTime):(hAmzContentSha256, payloadHash):iamTok ++ s3QAmzHeaders
+            where
+                -- needs to match the one produces in the @authorizationV4@
+                sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime
+                payloadHash = case (signpayload, s3QRequestBody) of
+                    (AlwaysUnsigned, _)                              -> "UNSIGNED-PAYLOAD"
+                    (SignWithEffort, Nothing)                        -> emptyBodyHash
+                    (SignWithEffort, Just (HTTP.RequestBodyLBS lbs)) -> Base16.encode $ ByteArray.convert (CH.hashlazy lbs :: CH.Digest CH.SHA256)
+                    (SignWithEffort, Just (HTTP.RequestBodyBS bs))   -> Base16.encode $ ByteArray.convert (CH.hash bs :: CH.Digest CH.SHA256)
+                    _                                                -> "UNSIGNED-PAYLOAD"
+                emptyBodyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+        (host, path) = case s3RequestStyle of
+            PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
+            BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", urlEncodedS3QObject])
+            VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/", urlEncodedS3QObject])
+            where
+                urlEncodedS3QObject = s3UriEncode False <$> s3QObject
+
+        -- must provide host in the canonical headers.
+        canonicalHeaders = Map.union amzHeaders . Map.fromList $ catMaybes
+            [ Just ("host", B.intercalate "." $ catMaybes host)
+            , ("content-type",) <$> s3QContentType
+            ]
+        signedHeaders = B8.intercalate ";" (map CI.foldedCase $ Map.keys canonicalHeaders)
+        stringToSign = B.intercalate "\n" $
+            [ httpMethod s3QMethod                   -- method
+            , mconcat . catMaybes $ path             -- path
+            , s3RenderQuery False $ sort queryString -- query string
+            ] ++
+            Map.foldMapWithKey (\a b -> [CI.foldedCase a <> ":" <> b]) canonicalHeaders ++
+            [ "" -- end headers
+            , signedHeaders
+            , amzHeaders Map.! hAmzContentSha256
+            ]
+
+        (authorization, signatureQuery, queryString) = case ti of
+            AbsoluteTimestamp _  -> (Just . return $ auth, [], allQueries)
+            AbsoluteExpires time ->
+                ( Nothing
+                , [(CI.original hAmzSignature, Just sig)]
+                , (allQueries ++) . HTTP.toQuery . map (first CI.original) $
+                    [ (hAmzAlgorithm, "AWS4-HMAC-SHA256")
+                    , (hAmzCredential, cred)
+                    , (hAmzDate, amzHeaders Map.! hAmzDate)
+                    , (hAmzExpires, B8.pack . show . floor $ diffUTCTime time signatureTime)
+                    , (hAmzSignedHeaders, signedHeaders)
+                    ] ++ iamTok
+                )
+            where
+                allQueries = s3QSubresources ++ s3QQuery
+                region = s3ExtractRegion s3Endpoint
+                auth = authorizationV4' sd HmacSHA256 region "s3" signedHeaders stringToSign
+                sig  = signatureV4      sd HmacSHA256 region "s3"               stringToSign
+                cred = credentialV4     sd            region "s3"
+                ti = case (s3UseUri, signatureTimeInfo) of
+                    (False, t) -> t
+                    (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
+                    (True, AbsoluteExpires time) -> AbsoluteExpires time
+
+-- | Custom UriEncode function
+-- see <http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html>
+s3UriEncode
+    :: Bool         -- ^ Whether encode slash characters
+    -> B.ByteString
+    -> B.ByteString
+s3UriEncode encodeSlash = B8.concatMap $ \c ->
+    if (isAscii c && isAlphaNum c) || (c `elem` nonEncodeMarks)
+        then B8.singleton c
+        else B8.pack $ '%' : map toUpper (showHex (ord c) "")
+    where
+        nonEncodeMarks :: String
+        nonEncodeMarks = if encodeSlash
+            then "_-~."
+            else "_-~./"
+
+s3RenderQuery
+    :: Bool -- ^ Whether prepend a question mark
+    -> HTTP.Query
+    -> B.ByteString
+s3RenderQuery qm = mconcat . qmf . intersperse (B8.singleton '&') . map renderItem
+    where
+        qmf = if qm then ("?":) else id
+
+        renderItem :: HTTP.QueryItem -> B8.ByteString
+        renderItem (k, Just v) = s3UriEncode True k <> "=" <> s3UriEncode True v
+        renderItem (k, Nothing) = s3UriEncode True k <> "="
+
+-- | see: <http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region>
+s3ExtractRegion :: B.ByteString -> B.ByteString
+s3ExtractRegion "s3.us-east-2.amazonaws.com"           = "us-east-2"
+s3ExtractRegion "s3-us-east-2.amazonaws.com"           = "us-east-2"
+s3ExtractRegion "s3.dualstack.us-east-2.amazonaws.com" = "us-east-2"
+
+s3ExtractRegion "s3.amazonaws.com"                     = "us-east-1"
+s3ExtractRegion "s3-external-1.amazonaws.com"          = "us-east-1"
+s3ExtractRegion "s3.dualstack.us-east-1.amazonaws.com" = "us-east-1"
+
+s3ExtractRegion "s3.us-west-1.amazonaws.com"           = "us-west-1"
+s3ExtractRegion "s3-us-west-1.amazonaws.com"           = "us-west-1"
+s3ExtractRegion "s3.dualstack.us-west-1.amazonaws.com" = "us-west-1"
+
+s3ExtractRegion "s3.us-west-2.amazonaws.com"           = "us-west-2"
+s3ExtractRegion "s3-us-west-2.amazonaws.com"           = "us-west-2"
+s3ExtractRegion "s3.dualstack.us-west-2.amazonaws.com" = "us-west-2"
+
+s3ExtractRegion "s3.ca-central-1.amazonaws.com"           = "ca-central-1"
+s3ExtractRegion "s3-ca-central-1.amazonaws.com"           = "ca-central-1"
+s3ExtractRegion "s3.dualstack.ca-central-1.amazonaws.com" = "ca-central-1"
+
+s3ExtractRegion "s3.ap-south-1.amazonaws.com"           = "ap-south-1"
+s3ExtractRegion "s3-ap-south-1.amazonaws.com"           = "ap-south-1"
+s3ExtractRegion "s3.dualstack.ap-south-1.amazonaws.com" = "ap-south-1"
+
+s3ExtractRegion "s3.ap-northeast-2.amazonaws.com"           = "ap-northeast-2"
+s3ExtractRegion "s3-ap-northeast-2.amazonaws.com"           = "ap-northeast-2"
+s3ExtractRegion "s3.dualstack.ap-northeast-2.amazonaws.com" = "ap-northeast-2"
+
+s3ExtractRegion "s3.ap-southeast-1.amazonaws.com"           = "ap-southeast-1"
+s3ExtractRegion "s3-ap-southeast-1.amazonaws.com"           = "ap-southeast-1"
+s3ExtractRegion "s3.dualstack.ap-southeast-1.amazonaws.com" = "ap-southeast-1"
+
+s3ExtractRegion "s3.ap-southeast-2.amazonaws.com"           = "ap-southeast-2"
+s3ExtractRegion "s3-ap-southeast-2.amazonaws.com"           = "ap-southeast-2"
+s3ExtractRegion "s3.dualstack.ap-southeast-2.amazonaws.com" = "ap-southeast-2"
+
+s3ExtractRegion "s3.ap-northeast-1.amazonaws.com"           = "ap-northeast-1"
+s3ExtractRegion "s3-ap-northeast-1.amazonaws.com"           = "ap-northeast-1"
+s3ExtractRegion "s3.dualstack.ap-northeast-1.amazonaws.com" = "ap-northeast-1"
+
+s3ExtractRegion "s3.eu-central-1.amazonaws.com"           = "eu-central-1"
+s3ExtractRegion "s3-eu-central-1.amazonaws.com"           = "eu-central-1"
+s3ExtractRegion "s3.dualstack.eu-central-1.amazonaws.com" = "eu-central-1"
+
+s3ExtractRegion "s3.eu-west-1.amazonaws.com"           = "eu-west-1"
+s3ExtractRegion "s3-eu-west-1.amazonaws.com"           = "eu-west-1"
+s3ExtractRegion "s3.dualstack.eu-west-1.amazonaws.com" = "eu-west-1"
+
+s3ExtractRegion "s3.eu-west-2.amazonaws.com"           = "eu-west-2"
+s3ExtractRegion "s3-eu-west-2.amazonaws.com"           = "eu-west-2"
+s3ExtractRegion "s3.dualstack.eu-west-2.amazonaws.com" = "eu-west-2"
+
+s3ExtractRegion "s3.sa-east-1.amazonaws.com"           = "sa-east-1"
+s3ExtractRegion "s3-sa-east-1.amazonaws.com"           = "sa-east-1"
+s3ExtractRegion "s3.dualstack.sa-east-1.amazonaws.com" = "sa-east-1"
+
+s3ExtractRegion others = others
 
 s3ResponseConsumer :: HTTPResponseConsumer a
                          -> IORef S3Metadata
