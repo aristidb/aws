@@ -29,21 +29,13 @@ data PutObject = PutObject {
   poStorageClass :: Maybe StorageClass,
   poWebsiteRedirectLocation :: Maybe T.Text,
   poServerSideEncryption :: Maybe ServerSideEncryption,
-#if MIN_VERSION_http_conduit(2, 0, 0)
   poRequestBody  :: HTTP.RequestBody,
-#else
-  poRequestBody  :: HTTP.RequestBody (C.ResourceT IO),
-#endif
   poMetadata :: [(T.Text,T.Text)],
   poAutoMakeBucket :: Bool, -- ^ Internet Archive S3 nonstandard extension
   poExpect100Continue :: Bool -- ^ Note: Requires http-client >= 0.4.10
 }
 
-#if MIN_VERSION_http_conduit(2, 0, 0)
 putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
-#else
-putObject :: Bucket -> T.Text -> HTTP.RequestBody (C.ResourceT IO) -> PutObject
-#endif
 putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False False
 
 data PutObjectResponse

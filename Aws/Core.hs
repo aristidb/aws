@@ -452,22 +452,14 @@ data SignedQuery
         -- | Additional non-"amz" headers.
       , sqOtherHeaders :: !HTTP.RequestHeaders
         -- | Request body (used with 'Post' and 'Put').
-#if MIN_VERSION_http_conduit(2, 0, 0)
       , sqBody :: !(Maybe HTTP.RequestBody)
-#else
-      , sqBody :: !(Maybe (HTTP.RequestBody (C.ResourceT IO)))
-#endif
         -- | String to sign. Note that the string is already signed, this is passed mostly for debugging purposes.
       , sqStringToSign :: !B.ByteString
       }
     --deriving (Show)
 
 -- | Create a HTTP request from a 'SignedQuery' object.
-#if MIN_VERSION_http_conduit(2, 0, 0)
 queryToHttpRequest :: SignedQuery -> IO HTTP.Request
-#else
-queryToHttpRequest :: SignedQuery -> IO (HTTP.Request (C.ResourceT IO))
-#endif
 queryToHttpRequest SignedQuery{..} =  do
     mauth <- maybe (return Nothing) (Just<$>) sqAuthorization
     return $ HTTP.defaultRequest {
