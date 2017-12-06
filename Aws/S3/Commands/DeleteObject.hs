@@ -10,10 +10,10 @@ import qualified Data.Text.Encoding         as T
 data DeleteObject = DeleteObject {
   doObjectName :: T.Text,
   doBucket :: Bucket
-}
+} deriving (Show)
 
 data DeleteObjectResponse = DeleteObjectResponse{
-}
+} deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery DeleteObject where

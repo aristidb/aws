@@ -13,7 +13,7 @@ import           Text.XML.Cursor  (($/), ($//), (&|))
 import qualified Data.Text        as T
 import qualified Text.XML.Cursor  as Cu
 
-data GetService = GetService
+data GetService = GetService deriving (Show)
 
 data GetServiceResponse
     = GetServiceResponse {

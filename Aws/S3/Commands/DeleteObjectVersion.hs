@@ -11,7 +11,7 @@ data DeleteObjectVersion = DeleteObjectVersion {
   dovObjectName :: T.Text,
   dovBucket :: Bucket,
   dovVersionId :: T.Text
-}
+} deriving (Show)
 
 deleteObjectVersion :: Bucket -> T.Text -> T.Text -> DeleteObjectVersion
 deleteObjectVersion bucket object version
@@ -22,7 +22,7 @@ deleteObjectVersion bucket object version
         }
 
 data DeleteObjectVersionResponse = DeleteObjectVersionResponse {
-}
+} deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery DeleteObjectVersion where
