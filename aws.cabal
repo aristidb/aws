@@ -171,6 +171,24 @@ Library
         EmptyDataDecls,
         Rank2Types
 
+Executable GetObjectV4
+  Main-is: GetObjectV4.hs
+  Hs-source-dirs: Examples
+
+  if !flag(Examples)
+    Buildable: False
+  else
+    Buildable: True
+    Build-depends:
+                       base == 4.*,
+                       aws,
+                       http-conduit,
+                       conduit,
+                       conduit-extra,
+                       resourcet
+
+  Default-Language: Haskell2010
+
 Executable GetObject
   Main-is: GetObject.hs
   Hs-source-dirs: Examples
