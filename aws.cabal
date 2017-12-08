@@ -234,6 +234,7 @@ Executable MultipartUpload
     Build-depends:
                        base == 4.*,
                        aws,
+                       bytestring,
                        http-conduit,
                        conduit,
                        conduit-extra,
