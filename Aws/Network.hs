@@ -15,6 +15,6 @@ hostAvailable h = do
     remote@(SockAddrInet _ _) -> do
       v <- catch (timeout 100000 (connect sock remote) >>= return . isJust)
                  (\(_ :: SomeException) -> return False)
-      sClose sock
+      close sock
       return v
     _ -> return False

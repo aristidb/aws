@@ -162,7 +162,7 @@ iamResponseConsumer inner md resp = xmlCursorConsumer parse md resp
 -- | Parses IAM @DateTime@ data type.
 parseDateTime :: MonadThrow m => String -> m UTCTime
 parseDateTime x
-    = case parseTime defaultTimeLocale iso8601UtcDate x of
+    = case parseTimeM True defaultTimeLocale iso8601UtcDate x of
         Nothing -> throwM $ XmlException $ "Invalid DateTime: " ++ x
         Just dt -> return dt
 

@@ -346,7 +346,7 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV4 signpayload, .
                     [ (hAmzAlgorithm, "AWS4-HMAC-SHA256")
                     , (hAmzCredential, cred)
                     , (hAmzDate, amzHeaders Map.! hAmzDate)
-                    , (hAmzExpires, B8.pack . show . floor $ diffUTCTime time signatureTime)
+                    , (hAmzExpires, B8.pack . (show :: Integer -> String) . floor $ diffUTCTime time signatureTime)
                     , (hAmzSignedHeaders, signedHeaders)
                     ] ++ iamTok
                 )
@@ -623,8 +623,8 @@ parseObjectVersionInfo el
     = do key <- force "Missing object Key" $ el $/ elContent "Key"
          versionId <- force "Missing object VersionId" $ el $/ elContent "VersionId"
          isLatest <- forceM "Missing object IsLatest" $ el $/ elContent "IsLatest" &| textReadBool
-         let time s = case (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
-                           (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
+         let time s = case (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
+                           (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
                         Nothing -> throwM $ XmlException "Invalid time"
                         Just v -> return v
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time
@@ -674,8 +674,8 @@ data ObjectInfo
 parseObjectInfo :: MonadThrow m => Cu.Cursor -> m ObjectInfo
 parseObjectInfo el
     = do key <- force "Missing object Key" $ el $/ elContent "Key"
-         let time s = case (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
-                           (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
+         let time s = case (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
+                           (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
                         Nothing -> throwM $ XmlException "Invalid time"
                         Just v -> return v
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time

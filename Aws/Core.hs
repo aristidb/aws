@@ -825,7 +825,7 @@ parseHttpDate s =     p "%a, %d %b %Y %H:%M:%S GMT" s -- rfc1123-date
                   <|> p "%a %b %_d %H:%M:%S %Y" s     -- asctime-date
                   <|> p "%Y-%m-%dT%H:%M:%S%QZ" s      -- iso 8601
                   <|> p "%Y-%m-%dT%H:%M:%S%Q%Z" s     -- iso 8601
-  where p = parseTime defaultTimeLocale
+  where p = parseTimeM True defaultTimeLocale
 
 -- | HTTP-date (section 3.3.1 of RFC 2616, first type - RFC1123-style)
 httpDate1 :: String
