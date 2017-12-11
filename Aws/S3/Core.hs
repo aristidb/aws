@@ -56,6 +56,7 @@ data RequestStyle
 data S3SignPayloadMode
     = AlwaysUnsigned -- ^ Always use the "UNSIGNED-PAYLOAD" option.
     | SignWithEffort -- ^ Sign the payload when 'HTTP.RequestBody' is a on-memory one ('HTTP.RequestBodyLBS' or 'HTTP.RequestBodyBS'). Otherwise use the "UNSINGED-PAYLOAD" option.
+    | AlwaysSigned   -- ^ Always sign the payload. Note: 'error' called when 'HTTP.RequestBody' is a streaming one.
     deriving (Eq, Show, Read, Typeable)
 
 data S3SignVersion
@@ -306,11 +307,12 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV4 signpayload, .
                 -- needs to match the one produces in the @authorizationV4@
                 sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime
                 payloadHash = case (signpayload, s3QRequestBody) of
-                    (AlwaysUnsigned, _)                              -> "UNSIGNED-PAYLOAD"
-                    (SignWithEffort, Nothing)                        -> emptyBodyHash
-                    (SignWithEffort, Just (HTTP.RequestBodyLBS lbs)) -> Base16.encode $ ByteArray.convert (CH.hashlazy lbs :: CH.Digest CH.SHA256)
-                    (SignWithEffort, Just (HTTP.RequestBodyBS bs))   -> Base16.encode $ ByteArray.convert (CH.hash bs :: CH.Digest CH.SHA256)
-                    _                                                -> "UNSIGNED-PAYLOAD"
+                    (AlwaysUnsigned, _)                 -> "UNSIGNED-PAYLOAD"
+                    (_, Nothing)                        -> emptyBodyHash
+                    (_, Just (HTTP.RequestBodyLBS lbs)) -> Base16.encode $ ByteArray.convert (CH.hashlazy lbs :: CH.Digest CH.SHA256)
+                    (_, Just (HTTP.RequestBodyBS bs))   -> Base16.encode $ ByteArray.convert (CH.hash bs :: CH.Digest CH.SHA256)
+                    (SignWithEffort, _)                 -> "UNSIGNED-PAYLOAD"
+                    (AlwaysSigned, _)                   -> error "aws: RequestBody must be a on-memory one when AlwaysSigned mode."
                 emptyBodyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
         (host, path) = case s3RequestStyle of
