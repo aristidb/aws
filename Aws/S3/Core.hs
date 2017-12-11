@@ -340,7 +340,7 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV4 signpayload, .
             ]
 
         (authorization, signatureQuery, queryString) = case ti of
-            AbsoluteTimestamp _  -> (Just . return $ auth, [], allQueries)
+            AbsoluteTimestamp _  -> (Just auth, [], allQueries)
             AbsoluteExpires time ->
                 ( Nothing
                 , [(CI.original hAmzSignature, Just sig)]
@@ -355,9 +355,9 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV4 signpayload, .
             where
                 allQueries = s3QSubresources ++ s3QQuery
                 region = s3ExtractRegion s3Endpoint
-                auth = authorizationV4' sd HmacSHA256 region "s3" signedHeaders stringToSign
-                sig  = signatureV4      sd HmacSHA256 region "s3"               stringToSign
-                cred = credentialV4     sd            region "s3"
+                auth = authorizationV4 sd HmacSHA256 region "s3" signedHeaders stringToSign
+                sig  = signatureV4     sd HmacSHA256 region "s3"               stringToSign
+                cred = credentialV4    sd            region "s3"
                 ti = case (s3UseUri, signatureTimeInfo) of
                     (False, t) -> t
                     (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
