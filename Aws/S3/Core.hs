@@ -22,6 +22,7 @@ import           Numeric                        (showHex)
 import           System.Locale
 #endif
 import           Text.XML.Cursor                (($/), (&|))
+import qualified Data.Attoparsec.ByteString     as Atto
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
@@ -393,63 +394,19 @@ s3RenderQuery qm = mconcat . qmf . intersperse (B8.singleton '&') . map renderIt
 
 -- | see: <http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region>
 s3ExtractRegion :: B.ByteString -> B.ByteString
-s3ExtractRegion "s3.us-east-2.amazonaws.com"           = "us-east-2"
-s3ExtractRegion "s3-us-east-2.amazonaws.com"           = "us-east-2"
-s3ExtractRegion "s3.dualstack.us-east-2.amazonaws.com" = "us-east-2"
-
-s3ExtractRegion "s3.amazonaws.com"                     = "us-east-1"
-s3ExtractRegion "s3-external-1.amazonaws.com"          = "us-east-1"
-s3ExtractRegion "s3.dualstack.us-east-1.amazonaws.com" = "us-east-1"
-
-s3ExtractRegion "s3.us-west-1.amazonaws.com"           = "us-west-1"
-s3ExtractRegion "s3-us-west-1.amazonaws.com"           = "us-west-1"
-s3ExtractRegion "s3.dualstack.us-west-1.amazonaws.com" = "us-west-1"
-
-s3ExtractRegion "s3.us-west-2.amazonaws.com"           = "us-west-2"
-s3ExtractRegion "s3-us-west-2.amazonaws.com"           = "us-west-2"
-s3ExtractRegion "s3.dualstack.us-west-2.amazonaws.com" = "us-west-2"
-
-s3ExtractRegion "s3.ca-central-1.amazonaws.com"           = "ca-central-1"
-s3ExtractRegion "s3-ca-central-1.amazonaws.com"           = "ca-central-1"
-s3ExtractRegion "s3.dualstack.ca-central-1.amazonaws.com" = "ca-central-1"
-
-s3ExtractRegion "s3.ap-south-1.amazonaws.com"           = "ap-south-1"
-s3ExtractRegion "s3-ap-south-1.amazonaws.com"           = "ap-south-1"
-s3ExtractRegion "s3.dualstack.ap-south-1.amazonaws.com" = "ap-south-1"
-
-s3ExtractRegion "s3.ap-northeast-2.amazonaws.com"           = "ap-northeast-2"
-s3ExtractRegion "s3-ap-northeast-2.amazonaws.com"           = "ap-northeast-2"
-s3ExtractRegion "s3.dualstack.ap-northeast-2.amazonaws.com" = "ap-northeast-2"
-
-s3ExtractRegion "s3.ap-southeast-1.amazonaws.com"           = "ap-southeast-1"
-s3ExtractRegion "s3-ap-southeast-1.amazonaws.com"           = "ap-southeast-1"
-s3ExtractRegion "s3.dualstack.ap-southeast-1.amazonaws.com" = "ap-southeast-1"
-
-s3ExtractRegion "s3.ap-southeast-2.amazonaws.com"           = "ap-southeast-2"
-s3ExtractRegion "s3-ap-southeast-2.amazonaws.com"           = "ap-southeast-2"
-s3ExtractRegion "s3.dualstack.ap-southeast-2.amazonaws.com" = "ap-southeast-2"
-
-s3ExtractRegion "s3.ap-northeast-1.amazonaws.com"           = "ap-northeast-1"
-s3ExtractRegion "s3-ap-northeast-1.amazonaws.com"           = "ap-northeast-1"
-s3ExtractRegion "s3.dualstack.ap-northeast-1.amazonaws.com" = "ap-northeast-1"
-
-s3ExtractRegion "s3.eu-central-1.amazonaws.com"           = "eu-central-1"
-s3ExtractRegion "s3-eu-central-1.amazonaws.com"           = "eu-central-1"
-s3ExtractRegion "s3.dualstack.eu-central-1.amazonaws.com" = "eu-central-1"
-
-s3ExtractRegion "s3.eu-west-1.amazonaws.com"           = "eu-west-1"
-s3ExtractRegion "s3-eu-west-1.amazonaws.com"           = "eu-west-1"
-s3ExtractRegion "s3.dualstack.eu-west-1.amazonaws.com" = "eu-west-1"
-
-s3ExtractRegion "s3.eu-west-2.amazonaws.com"           = "eu-west-2"
-s3ExtractRegion "s3-eu-west-2.amazonaws.com"           = "eu-west-2"
-s3ExtractRegion "s3.dualstack.eu-west-2.amazonaws.com" = "eu-west-2"
-
-s3ExtractRegion "s3.sa-east-1.amazonaws.com"           = "sa-east-1"
-s3ExtractRegion "s3-sa-east-1.amazonaws.com"           = "sa-east-1"
-s3ExtractRegion "s3.dualstack.sa-east-1.amazonaws.com" = "sa-east-1"
-
-s3ExtractRegion others = others
+s3ExtractRegion "s3.amazonaws.com"            = "us-east-1"
+s3ExtractRegion "s3-external-1.amazonaws.com" = "us-east-1"
+s3ExtractRegion domain = either (const domain) B.pack $ Atto.parseOnly parser domain
+    where
+        -- s3.dualstack.<WA-DIR-N>.amazonaws.com
+        -- s3-<WA-DIR-N>.amazonaws.com
+        -- s3.<WA-DIR-N>.amazonaws.com
+        parser = do
+            _ <- Atto.string "s3"
+            _ <- Atto.string ".dualstack." <|> Atto.string "-" <|> Atto.string "."
+            r <- Atto.manyTill Atto.anyWord8 $ Atto.string ".amazonaws.com"
+            Atto.endOfInput
+            return r
 
 s3ResponseConsumer :: HTTPResponseConsumer a
                          -> IORef S3Metadata
