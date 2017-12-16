@@ -98,7 +98,7 @@ instance ResponseConsumer CopyObject CopyObjectResponse where
         (lastMod, etag) <- xmlCursorConsumer parse mref resp
         return $ CopyObjectResponse vid lastMod etag
       where parse el = do
-              let parseHttpDate' x = case parseTime defaultTimeLocale iso8601UtcDate x of
+              let parseHttpDate' x = case parseTimeM True defaultTimeLocale iso8601UtcDate x of
                                        Nothing -> throwM $ XmlException ("Invalid Last-Modified " ++ x)
                                        Just y -> return y
               lastMod <- forceM "Missing Last-Modified" $ el $/ elContent "LastModified" &| (parseHttpDate' . T.unpack)

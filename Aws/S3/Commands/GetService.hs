@@ -13,7 +13,7 @@ import           Text.XML.Cursor  (($/), ($//), (&|))
 import qualified Data.Text        as T
 import qualified Text.XML.Cursor  as Cu
 
-data GetService = GetService
+data GetService = GetService deriving (Show)
 
 data GetServiceResponse
     = GetServiceResponse {
@@ -35,7 +35,7 @@ instance ResponseConsumer r GetServiceResponse where
           parseBucket el = do
             name <- force "Missing owner Name" $ el $/ elContent "Name"
             creationDateString <- force "Missing owner CreationDate" $ el $/ elContent "CreationDate" &| T.unpack
-            creationDate <- force "Invalid CreationDate" . maybeToList $ parseTime defaultTimeLocale iso8601UtcDate creationDateString
+            creationDate <- force "Invalid CreationDate" . maybeToList $ parseTimeM True defaultTimeLocale iso8601UtcDate creationDateString
             return BucketInfo { bucketName = name, bucketCreationDate = creationDate }
 
 -- | ServiceConfiguration: 'S3Configuration'

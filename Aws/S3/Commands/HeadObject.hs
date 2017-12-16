@@ -31,7 +31,7 @@ headObject b o = HeadObject b o Nothing Nothing Nothing
 data HeadObjectResponse
     = HeadObjectResponse {
         horMetadata :: Maybe ObjectMetadata
-      }
+      } deriving (Show)
 
 data HeadObjectMemoryResponse
     = HeadObjectMemoryResponse (Maybe ObjectMetadata)

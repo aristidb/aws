@@ -2,10 +2,11 @@
 module Aws.S3.Core where
 
 import           Aws.Core
-import           Control.Arrow                  ((***))
+import           Control.Arrow                  (first, (***))
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
+import           Data.Char                      (isAscii, isAlphaNum, toUpper, ord)
 import           Data.Conduit                   (($$+-))
 import           Data.Function
 import           Data.Functor                   ((<$>))
@@ -16,10 +17,12 @@ import           Data.Monoid
 import           Control.Applicative            ((<|>))
 import           Data.Time
 import           Data.Typeable
+import           Numeric                        (showHex)
 #if !MIN_VERSION_time(1,5,0)
 import           System.Locale
 #endif
 import           Text.XML.Cursor                (($/), (&|))
+import qualified Data.Attoparsec.ByteString     as Atto
 import qualified Blaze.ByteString.Builder       as Blaze
 import qualified Blaze.ByteString.Builder.Char8 as Blaze8
 import qualified Control.Exception              as C
@@ -27,9 +30,11 @@ import qualified Crypto.Hash                    as CH
 import qualified Data.ByteArray                 as ByteArray
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as B8
+import qualified Data.ByteString.Base16         as Base16
 import qualified Data.ByteString.Base64         as Base64
 import qualified Data.CaseInsensitive           as CI
 import qualified Data.Conduit                   as C
+import qualified Data.Map                       as Map
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import qualified Network.HTTP.Conduit           as HTTP
@@ -49,6 +54,17 @@ data RequestStyle
     | VHostStyle
     deriving (Show)
 
+data S3SignPayloadMode
+    = AlwaysUnsigned -- ^ Always use the "UNSIGNED-PAYLOAD" option.
+    | SignWithEffort -- ^ Sign the payload when 'HTTP.RequestBody' is a on-memory one ('HTTP.RequestBodyLBS' or 'HTTP.RequestBodyBS'). Otherwise use the "UNSINGED-PAYLOAD" option.
+    | AlwaysSigned   -- ^ Always sign the payload. Note: 'error' called when 'HTTP.RequestBody' is a streaming one.
+    deriving (Eq, Show, Read, Typeable)
+
+data S3SignVersion
+    = S3SignV2
+    | S3SignV4 { _s3SignPayloadMode :: S3SignPayloadMode }
+    deriving (Eq, Show, Read, Typeable)
+
 data S3Configuration qt
     = S3Configuration {
         s3Protocol :: Protocol
@@ -58,6 +74,7 @@ data S3Configuration qt
       , s3ServerSideEncryption :: Maybe ServerSideEncryption
       , s3UseUri :: Bool
       , s3DefaultExpiry :: NominalDiffTime
+      , s3SignVersion :: S3SignVersion
       }
     deriving (Show)
 
@@ -101,7 +118,22 @@ s3 protocol endpoint uri
        , s3ServerSideEncryption = Nothing
        , s3UseUri = uri
        , s3DefaultExpiry = 15*60
+       , s3SignVersion = S3SignV2
        }
+
+s3v4 :: Protocol -> B.ByteString -> Bool -> S3SignPayloadMode -> S3Configuration qt
+s3v4 protocol endpoint uri payload
+    = S3Configuration
+    { s3Protocol = protocol
+    , s3Endpoint = endpoint
+    , s3RequestStyle = BucketStyle
+    , s3Port = defaultPort protocol
+    , s3ServerSideEncryption = Nothing
+    , s3UseUri = uri
+    , s3DefaultExpiry = 15*60
+    , s3SignVersion = S3SignV4 payload
+    }
+
 
 type ErrorCode = T.Text
 
@@ -150,11 +182,7 @@ data S3Query
       , s3QContentMd5 :: Maybe (CH.Digest CH.MD5)
       , s3QAmzHeaders :: HTTP.RequestHeaders
       , s3QOtherHeaders :: HTTP.RequestHeaders
-#if MIN_VERSION_http_conduit(2, 0, 0)
       , s3QRequestBody :: Maybe HTTP.RequestBody
-#else
-      , s3QRequestBody :: Maybe (HTTP.RequestBody (C.ResourceT IO))
-#endif
       }
 
 instance Show S3Query where
@@ -166,8 +194,18 @@ instance Show S3Query where
                        " ; request body: " ++ (case s3QRequestBody of Nothing -> "no"; _ -> "yes") ++
                        "]"
 
+hAmzDate, hAmzContentSha256, hAmzAlgorithm, hAmzCredential, hAmzExpires, hAmzSignedHeaders, hAmzSignature, hAmzSecurityToken :: HTTP.HeaderName
+hAmzDate          = "X-Amz-Date"
+hAmzContentSha256 = "X-Amz-Content-Sha256"
+hAmzAlgorithm     = "X-Amz-Algorithm"
+hAmzCredential    = "X-Amz-Credential"
+hAmzExpires       = "X-Amz-Expires"
+hAmzSignedHeaders = "X-Amz-SignedHeaders"
+hAmzSignature     = "X-Amz-Signature"
+hAmzSecurityToken = "X-Amz-Security-Token"
+
 s3SignQuery :: S3Query -> S3Configuration qt -> SignatureData -> SignedQuery
-s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
+s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV2, .. } SignatureData{..}
     = SignedQuery {
         sqMethod = s3QMethod
       , sqProtocol = s3Protocol
@@ -240,6 +278,135 @@ s3SignQuery S3Query{..} S3Configuration{..} SignatureData{..}
             , ("AWSAccessKeyId", accessKeyID signatureCredentials)
             , ("SignatureMethod", "HmacSHA256")
             , ("Signature", sig)] ++ iamTok
+s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV4 signpayload, .. } sd@SignatureData{..}
+    = SignedQuery
+    { sqMethod = s3QMethod
+    , sqProtocol = s3Protocol
+    , sqHost = B.intercalate "." $ catMaybes host
+    , sqPort = s3Port
+    , sqPath = mconcat $ catMaybes path
+    , sqQuery = queryString ++ signatureQuery :: HTTP.Query
+    , sqDate = Just signatureTime
+    , sqAuthorization = authorization
+    , sqContentType = s3QContentType
+    , sqContentMd5 = s3QContentMd5
+    , sqAmzHeaders = Map.toList amzHeaders
+    , sqOtherHeaders = s3QOtherHeaders
+    , sqBody = s3QRequestBody
+    , sqStringToSign = stringToSign
+    }
+    where
+        -- V4 signing
+        -- * <http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html>
+        -- * <http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html>
+        -- * <http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html>
+
+        iamTok = maybe [] (\x -> [(hAmzSecurityToken, x)]) $ iamToken signatureCredentials
+
+        amzHeaders = Map.fromList $ (hAmzDate, sigTime):(hAmzContentSha256, payloadHash):iamTok ++ s3QAmzHeaders
+            where
+                -- needs to match the one produces in the @authorizationV4@
+                sigTime = fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime
+                payloadHash = case (signpayload, s3QRequestBody) of
+                    (AlwaysUnsigned, _)                 -> "UNSIGNED-PAYLOAD"
+                    (_, Nothing)                        -> emptyBodyHash
+                    (_, Just (HTTP.RequestBodyLBS lbs)) -> Base16.encode $ ByteArray.convert (CH.hashlazy lbs :: CH.Digest CH.SHA256)
+                    (_, Just (HTTP.RequestBodyBS bs))   -> Base16.encode $ ByteArray.convert (CH.hash bs :: CH.Digest CH.SHA256)
+                    (SignWithEffort, _)                 -> "UNSIGNED-PAYLOAD"
+                    (AlwaysSigned, _)                   -> error "aws: RequestBody must be a on-memory one when AlwaysSigned mode."
+                emptyBodyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+        (host, path) = case s3RequestStyle of
+            PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
+            BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", urlEncodedS3QObject])
+            VHostStyle  -> ([Just $ fromMaybe s3Endpoint s3QBucket], [Just "/", urlEncodedS3QObject])
+            where
+                urlEncodedS3QObject = s3UriEncode False <$> s3QObject
+
+        -- must provide host in the canonical headers.
+        canonicalHeaders = Map.union amzHeaders . Map.fromList $ catMaybes
+            [ Just ("host", B.intercalate "." $ catMaybes host)
+            , ("content-type",) <$> s3QContentType
+            ]
+        signedHeaders = B8.intercalate ";" (map CI.foldedCase $ Map.keys canonicalHeaders)
+        stringToSign = B.intercalate "\n" $
+            [ httpMethod s3QMethod                   -- method
+            , mconcat . catMaybes $ path             -- path
+            , s3RenderQuery False $ sort queryString -- query string
+            ] ++
+            Map.foldMapWithKey (\a b -> [CI.foldedCase a <> ":" <> b]) canonicalHeaders ++
+            [ "" -- end headers
+            , signedHeaders
+            , amzHeaders Map.! hAmzContentSha256
+            ]
+
+        (authorization, signatureQuery, queryString) = case ti of
+            AbsoluteTimestamp _  -> (Just auth, [], allQueries)
+            AbsoluteExpires time ->
+                ( Nothing
+                , [(CI.original hAmzSignature, Just sig)]
+                , (allQueries ++) . HTTP.toQuery . map (first CI.original) $
+                    [ (hAmzAlgorithm, "AWS4-HMAC-SHA256")
+                    , (hAmzCredential, cred)
+                    , (hAmzDate, amzHeaders Map.! hAmzDate)
+                    , (hAmzExpires, B8.pack . (show :: Integer -> String) . floor $ diffUTCTime time signatureTime)
+                    , (hAmzSignedHeaders, signedHeaders)
+                    ] ++ iamTok
+                )
+            where
+                allQueries = s3QSubresources ++ s3QQuery
+                region = s3ExtractRegion s3Endpoint
+                auth = authorizationV4 sd HmacSHA256 region "s3" signedHeaders stringToSign
+                sig  = signatureV4     sd HmacSHA256 region "s3"               stringToSign
+                cred = credentialV4    sd            region "s3"
+                ti = case (s3UseUri, signatureTimeInfo) of
+                    (False, t) -> t
+                    (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
+                    (True, AbsoluteExpires time) -> AbsoluteExpires time
+
+-- | Custom UriEncode function
+-- see <http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html>
+s3UriEncode
+    :: Bool         -- ^ Whether encode slash characters
+    -> B.ByteString
+    -> B.ByteString
+s3UriEncode encodeSlash = B8.concatMap $ \c ->
+    if (isAscii c && isAlphaNum c) || (c `elem` nonEncodeMarks)
+        then B8.singleton c
+        else B8.pack $ '%' : map toUpper (showHex (ord c) "")
+    where
+        nonEncodeMarks :: String
+        nonEncodeMarks = if encodeSlash
+            then "_-~."
+            else "_-~./"
+
+s3RenderQuery
+    :: Bool -- ^ Whether prepend a question mark
+    -> HTTP.Query
+    -> B.ByteString
+s3RenderQuery qm = mconcat . qmf . intersperse (B8.singleton '&') . map renderItem
+    where
+        qmf = if qm then ("?":) else id
+
+        renderItem :: HTTP.QueryItem -> B8.ByteString
+        renderItem (k, Just v) = s3UriEncode True k <> "=" <> s3UriEncode True v
+        renderItem (k, Nothing) = s3UriEncode True k <> "="
+
+-- | see: <http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region>
+s3ExtractRegion :: B.ByteString -> B.ByteString
+s3ExtractRegion "s3.amazonaws.com"            = "us-east-1"
+s3ExtractRegion "s3-external-1.amazonaws.com" = "us-east-1"
+s3ExtractRegion domain = either (const domain) B.pack $ Atto.parseOnly parser domain
+    where
+        -- s3.dualstack.<WA-DIR-N>.amazonaws.com
+        -- s3-<WA-DIR-N>.amazonaws.com
+        -- s3.<WA-DIR-N>.amazonaws.com
+        parser = do
+            _ <- Atto.string "s3"
+            _ <- Atto.string ".dualstack." <|> Atto.string "-" <|> Atto.string "."
+            r <- Atto.manyTill Atto.anyWord8 $ Atto.string ".amazonaws.com"
+            Atto.endOfInput
+            return r
 
 s3ResponseConsumer :: HTTPResponseConsumer a
                          -> IORef S3Metadata
@@ -415,8 +582,8 @@ parseObjectVersionInfo el
     = do key <- force "Missing object Key" $ el $/ elContent "Key"
          versionId <- force "Missing object VersionId" $ el $/ elContent "VersionId"
          isLatest <- forceM "Missing object IsLatest" $ el $/ elContent "IsLatest" &| textReadBool
-         let time s = case (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
-                           (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
+         let time s = case (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
+                           (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
                         Nothing -> throwM $ XmlException "Invalid time"
                         Just v -> return v
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time
@@ -466,8 +633,8 @@ data ObjectInfo
 parseObjectInfo :: MonadThrow m => Cu.Cursor -> m ObjectInfo
 parseObjectInfo el
     = do key <- force "Missing object Key" $ el $/ elContent "Key"
-         let time s = case (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
-                           (parseTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
+         let time s = case (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" $ T.unpack s) <|>
+                           (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%Z" $ T.unpack s) of
                         Nothing -> throwM $ XmlException "Invalid time"
                         Just v -> return v
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time

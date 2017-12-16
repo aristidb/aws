@@ -52,7 +52,10 @@ module Aws.Core
 , AuthorizationHash(..)
 , amzHash
 , signature
+, credentialV4
 , authorizationV4
+, authorizationV4'
+, signatureV4
   -- ** Query construction helpers
 , queryList
 , awsBool
@@ -449,22 +452,14 @@ data SignedQuery
         -- | Additional non-"amz" headers.
       , sqOtherHeaders :: !HTTP.RequestHeaders
         -- | Request body (used with 'Post' and 'Put').
-#if MIN_VERSION_http_conduit(2, 0, 0)
       , sqBody :: !(Maybe HTTP.RequestBody)
-#else
-      , sqBody :: !(Maybe (HTTP.RequestBody (C.ResourceT IO)))
-#endif
         -- | String to sign. Note that the string is already signed, this is passed mostly for debugging purposes.
       , sqStringToSign :: !B.ByteString
       }
     --deriving (Show)
 
 -- | Create a HTTP request from a 'SignedQuery' object.
-#if MIN_VERSION_http_conduit(2, 0, 0)
 queryToHttpRequest :: SignedQuery -> IO HTTP.Request
-#else
-queryToHttpRequest :: SignedQuery -> IO (HTTP.Request (C.ResourceT IO))
-#endif
 queryToHttpRequest SignedQuery{..} =  do
     mauth <- maybe (return Nothing) (Just<$>) sqAuthorization
     return $ HTTP.defaultRequest {
@@ -608,6 +603,26 @@ signature cr ah input = Base64.encode sig
               HmacSHA1 -> ByteArray.convert (CMH.hmac (secretAccessKey cr) input :: CMH.HMAC CH.SHA1)
               HmacSHA256 -> ByteArray.convert (CMH.hmac (secretAccessKey cr) input :: CMH.HMAC CH.SHA256)
 
+
+-- | Generates the Credential string, required for V4 signatures.
+credentialV4
+    :: SignatureData
+    -> B.ByteString -- ^ region, e.g. us-east-1
+    -> B.ByteString -- ^ service, e.g. dynamodb
+    -> B.ByteString
+credentialV4 sd region service = B.concat
+    [ accessKeyID (signatureCredentials sd)
+    , "/"
+    , date
+    , "/"
+    , region
+    , "/"
+    , service
+    , "/aws4_request"
+    ]
+    where
+        date = fmtTime "%Y%m%d" $ signatureTime sd
+
 -- | Use this to create the Authorization header to set into 'sqAuthorization'.
 -- See <http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html>: you must create the
 -- canonical request as explained by Step 1 and this function takes care of Steps 2 and 3.
@@ -621,68 +636,128 @@ authorizationV4 :: SignatureData
 authorizationV4 sd ah region service headers canonicalRequest = do
     let ref = v4SigningKeys $ signatureCredentials sd
         date = fmtTime "%Y%m%d" $ signatureTime sd
-        mkHmac k i = case ah of
-                        HmacSHA1 -> ByteArray.convert (CMH.hmac k i :: CMH.HMAC CH.SHA1)
-                        HmacSHA256 -> ByteArray.convert (CMH.hmac k i :: CMH.HMAC CH.SHA256)
-        mkHash i = case ah of
-                        HmacSHA1 -> ByteArray.convert (CH.hash i :: CH.Digest CH.SHA1)
-                        HmacSHA256 -> ByteArray.convert (CH.hash i :: CH.Digest CH.SHA256)
-        alg = case ah of
-                    HmacSHA1 -> "AWS4-HMAC-SHA1"
-                    HmacSHA256 -> "AWS4-HMAC-SHA256"
 
     -- Lookup existing signing key
     allkeys <- readIORef ref
     let mkey = case lookup (region,service) allkeys of
-                Just (d,k) | d /= date -> Nothing
-                           | otherwise -> Just k
-                Nothing -> Nothing
+            Just (d,k) | d /= date -> Nothing
+                       | otherwise -> Just k
+            Nothing -> Nothing
 
     -- possibly create a new signing key
-    key <- case mkey of
-            Just k -> return k
-            Nothing -> atomicModifyIORef ref $ \keylist ->
-                            let secretKey = secretAccessKey $ signatureCredentials sd
-                                kDate = mkHmac ("AWS4" <> secretKey) date
-                                kRegion = mkHmac kDate region
-                                kService = mkHmac kRegion service
-                                kSigning = mkHmac kService "aws4_request"
-                                lstK = (region,service)
-                                keylist' = (lstK,(date,kSigning)) : filter ((lstK/=).fst) keylist
-                             in (keylist', kSigning)
-
-    -- now do the signature
-    let canonicalRequestHash = Base16.encode $ mkHash canonicalRequest
-        stringToSign = B.concat [ alg
-                                , "\n"
-                                , fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
-                                , "\n"
-                                , date
-                                , "/"
-                                , region
-                                , "/"
-                                , service
-                                , "/aws4_request\n"
-                                , canonicalRequestHash
-                                ]
-        sig = Base16.encode $ mkHmac key stringToSign
+    let createNewKey = atomicModifyIORef ref $ \keylist ->
+            let kSigning = signingKeyV4 sd ah region service
+                lstK     = (region,service)
+                keylist' = (lstK,(date,kSigning)) : filter ((lstK/=).fst) keylist
+             in (keylist', kSigning)
 
     -- finally, return the header
-    return $ B.concat [ alg
-                      , " Credential="
-                      , accessKeyID (signatureCredentials sd)
-                      , "/"
-                      , date
-                      , "/"
-                      , region
-                      , "/"
-                      , service
-                      , "/aws4_request,"
-                      , "SignedHeaders="
-                      , headers
-                      , ",Signature="
-                      , sig
-                      ]
+    constructAuthorizationV4Header sd ah region service headers
+         .  signatureV4WithKey sd ah region service canonicalRequest
+        <$> maybe createNewKey return mkey
+
+-- | IO free version of @authorizationV4@, use this if you need
+-- to compute the signature outside of IO.
+authorizationV4'
+    :: SignatureData
+    -> AuthorizationHash
+    -> B.ByteString -- ^ region, e.g. us-east-1
+    -> B.ByteString -- ^ service, e.g. dynamodb
+    -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
+    -> B.ByteString -- ^ canonicalRequest (before hashing)
+    -> B.ByteString
+authorizationV4' sd ah region service headers canonicalRequest
+    = constructAuthorizationV4Header sd ah region service headers
+        $ signatureV4 sd ah region service canonicalRequest
+
+constructAuthorizationV4Header
+    :: SignatureData
+    -> AuthorizationHash
+    -> B.ByteString -- ^ region, e.g. us-east-1
+    -> B.ByteString -- ^ service, e.g. dynamodb
+    -> B.ByteString -- ^ SignedHeaders, e.g. content-type;host;x-amz-date;x-amz-target
+    -> B.ByteString -- ^ signature
+    -> B.ByteString
+constructAuthorizationV4Header sd ah region service headers sig = B.concat
+    [ alg
+    , " Credential="
+    , credentialV4 sd region service
+    , ",SignedHeaders="
+    , headers
+    , ",Signature="
+    , sig
+    ]
+    where
+        alg = case ah of
+            HmacSHA1 -> "AWS4-HMAC-SHA1"
+            HmacSHA256 -> "AWS4-HMAC-SHA256"
+
+-- | Compute the signature for V4
+signatureV4WithKey
+    :: SignatureData
+    -> AuthorizationHash
+    -> B.ByteString -- ^ region, e.g. us-east-1
+    -> B.ByteString -- ^ service, e.g. dynamodb
+    -> B.ByteString -- ^ canonicalRequest (before hashing)
+    -> B.ByteString -- ^ signing key
+    -> B.ByteString
+signatureV4WithKey sd ah region service canonicalRequest key = Base16.encode $ mkHmac key stringToSign
+    where
+        date = fmtTime "%Y%m%d" $ signatureTime sd
+        mkHmac k i = case ah of
+            HmacSHA1 -> ByteArray.convert (CMH.hmac k i :: CMH.HMAC CH.SHA1)
+            HmacSHA256 -> ByteArray.convert (CMH.hmac k i :: CMH.HMAC CH.SHA256)
+        mkHash i = case ah of
+            HmacSHA1 -> ByteArray.convert (CH.hash i :: CH.Digest CH.SHA1)
+            HmacSHA256 -> ByteArray.convert (CH.hash i :: CH.Digest CH.SHA256)
+        alg = case ah of
+            HmacSHA1 -> "AWS4-HMAC-SHA1"
+            HmacSHA256 -> "AWS4-HMAC-SHA256"
+
+        -- now do the signature
+        canonicalRequestHash = Base16.encode $ mkHash canonicalRequest
+        stringToSign = B.concat
+            [ alg
+            , "\n"
+            , fmtTime "%Y%m%dT%H%M%SZ" $ signatureTime sd
+            , "\n"
+            , date
+            , "/"
+            , region
+            , "/"
+            , service
+            , "/aws4_request\n"
+            , canonicalRequestHash
+            ]
+
+signingKeyV4
+    :: SignatureData
+    -> AuthorizationHash
+    -> B.ByteString -- ^ region, e.g. us-east-1
+    -> B.ByteString -- ^ service, e.g. dynamodb
+    -> B.ByteString
+signingKeyV4 sd ah region service = kSigning
+    where
+        mkHmac k i = case ah of
+            HmacSHA1 -> ByteArray.convert (CMH.hmac k i :: CMH.HMAC CH.SHA1)
+            HmacSHA256 -> ByteArray.convert (CMH.hmac k i :: CMH.HMAC CH.SHA256)
+        date = fmtTime "%Y%m%d" $ signatureTime sd
+        secretKey = secretAccessKey $ signatureCredentials sd
+        kDate = mkHmac ("AWS4" <> secretKey) date
+        kRegion = mkHmac kDate region
+        kService = mkHmac kRegion service
+        kSigning = mkHmac kService "aws4_request"
+
+signatureV4
+    :: SignatureData
+    -> AuthorizationHash
+    -> B.ByteString -- ^ region, e.g. us-east-1
+    -> B.ByteString -- ^ service, e.g. dynamodb
+    -> B.ByteString -- ^ canonicalRequest (before hashing)
+    -> B.ByteString
+signatureV4 sd ah region service canonicalRequest
+    = signatureV4WithKey sd ah region service canonicalRequest
+        $ signingKeyV4 sd ah region service
 
 -- | Default configuration for a specific service.
 class DefaultServiceConfiguration config where
@@ -748,7 +823,7 @@ parseHttpDate s =     p "%a, %d %b %Y %H:%M:%S GMT" s -- rfc1123-date
                   <|> p "%a %b %_d %H:%M:%S %Y" s     -- asctime-date
                   <|> p "%Y-%m-%dT%H:%M:%S%QZ" s      -- iso 8601
                   <|> p "%Y-%m-%dT%H:%M:%S%Q%Z" s     -- iso 8601
-  where p = parseTime defaultTimeLocale
+  where p = parseTimeM True defaultTimeLocale
 
 -- | HTTP-date (section 3.3.1 of RFC 2616, first type - RFC1123-style)
 httpDate1 :: String

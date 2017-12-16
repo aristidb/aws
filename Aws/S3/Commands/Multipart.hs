@@ -209,7 +209,7 @@ data CompleteMultipartUploadResponse
     , cmurKey      :: !T.Text
     , cmurETag     :: !T.Text
     , cmurVersionId :: !(Maybe T.Text)
-    }
+    } deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery CompleteMultipartUpload where
@@ -296,7 +296,7 @@ postAbortMultipartUpload b o i = AbortMultipartUpload b o i
 
 data AbortMultipartUploadResponse
   = AbortMultipartUploadResponse {
-    }
+    } deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
 instance SignQuery AbortMultipartUpload where

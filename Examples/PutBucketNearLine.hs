@@ -25,7 +25,7 @@ main = do
   {- Set up AWS credentials and S3 configuration using the Google Cloud
    - Storage endpoint. -}
   Just creds <- Aws.loadCredentialsFromEnv
-  let cfg = Aws.Configuration Aws.Timestamp creds (Aws.defaultLog Aws.Debug)
+  let cfg = Aws.Configuration Aws.Timestamp creds (Aws.defaultLog Aws.Debug) Nothing
   let s3cfg = S3.s3 Aws.HTTP "storage.googleapis.com" False
 
   {- Set up a ResourceT region with an available HTTP manager. -}
