@@ -99,6 +99,9 @@ s3EndpointUsWest2 = "s3-us-west-2.amazonaws.com"
 s3EndpointEu :: B.ByteString
 s3EndpointEu = "s3-eu-west-1.amazonaws.com"
 
+s3EndpointEuWest2 :: B.ByteString
+s3EndpointEuWest2 = "s3-eu-west-2.amazonaws.com"
+
 s3EndpointApSouthEast :: B.ByteString
 s3EndpointApSouthEast = "s3-ap-southeast-1.amazonaws.com"
 
@@ -707,11 +710,12 @@ parseObjectMetadata h = ObjectMetadata
 
 type LocationConstraint = T.Text
 
-locationUsClassic, locationUsWest, locationUsWest2, locationEu, locationEuFrankfurt, locationApSouthEast, locationApSouthEast2, locationApNorthEast, locationSA :: LocationConstraint
+locationUsClassic, locationUsWest, locationUsWest2, locationEu, locationEuWest2, locationEuFrankfurt, locationApSouthEast, locationApSouthEast2, locationApNorthEast, locationSA :: LocationConstraint
 locationUsClassic = ""
 locationUsWest = "us-west-1"
 locationUsWest2 = "us-west-2"
 locationEu = "EU"
+locationEuWest2 = "eu-west-2"
 locationEuFrankfurt = "eu-central-1"
 locationApSouthEast = "ap-southeast-1"
 locationApSouthEast2 = "ap-southeast-2"

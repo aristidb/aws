@@ -31,6 +31,7 @@ module Aws.DynamoDb.Core
     , ddbUsWest1
     , ddbUsWest2
     , ddbEuWest1
+    , ddbEuWest2
     , ddbEuCentral1
     , ddbApNe1
     , ddbApSe1
@@ -792,6 +793,9 @@ ddbUsWest2 = Region "dynamodb.us-west-2.amazonaws.com" "us-west-2"
 
 ddbEuWest1 :: Region
 ddbEuWest1 = Region "dynamodb.eu-west-1.amazonaws.com" "eu-west-1"
+
+ddbEuWest2 :: Region
+ddbEuWest2 = Region "dynamodb.eu-west-2.amazonaws.com" "eu-west-2"
 
 ddbEuCentral1 :: Region
 ddbEuCentral1 = Region "dynamodb.eu-central-1.amazonaws.com" "eu-central-1"
