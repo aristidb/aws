@@ -1,3 +1,11 @@
+0.19 series
+-----------
+
+-   0.19
+    - Experimental support for V4 signing
+    - Add "eu-west-2" endpoint for some services
+    - Loosen http-conduit bounds
+
 0.18 series
 -----------
 
