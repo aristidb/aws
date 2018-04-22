@@ -7,7 +7,8 @@ import qualified Data.Conduit.List as CL
 import           Data.Text (pack)
 import           Control.Monad ((<=<))
 import           Control.Monad.IO.Class (liftIO)
-import           Network.HTTP.Conduit (withManager, responseBody)
+import           Control.Monad.Trans.Resource
+import           Network.HTTP.Conduit (newManager, tlsManagerSettings, responseBody)
 import           System.Environment (getArgs)
 
 main :: IO ()
@@ -19,7 +20,8 @@ main = do
   let s3cfg = Aws.defServiceConfig :: S3.S3Configuration Aws.NormalQuery
 
   {- Set up a ResourceT region with an available HTTP manager. -}
-  withManager $ \mgr -> do
+  mgr <- newManager tlsManagerSettings
+  runResourceT $ do
     let src = Aws.awsIteratedSource cfg s3cfg mgr (S3.getBucket bucket)
     let deleteObjects [] = return ()
         deleteObjects os =

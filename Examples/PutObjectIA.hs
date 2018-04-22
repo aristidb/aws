@@ -5,9 +5,10 @@ import qualified Aws.Core as Aws
 import qualified Aws.S3 as S3
 import           Data.Conduit (($$+-))
 import           Data.Conduit.Binary (sinkFile)
-import           Network.HTTP.Conduit (withManager, RequestBody(..))
+import           Network.HTTP.Conduit (newManager, tlsManagerSettings, RequestBody(..))
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString as S
+import Control.Monad.Trans.Resource
 import Control.Monad.IO.Class
 import Control.Concurrent
 import System.Posix.Files
@@ -19,11 +20,12 @@ main :: IO ()
 main = do
   {- Set up AWS credentials and S3 configuration using the IA endpoint. -}
   Just creds <- Aws.loadCredentialsFromEnv
-  let cfg = Aws.Configuration Aws.Timestamp creds (Aws.defaultLog Aws.Debug)
+  let cfg = Aws.Configuration Aws.Timestamp creds (Aws.defaultLog Aws.Debug) Nothing
   let s3cfg = S3.s3 Aws.HTTP "s3.us.archive.org" False
 
   {- Set up a ResourceT region with an available HTTP manager. -}
-  withManager $ \mgr -> do
+  mgr <- newManager tlsManagerSettings
+  runResourceT $ do
     let file ="test"
     -- streams large file content, without buffering more than 10k in memory
     let streamer sink = withFile file ReadMode $ \h -> sink $ S.hGet h 10240

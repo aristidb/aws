@@ -115,7 +115,7 @@ import           Data.ByteString.Char8    ({- IsString -})
 import qualified Data.ByteString.Lazy     as L
 import qualified Data.ByteString.UTF8     as BU
 import           Data.Char
-import           Data.Conduit             (($$+-))
+import           Data.Conduit             ((.|))
 import qualified Data.Conduit             as C
 #if MIN_VERSION_http_conduit(2,2,0)
 import qualified Data.Conduit.Binary      as CB
@@ -195,7 +195,7 @@ tellMetadataRef :: Monoid m => IORef m -> m -> IO ()
 tellMetadataRef r m = modifyIORef r (`mappend` m)
 
 -- | A full HTTP response parser. Takes HTTP status, response headers, and response body.
-type HTTPResponseConsumer a = HTTP.Response (C.ResumableSource (ResourceT IO) ByteString)
+type HTTPResponseConsumer a = HTTP.Response (C.ConduitM () ByteString (ResourceT IO) ())
                               -> ResourceT IO a
 
 -- | Class for types that AWS HTTP responses can be parsed into.
@@ -217,7 +217,7 @@ class Monoid (ResponseMetadata resp) => ResponseConsumer req resp where
 instance ResponseConsumer r (HTTP.Response L.ByteString) where
     type ResponseMetadata (HTTP.Response L.ByteString) = ()
     responseConsumer _ _ _ resp = do
-        bss <- HTTP.responseBody resp $$+- CL.consume
+        bss <- C.runConduit $ HTTP.responseBody resp .| CL.consume
         return resp
             { HTTP.responseBody = L.fromChunks bss
             }
@@ -875,23 +875,13 @@ newtype NoCredentialsException = NoCredentialsException { noCredentialsErrorMess
 instance E.Exception NoCredentialsException
 
 -- | A helper to throw an 'HTTP.StatusCodeException'.
-throwStatusCodeException :: HTTP.Request
-                         -> HTTP.Response (C.ResumableSource (ResourceT IO) ByteString)
-                         -> ResourceT IO a
-#if MIN_VERSION_http_conduit(2,2,0)
+throwStatusCodeException :: MonadThrow m => HTTP.Request -> HTTP.Response (C.ConduitM () ByteString m ()) -> m a
 throwStatusCodeException req resp = do
     let resp' = fmap (const ()) resp
     -- only take first 10kB of error response
-    body <- HTTP.responseBody resp C.$$+- CB.take (10*1024)
+    body <- C.runConduit $ HTTP.responseBody resp .| CB.take (10*1024)
     let sce = HTTP.StatusCodeException resp' (L.toStrict body)
     throwM $ HTTP.HttpExceptionRequest req sce
-#else
-throwStatusCodeException _req resp = do
-    let cookies = HTTP.responseCookieJar resp
-        headers = HTTP.responseHeaders   resp
-        status  = HTTP.responseStatus    resp
-    throwM $ HTTP.StatusCodeException status headers cookies
-#endif
 
 -- | A specific element (case-insensitive, ignoring namespace - sadly necessary), extracting only the textual contents.
 elContent :: T.Text -> Cursor -> [T.Text]
@@ -939,7 +929,7 @@ xmlCursorConsumer ::
     -> IORef m
     -> HTTPResponseConsumer a
 xmlCursorConsumer parse metadataRef res
-    = do doc <- HTTP.responseBody res $$+- XML.sinkDoc XML.def
+    = do doc <- C.runConduit $ HTTP.responseBody res .| XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          let Response metadata x = parse cursor
          liftIO $ tellMetadataRef metadataRef metadata

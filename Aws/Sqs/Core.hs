@@ -11,7 +11,8 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import qualified Data.ByteString                as B
 import qualified Data.ByteString.Char8          as BC
-import           Data.Conduit                   (($$+-))
+import qualified Data.Conduit
+import           Data.Conduit                   ((.|))
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
@@ -248,7 +249,7 @@ sqsXmlResponseConsumer parse metadataRef = sqsResponseConsumer (xmlCursorConsume
 
 sqsErrorResponseConsumer :: HTTPResponseConsumer a
 sqsErrorResponseConsumer resp
-    = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
+    = do doc <- Data.Conduit.runConduit $ HTTP.responseBody resp .| XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Right err     -> throwM err

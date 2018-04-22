@@ -5,9 +5,9 @@
 import qualified Aws
 import qualified Aws.Core as Aws
 import qualified Aws.S3 as S3
-import           Data.Conduit (($$+-))
 import           Data.Conduit.Binary (sinkFile)
-import           Network.HTTP.Conduit (withManager, RequestBody(..))
+import           Control.Monad.Trans.Resource
+import           Network.HTTP.Conduit (newManager, tlsManagerSettings, RequestBody(..))
 import Control.Monad.IO.Class
 import Control.Concurrent
 import System.IO
@@ -29,7 +29,8 @@ main = do
   let s3cfg = S3.s3 Aws.HTTP "storage.googleapis.com" False
 
   {- Set up a ResourceT region with an available HTTP manager. -}
-  withManager $ \mgr -> do
+  mgr <- newManager tlsManagerSettings
+  runResourceT $ do
     {- Create a request object with S3.PutBucket and run the request with pureAws. -}
     rsp <-
       Aws.pureAws cfg s3cfg mgr $

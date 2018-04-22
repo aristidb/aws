@@ -236,7 +236,7 @@ test_versioning = askOption $ \(BucketOption bucket) ->
         let Just vid = cmurVersionId resp
         bs <- runResourceT $ do
             gor <- pureAws cfg s3cfg mgr (getObject bucket k) { goVersionId = Just vid }
-            responseBody (gorResponse gor) $$+- sinkLazy
+            sealConduitT (responseBody (gorResponse gor)) $$+- sinkLazy
 
         assertEqual "data do not match" testStr bs
     ]
