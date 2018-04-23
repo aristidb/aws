@@ -231,7 +231,7 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV2, .. } Signatur
                                                  | otherwise = x1 : merge (x2 : xs)
                 merge xs = xs
 
-      urlEncodedS3QObject = HTTP.urlEncode False <$> s3QObject
+      urlEncodedS3QObject = s3UriEncode False <$> s3QObject
       (host, path) = case s3RequestStyle of
                        PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
                        BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", urlEncodedS3QObject])
