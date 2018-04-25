@@ -28,7 +28,8 @@ import           Data.ByteString                (ByteString)
 import           Data.IORef
 import           Data.List                      (intersperse, sort)
 import           Data.Maybe
-import           Data.Monoid
+import           Data.Monoid                    ()
+import qualified Data.Semigroup                 as Sem
 import           Data.Text                      (Text)
 import qualified Data.Text                      as Text
 import           Data.Time
@@ -58,11 +59,14 @@ data IamMetadata
     deriving (Show, Typeable)
 
 instance Loggable IamMetadata where
-    toLogText (IamMetadata r) = "IAM: request ID=" <> fromMaybe "<none>" r
+    toLogText (IamMetadata r) = "IAM: request ID=" Sem.<> fromMaybe "<none>" r
+
+instance Sem.Semigroup IamMetadata where
+    IamMetadata r1 <> IamMetadata r2 = IamMetadata (r1 `mplus` r2)
 
 instance Monoid IamMetadata where
     mempty = IamMetadata Nothing
-    IamMetadata r1 `mappend` IamMetadata r2 = IamMetadata (r1 `mplus` r2)
+    mappend = (Sem.<>)
 
 data IamConfiguration qt
     = IamConfiguration {

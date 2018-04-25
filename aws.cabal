@@ -153,6 +153,9 @@ Library
   if !impl(ghc >= 7.6)
     Build-depends: ghc-prim
 
+  if !impl(ghc >= 8.0)
+    Build-depends: semigroups == 0.18.*
+
   GHC-Options: -Wall
 
   Default-Language: Haskell2010
