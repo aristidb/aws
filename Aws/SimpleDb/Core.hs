@@ -12,6 +12,7 @@ import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
+import qualified Data.Semigroup                 as Sem
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
 import           Data.Typeable
@@ -46,9 +47,12 @@ instance Loggable SdbMetadata where
                                      ", box usage=" `mappend`
                                      fromMaybe "<not available>" bu
 
+instance Sem.Semigroup SdbMetadata where
+    SdbMetadata r1 b1 <> SdbMetadata r2 b2 = SdbMetadata (r1 `mplus` r2) (b1 `mplus` b2)
+
 instance Monoid SdbMetadata where
     mempty = SdbMetadata Nothing Nothing
-    SdbMetadata r1 b1 `mappend` SdbMetadata r2 b2 = SdbMetadata (r1 `mplus` r2) (b1 `mplus` b2)
+    mappend = (Sem.<>)
 
 data SdbConfiguration qt
     = SdbConfiguration {

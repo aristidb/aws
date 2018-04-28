@@ -143,7 +143,8 @@ import           Data.IORef
 import           Data.List
 import qualified Data.Map                     as M
 import           Data.Maybe
-import           Data.Monoid
+import           Data.Monoid                  ()
+import qualified Data.Semigroup               as Sem
 import           Data.Proxy
 import           Data.Scientific
 import qualified Data.Serialize               as Ser
@@ -749,9 +750,12 @@ instance Loggable DdbResponse where
         ", x-amz-id-2=" `mappend`
         fromMaybe "<none>" id2
 
+instance Sem.Semigroup DdbResponse where
+    a <> b = DdbResponse (ddbrCrc a `mplus` ddbrCrc b) (ddbrMsgId a `mplus` ddbrMsgId b)
+
 instance Monoid DdbResponse where
     mempty = DdbResponse Nothing Nothing
-    mappend a b = DdbResponse (ddbrCrc a `mplus` ddbrCrc b) (ddbrMsgId a `mplus` ddbrMsgId b)
+    mappend = (Sem.<>)
 
 
 data Region = Region {
@@ -856,7 +860,7 @@ ddbSignQuery target body di sd
 
         -- for some reason AWS doesn't want the x-amz-security-token in the canonical request
         amzHeaders = [ ("x-amz-date", sigTime)
-                     , ("x-amz-target", dyApiVersion <> target)
+                     , ("x-amz-target", dyApiVersion Sem.<> target)
                      ]
 
         canonicalHeaders = sortBy (compare `on` fst) $ amzHeaders ++
@@ -1273,10 +1277,14 @@ instance MonadPlus Parser where
                                    in runParser a kf' ks
     {-# INLINE mplus #-}
 
+instance Sem.Semigroup (Parser a) where
+    (<>) = mplus
+    {-# INLINE (<>) #-}
+
 instance Monoid (Parser a) where
     mempty  = fail "mempty"
     {-# INLINE mempty #-}
-    mappend = mplus
+    mappend = (Sem.<>)
     {-# INLINE mappend #-}
 
 apP :: Parser (a -> b) -> Parser a -> Parser b
@@ -1330,8 +1338,8 @@ instance (Typeable a, DynVal a) => FromDynItem (M.Map T.Text a) where
 
 
 valErr :: forall a. Typeable a => Tagged a DValue -> String
-valErr (Tagged dv) = "Can't convert DynamoDb value " <> show dv <>
-              " into type " <> (show (typeOf (undefined :: a)))
+valErr (Tagged dv) = "Can't convert DynamoDb value " Sem.<> show dv Sem.<>
+              " into type " Sem.<> (show (typeOf (undefined :: a)))
 
 
 -- | Convenience combinator for parsing fields from an 'Item' returned
@@ -1345,7 +1353,7 @@ getAttr
     -> Parser a
 getAttr k m = do
     case M.lookup k m of
-      Nothing -> fail ("Key " <> T.unpack k <> " not found")
+      Nothing -> fail ("Key " Sem.<> T.unpack k Sem.<> " not found")
       Just dv -> maybe (fail (valErr (Tagged dv :: Tagged a DValue))) return $ fromValue dv
 
 
@@ -1373,9 +1381,9 @@ parseAttr
     -> Parser a
 parseAttr k m =
   case M.lookup k m of
-    Nothing -> fail ("Key " <> T.unpack k <> " not found")
+    Nothing -> fail ("Key " Sem.<> T.unpack k Sem.<> " not found")
     Just (DMap dv) -> either (fail "...") return $ fromItem dv
-    _       -> fail ("Key " <> T.unpack k <> " is not a map!")
+    _       -> fail ("Key " Sem.<> T.unpack k Sem.<> " is not a map!")
 
 -------------------------------------------------------------------------------
 -- | Parse an 'Item' into target type using the 'FromDynItem'
