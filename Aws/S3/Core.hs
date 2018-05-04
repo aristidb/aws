@@ -483,13 +483,15 @@ type CanonicalUserId = T.Text
 data UserInfo
     = UserInfo {
         userId          :: CanonicalUserId
-      , userDisplayName :: T.Text
+      , userDisplayName :: Maybe T.Text
       }
     deriving (Show)
 
 parseUserInfo :: MonadThrow m => Cu.Cursor -> m UserInfo
 parseUserInfo el = do id_ <- force "Missing user ID" $ el $/ elContent "ID"
-                      displayName <- force "Missing user DisplayName" $ el $/ elContent "DisplayName"
+                      displayName <- return $ case (el $/ elContent "DisplayName") of
+                                                  (x:_) -> Just x
+                                                  []    -> Nothing
                       return UserInfo { userId = id_, userDisplayName = displayName }
 
 data CannedAcl
