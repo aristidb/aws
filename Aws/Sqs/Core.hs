@@ -16,6 +16,7 @@ import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
+import qualified Data.Semigroup                 as Sem
 import           Data.Ord
 import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
@@ -64,9 +65,12 @@ instance Loggable SqsMetadata where
                                       ", x-amz-id-2=" `mappend`
                                       fromMaybe "<none>" id2
 
+instance Sem.Semigroup SqsMetadata where
+    SqsMetadata a1 r1 <> SqsMetadata a2 r2 = SqsMetadata (a1 `mplus` a2) (r1 `mplus` r2)
+
 instance Monoid SqsMetadata where
     mempty = SqsMetadata Nothing Nothing
-    SqsMetadata a1 r1 `mappend` SqsMetadata a2 r2 = SqsMetadata (a1 `mplus` a2) (r1 `mplus` r2)
+    mappend = (Sem.<>)
 
 data SqsAuthorization 
     = SqsAuthorizationHeader 

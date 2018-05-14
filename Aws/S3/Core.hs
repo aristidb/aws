@@ -14,6 +14,7 @@ import           Data.IORef
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
+import qualified Data.Semigroup                 as Sem
 import           Control.Applicative            ((<|>))
 import           Data.Time
 import           Data.Typeable
@@ -164,9 +165,12 @@ data S3Metadata
       }
     deriving (Show, Typeable)
 
+instance Sem.Semigroup S3Metadata where
+    S3Metadata a1 r1 <> S3Metadata a2 r2 = S3Metadata (a1 `mplus` a2) (r1 `mplus` r2)
+
 instance Monoid S3Metadata where
     mempty = S3Metadata Nothing Nothing
-    S3Metadata a1 r1 `mappend` S3Metadata a2 r2 = S3Metadata (a1 `mplus` a2) (r1 `mplus` r2)
+    mappend = (Sem.<>)
 
 instance Loggable S3Metadata where
     toLogText (S3Metadata id2 rid) = "S3: request ID=" `mappend`
@@ -231,7 +235,7 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV2, .. } Signatur
                                                  | otherwise = x1 : merge (x2 : xs)
                 merge xs = xs
 
-      urlEncodedS3QObject = HTTP.urlEncode False <$> s3QObject
+      urlEncodedS3QObject = s3UriEncode False <$> s3QObject
       (host, path) = case s3RequestStyle of
                        PathStyle   -> ([Just s3Endpoint], [Just "/", fmap (`B8.snoc` '/') s3QBucket, urlEncodedS3QObject])
                        BucketStyle -> ([s3QBucket, Just s3Endpoint], [Just "/", urlEncodedS3QObject])
@@ -337,7 +341,7 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV4 signpayload, .
             , mconcat . catMaybes $ path             -- path
             , s3RenderQuery False $ sort queryString -- query string
             ] ++
-            Map.foldMapWithKey (\a b -> [CI.foldedCase a <> ":" <> b]) canonicalHeaders ++
+            Map.foldMapWithKey (\a b -> [CI.foldedCase a Sem.<> ":" Sem.<> b]) canonicalHeaders ++
             [ "" -- end headers
             , signedHeaders
             , amzHeaders Map.! hAmzContentSha256
@@ -392,8 +396,8 @@ s3RenderQuery qm = mconcat . qmf . intersperse (B8.singleton '&') . map renderIt
         qmf = if qm then ("?":) else id
 
         renderItem :: HTTP.QueryItem -> B8.ByteString
-        renderItem (k, Just v) = s3UriEncode True k <> "=" <> s3UriEncode True v
-        renderItem (k, Nothing) = s3UriEncode True k <> "="
+        renderItem (k, Just v) = s3UriEncode True k Sem.<> "=" Sem.<> s3UriEncode True v
+        renderItem (k, Nothing) = s3UriEncode True k Sem.<> "="
 
 -- | see: <http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region>
 s3ExtractRegion :: B.ByteString -> B.ByteString
@@ -458,7 +462,7 @@ s3ErrorResponseConsumer resp
                                accessKeyId = listToMaybe $ root $/ elContent "AWSAccessKeyId"
                                bucket = listToMaybe $ root $/ elContent "Bucket"
                                endpointRaw = listToMaybe $ root $/ elContent "Endpoint"
-                               endpoint = T.encodeUtf8 <$> (T.stripPrefix (fromMaybe "" bucket <> ".") =<< endpointRaw)
+                               endpoint = T.encodeUtf8 <$> (T.stripPrefix (fromMaybe "" bucket Sem.<> ".") =<< endpointRaw)
                                stringToSign = do unprocessed <- listToMaybe $ root $/ elCont "StringToSignBytes"
                                                  bytes <- mapM readHex2 $ words unprocessed
                                                  return $ B.pack bytes

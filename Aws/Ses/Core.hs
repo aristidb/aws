@@ -33,6 +33,7 @@ import           Data.ByteString.Char8          ({-IsString-})
 import           Data.IORef
 import           Data.Maybe
 import           Data.Monoid
+import qualified Data.Semigroup                 as Sem
 import           Data.Text                      (Text)
 import qualified Data.Text.Encoding             as TE
 import           Data.Typeable
@@ -61,9 +62,12 @@ data SesMetadata
 instance Loggable SesMetadata where
     toLogText (SesMetadata rid) = "SES: request ID=" `mappend` fromMaybe "<none>" rid
 
+instance Sem.Semigroup SesMetadata where
+    SesMetadata r1 <> SesMetadata r2 = SesMetadata (r1 `mplus` r2)
+
 instance Monoid SesMetadata where
     mempty = SesMetadata Nothing
-    SesMetadata r1 `mappend` SesMetadata r2 = SesMetadata (r1 `mplus` r2)
+    mappend = (Sem.<>)
 
 data SesConfiguration qt
     = SesConfiguration {
@@ -184,11 +188,13 @@ instance SesAsQuery Destination where
           s = Blaze.fromByteString
           one = 1 :: Int
 
-instance Monoid Destination where
-    mempty = Destination [] [] []
-    mappend (Destination a1 a2 a3) (Destination b1 b2 b3) =
+instance Sem.Semigroup Destination where
+    (Destination a1 a2 a3) <> (Destination b1 b2 b3) =
         Destination (a1 ++ b1) (a2 ++ b2) (a3 ++ b3)
 
+instance Monoid Destination where
+    mempty = Destination [] [] []
+    mappend = (Sem.<>)
 
 -- | An e-mail address.
 type EmailAddress = Text
