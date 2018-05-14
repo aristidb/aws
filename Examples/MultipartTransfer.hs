@@ -7,10 +7,10 @@ import qualified Aws
 import           Aws.Aws              (Configuration (..))
 import qualified Aws.S3               as S3
 import           Control.Applicative  ((<$>))
-import           Data.Conduit         (unwrapResumable)
+import           Control.Monad.Trans.Resource
 import qualified Data.Text            as T
 import           Network.HTTP.Conduit (http, parseUrl, responseBody,
-                                       withManager)
+                                       newManager, tlsManagerSettings)
 import           System.Environment   (getArgs)
 
 main :: IO ()
@@ -27,9 +27,9 @@ main = do
       case args of
         [sourceUrl,destBucket,destObj] -> do
           request <- parseUrl sourceUrl
-          withManager $ \mgr -> do
-            resumableSource <- responseBody <$> http request mgr
-            (source, _) <- unwrapResumable resumableSource
+	  mgr <- newManager tlsManagerSettings
+          runResourceT $ do
+            source <- responseBody <$> http request mgr
             let initiator b o = (S3.postInitiateMultipartUpload b o){S3.imuAcl = Just S3.AclPublicRead}
             S3.multipartUploadWithInitiator cfg{credentials = creds} s3cfg initiator mgr (T.pack destBucket) (T.pack destObj) source (10*1024*1024)
         _ -> do

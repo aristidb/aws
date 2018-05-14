@@ -35,8 +35,8 @@ where
 
 import           Aws.Core
 import           Control.Applicative
-import qualified Control.Exception.Lifted     as E
 import           Control.Monad
+import qualified Control.Monad.Catch          as E
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource
@@ -91,7 +91,7 @@ baseConfiguration :: MonadIO io => io Configuration
 baseConfiguration = liftIO $ do
   cr <- loadCredentialsDefault
   case cr of
-    Nothing -> E.throw $ NoCredentialsException "could not locate aws credentials"
+    Nothing -> E.throwM $ NoCredentialsException "could not locate aws credentials"
     Just cr' -> return Configuration {
                       timeInfo = Timestamp
                     , credentials = cr'

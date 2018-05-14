@@ -899,7 +899,7 @@ instance FromJSON AmazonError where
 -------------------------------------------------------------------------------
 ddbResponseConsumer :: A.FromJSON a => IORef DdbResponse -> HTTPResponseConsumer a
 ddbResponseConsumer ref resp = do
-    val <- HTTP.responseBody resp $$+- sinkParser (A.json' <* AttoB.endOfInput)
+    val <- runConduit $ HTTP.responseBody resp .| sinkParser (A.json' <* AttoB.endOfInput)
     case statusCode of
       200 -> rSuccess val
       _   -> rError val

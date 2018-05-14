@@ -11,12 +11,13 @@ import           Aws.DynamoDb.Core
 import           Control.Concurrent
 import           Control.Monad
 import           Control.Monad.Catch
+import           Control.Monad.Trans.Resource
 import           Control.Applicative
 import           Data.Conduit
 import           Data.Maybe
 import qualified Data.Conduit.List     as C
 import qualified Data.Text             as T
-import           Network.HTTP.Conduit  (withManager)
+import           Network.HTTP.Conduit  (newManager, tlsManagerSettings)
 -------------------------------------------------------------------------------
 
 createTableAndWait :: IO ()
@@ -119,8 +120,8 @@ main = do
   echo "Now paginating in increments of 5..."
   let q0 = (scan "devel-1") { sLimit = Just 5 }
 
-  xs <- withManager $ \mgr -> do
-    awsIteratedList cfg debugServiceConfig mgr q0 $$ C.consume
+  mgr <- newManager tlsManagerSettings
+  xs <- runResourceT $ awsIteratedList cfg debugServiceConfig mgr q0 $$ C.consume
   echo ("Pagination returned " ++ show (length xs) ++ " items")
 
 

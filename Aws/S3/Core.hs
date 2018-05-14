@@ -7,7 +7,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import           Data.Char                      (isAscii, isAlphaNum, toUpper, ord)
-import           Data.Conduit                   (($$+-))
+import           Data.Conduit                   ((.|))
 import           Data.Function
 import           Data.Functor                   ((<$>))
 import           Data.IORef
@@ -422,7 +422,6 @@ s3ResponseConsumer inner metadataRef = s3BinaryResponseConsumer inner' metadataR
   where inner' resp =
           do
             !res <- inner resp
-            C.closeResumableSource (HTTP.responseBody resp)
             return res
 
 s3BinaryResponseConsumer :: HTTPResponseConsumer a
@@ -448,7 +447,7 @@ s3XmlResponseConsumer parse metadataRef =
 
 s3ErrorResponseConsumer :: HTTPResponseConsumer a
 s3ErrorResponseConsumer resp
-    = do doc <- HTTP.responseBody resp $$+- XML.sinkDoc XML.def
+    = do doc <- C.runConduit $ HTTP.responseBody resp .| XML.sinkDoc XML.def
          let cursor = Cu.fromDocument doc
          liftIO $ case parseError cursor of
            Right err      -> throwM err

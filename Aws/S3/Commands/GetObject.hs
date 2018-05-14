@@ -11,6 +11,7 @@ import           Data.ByteString.Char8 ({- IsString -})
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy  as L
 import qualified Data.Conduit          as C
+import           Data.Conduit ((.|))
 import qualified Data.Conduit.List     as CL
 import           Data.Maybe
 import qualified Data.Text             as T
@@ -44,7 +45,7 @@ getObject b o = GetObject b o Nothing Nothing Nothing Nothing Nothing Nothing No
 data GetObjectResponse
     = GetObjectResponse {
         gorMetadata :: ObjectMetadata,
-        gorResponse :: HTTP.Response (C.ResumableSource (ResourceT IO) B8.ByteString)
+        gorResponse :: HTTP.Response (C.ConduitM () B8.ByteString (ResourceT IO) ())
       }
 
 data GetObjectMemoryResponse
@@ -96,7 +97,7 @@ instance Transaction GetObject GetObjectResponse
 instance AsMemoryResponse GetObjectResponse where
     type MemoryResponse GetObjectResponse = GetObjectMemoryResponse
     loadToMemory (GetObjectResponse om x) = do
-        bss <- HTTP.responseBody x C.$$+- CL.consume
+        bss <- C.runConduit $ HTTP.responseBody x .| CL.consume
         return $ GetObjectMemoryResponse om x
             { HTTP.responseBody = L.fromChunks bss
             }

@@ -123,22 +123,23 @@ Library
                        bytestring           >= 0.9     && < 0.11,
                        case-insensitive     >= 0.2     && < 1.3,
                        cereal               >= 0.3     && < 0.6,
-                       conduit              >= 1.1     && < 1.3,
-                       conduit-extra        >= 1.1     && < 1.3,
+                       conduit              >= 1.3     && < 1.4,
+                       conduit-extra        >= 1.3     && < 1.4,
                        containers           >= 0.4,
                        cryptonite           >= 0.11,
                        data-default         >= 0.5.3   && < 0.8,
                        directory            >= 1.0     && < 2.0,
                        filepath             >= 1.1     && < 1.5,
-                       http-conduit         >= 2.1     && < 2.4,
+                       http-conduit         >= 2.3     && < 2.4,
                        http-types           >= 0.7     && < 1.0,
                        lifted-base          >= 0.1     && < 0.3,
                        memory,
                        monad-control        >= 0.3,
+                       exceptions           >= 0.8     && < 0.11,
                        mtl                  == 2.*,
                        network              == 2.*,
                        old-locale           == 1.*,
-                       resourcet            >= 1.1     && < 1.2,
+                       resourcet            >= 1.2     && < 1.3,
                        safe                 >= 0.3     && < 0.4,
                        scientific           >= 0.3,
                        tagged               >= 0.7     && < 0.9,
@@ -148,7 +149,7 @@ Library
                        unordered-containers >= 0.2,
                        utf8-string          >= 0.3     && < 1.1,
                        vector               >= 0.10,
-                       xml-conduit          >= 1.2     && <2.0
+                       xml-conduit          >= 1.8     && <2.0
  
   if !impl(ghc >= 7.6)
     Build-depends: ghc-prim
@@ -205,7 +206,8 @@ Executable GetObject
                        aws,
                        http-conduit,
                        conduit,
-                       conduit-extra
+                       conduit-extra,
+                       resourcet
 
   Default-Language: Haskell2010
 
@@ -222,7 +224,8 @@ Executable GetObjectGoogle
                        aws,
                        http-conduit,
                        conduit,
-                       conduit-extra
+                       conduit-extra,
+                       resourcet
 
   Default-Language: Haskell2010
 
@@ -260,7 +263,8 @@ Executable MultipartTransfer
                        http-conduit,
                        conduit,
                        conduit-extra,
-                       text
+                       text,
+                       resourcet
 
   Default-Language: Haskell2010
 
@@ -279,7 +283,8 @@ Executable NukeBucket
                        conduit,
                        conduit-extra,
                        text >=0.1,
-                       transformers
+                       transformers,
+                       resourcet
 
   Default-Language: Haskell2010
 
@@ -298,7 +303,8 @@ Executable PutBucketNearLine
                        conduit,
                        conduit-extra,
                        text >=0.1,
-                       transformers
+                       transformers,
+                       resourcet
 
   Default-Language: Haskell2010
 
@@ -331,6 +337,7 @@ Executable DynamoDb
                        data-default,
                        exceptions,
                        http-conduit,
+                       resourcet,
                        text,
                        conduit
 
@@ -433,7 +440,7 @@ test-suite s3-tests
         QuickCheck >= 2.7,
         aeson >= 0.7,
         bytestring,
-        conduit-combinators,
+        conduit,
         errors >= 2.0,
         lifted-base >= 0.2,
         monad-control >= 0.3,

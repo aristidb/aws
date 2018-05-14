@@ -4,7 +4,7 @@ import qualified Aws
 import qualified Aws.Core as Aws
 import qualified Aws.S3 as S3
 import           Control.Monad.Trans.Resource
-import           Data.Conduit (($$+-))
+import           Data.Conduit ((.|), runConduit)
 import           Data.Conduit.Binary (sinkFile)
 import           Network.HTTP.Conduit (newManager, tlsManagerSettings, responseBody)
 
@@ -24,4 +24,4 @@ main = do
         S3.getObject "haskell-aws" "cloud-remote.pdf"
 
     {- Save the response to a file. -}
-    responseBody rsp $$+- sinkFile "cloud-remote.pdf"
+    runConduit $ responseBody rsp .| sinkFile "cloud-remote.pdf"
