@@ -134,6 +134,7 @@ import qualified Data.Traversable         as Traversable
 import           Data.Typeable
 import           Data.Word
 import qualified Network.HTTP.Conduit     as HTTP
+import qualified Network.HTTP.Client.TLS  as HTTP
 import qualified Network.HTTP.Types       as HTTP
 import           System.Directory
 import           System.Environment
@@ -326,7 +327,7 @@ loadCredentialsFromEnv = liftIO $ do
 
 loadCredentialsFromInstanceMetadata :: MonadIO io => io (Maybe Credentials)
 loadCredentialsFromInstanceMetadata = do
-    mgr <- liftIO $ HTTP.newManager HTTP.tlsManagerSettings
+    mgr <- liftIO HTTP.getGlobalManager
     -- check if the path is routable
     avail <- liftIO $ hostAvailable "169.254.169.254"
     if not avail

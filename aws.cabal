@@ -131,6 +131,7 @@ Library
                        directory            >= 1.0     && < 2.0,
                        filepath             >= 1.1     && < 1.5,
                        http-conduit         >= 2.3     && < 2.4,
+                       http-client-tls      >= 0.3     && < 0.4,
                        http-types           >= 0.7     && < 1.0,
                        lifted-base          >= 0.1     && < 0.3,
                        memory,
