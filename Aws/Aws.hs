@@ -51,6 +51,7 @@ import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import qualified Data.Text.IO                 as T
 import qualified Network.HTTP.Conduit         as HTTP
+import qualified Network.HTTP.Client.TLS      as HTTP
 import           System.IO                    (stderr)
 import           Prelude
 
@@ -193,7 +194,7 @@ simpleAws :: (Transaction r a, AsMemoryResponse a, MonadIO io)
             -> r
             -> io (MemoryResponse a)
 simpleAws cfg scfg request = liftIO $ runResourceT $ do
-    manager <- liftIO $ HTTP.newManager HTTP.tlsManagerSettings
+    manager <- liftIO HTTP.getGlobalManager
     loadToMemory =<< readResponseIO =<< aws cfg scfg manager request
 
 -- | Run an AWS transaction, without enforcing that response and request type form a valid transaction pair.
