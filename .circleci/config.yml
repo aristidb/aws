@@ -1,0 +1,200 @@
+
+version: 2
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - build
+      - build-nightly
+      - build-lts-12
+      - build-lts-11
+      - build-lts-10
+      - build-lts-9
+
+
+references:
+
+  restore_backend_stack_cache: &restore_backend_stack_cache
+
+  # Default branch / master
+
+  default_cache_key: &default_cache_key
+    v2-stack-{{ checksum "stack.yaml" }}-{{ checksum "aws.cabal" }}
+
+  restore_stack_default_cache: &restore_stack_default_cache
+    restore_cache:
+      keys:
+        - *default_cache_key
+        - v2-stack-{{ checksum "stack.yaml" }}-
+        - v2-stack
+
+  save_stack_default_cache: &save_stack_default_cache
+    save_cache:
+      key: *default_cache_key
+      paths:
+        - ~/.stack
+
+  # nightly
+
+  nightly_cache_key: &nightly_cache_key
+    v2-stack-nightly-{{ checksum "aws.cabal" }}
+
+  restore_stack_nightly_cache: &restore_stack_nightly_cache
+    restore_cache:
+      keys:
+        - *nightly_cache_key
+        - v2-stack
+
+  save_stack_nightly_cache: &save_stack_nightly_cache
+    save_cache:
+      key: *nightly_cache_key
+      paths:
+        - ~/.stack
+
+  # lts-12
+
+  lts-11_cache_key: &lts-12_cache_key
+    v2-stack-lts-12-{{ checksum "aws.cabal" }}
+
+  restore_stack_lts-12_cache: &restore_stack_lts-12_cache
+    restore_cache:
+      keys:
+        - *lts-12_cache_key
+        - v2-stack
+
+  save_stack_lts-12_cache: &save_stack_lts-12_cache
+    save_cache:
+      key: *lts-12_cache_key
+      paths:
+        - ~/.stack
+
+  # lts-11
+
+  lts-11_cache_key: &lts-11_cache_key
+    v2-stack-lts-11-{{ checksum "aws.cabal" }}
+
+  restore_stack_lts-11_cache: &restore_stack_lts-11_cache
+    restore_cache:
+      keys:
+        - *lts-11_cache_key
+        - v2-stack
+
+  save_stack_lts-11_cache: &save_stack_lts-11_cache
+    save_cache:
+      key: *lts-11_cache_key
+      paths:
+        - ~/.stack
+
+  # lts-10
+
+  lts-10_cache_key: &lts-10_cache_key
+    v2-stack-lts-10-{{ checksum "aws.cabal" }}
+
+  restore_stack_lts-10_cache: &restore_stack_lts-10_cache
+    restore_cache:
+      keys:
+        - *lts-10_cache_key
+        - v2-stack
+
+  save_stack_lts-10_cache: &save_stack_lts-10_cache
+    save_cache:
+      key: *lts-10_cache_key
+      paths:
+        - ~/.stack
+
+  # lts-9
+
+  lts-9_cache_key: &lts-9_cache_key
+    v2-stack-lts-9-{{ checksum "aws.cabal" }}
+
+  restore_stack_lts-9_cache: &restore_stack_lts-9_cache
+    restore_cache:
+      keys:
+        - *lts-9_cache_key
+        - v2-stack
+
+  save_stack_lts-9_cache: &save_stack_lts-9_cache
+    save_cache:
+      key: *lts-9_cache_key
+      paths:
+        - ~/.stack
+
+jobs:
+  build:
+    docker:
+      - image: fpco/stack-build:lts-12.9
+    environment:
+      STACK_ARGS: "--resolver nightly --jobs 2"
+    steps:
+      - checkout
+      - *restore_stack_default_cache
+      - run: stack setup $STACK_ARGS
+      - run: stack install $STACK_ARGS --only-dependencies --test --no-run-tests
+      - *save_stack_default_cache
+      - run: stack test --no-terminal
+
+  build-nightly:
+    docker:
+      - image: fpco/stack-build:latest
+    environment:
+      STACK_ARGS: "--resolver nightly --no-terminal --jobs 2"
+    steps:
+      - checkout
+      - *restore_stack_nightly_cache
+      - run: stack setup $STACK_ARGS
+      - run: stack install $STACK_ARGS --only-dependencies --test --no-run-tests
+      - *save_stack_nightly_cache
+      - run: stack test $STACK_ARGS
+
+  build-lts-12:
+    docker:
+      - image: fpco/stack-build:lts-12
+    environment:
+      STACK_ARGS: "--resolver lts-12 --no-terminal --jobs 2"
+    steps:
+      - checkout
+      - *restore_stack_lts-12_cache
+      - run: stack setup $STACK_ARGS
+      - run: stack install $STACK_ARGS --only-dependencies --test --no-run-tests
+      - *save_stack_lts-12_cache
+      - run: stack test $STACK_ARGS
+
+  build-lts-11:
+    docker:
+      - image: fpco/stack-build:lts-11
+    environment:
+      STACK_ARGS: "--resolver lts-11 --no-terminal --jobs 2"
+    steps:
+      - checkout
+      - *restore_stack_lts-11_cache
+      - run: stack setup $STACK_ARGS
+      - run: stack install $STACK_ARGS --only-dependencies --test --no-run-tests
+      - *save_stack_lts-11_cache
+      - run: stack test $STACK_ARGS
+
+  build-lts-10:
+    docker:
+      - image: fpco/stack-build:lts-10
+    environment:
+      STACK_ARGS: "--resolver lts-10 --no-terminal --jobs 2"
+    steps:
+      - checkout
+      - *restore_stack_lts-10_cache
+      - run: stack setup $STACK_ARGS
+      - run: stack install $STACK_ARGS --only-dependencies --test --no-run-tests
+      - *save_stack_lts-10_cache
+      - run: stack test $STACK_ARGS
+
+  build-lts-9:
+    docker:
+      - image: fpco/stack-build:lts-9
+    environment:
+      STACK_ARGS: "--resolver lts-9 --no-terminal --jobs 2"
+    steps:
+      - checkout
+      - *restore_stack_lts-9_cache
+      - run: stack setup $STACK_ARGS --install-cabal
+      - run: stack install $STACK_ARGS --only-dependencies --test --no-run-tests
+      - *save_stack_lts-9_cache
+      - run: stack test $STACK_ARGS
