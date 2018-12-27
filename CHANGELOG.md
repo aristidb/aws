@@ -1,3 +1,13 @@
+0.21 series
+-----------
+
+-   0.21
+    - S3: Make user DisplayName field optional (used in "GetBucket"
+      among other places)
+    - Use HTTP.getGlobalManager from http-client-tls by default (more
+      efficient, and we have a transitive dependency on the package
+      anyways)
+
 0.20 series
 -----------
 
