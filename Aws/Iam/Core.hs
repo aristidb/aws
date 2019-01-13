@@ -14,6 +14,8 @@ module Aws.Iam.Core
     , AccessKeyStatus(..)
     , User(..)
     , parseUser
+    , Group(..)
+    , parseGroup
     , MfaDevice(..)
     , parseMfaDevice
     ) where
@@ -197,6 +199,38 @@ parseUser cursor = do
     userUserId     <- attr "UserId"
     userUserName   <- attr "UserName"
     return User{..}
+  where
+    attr name = force ("Missing " ++ Text.unpack name) $
+                cursor $// elContent name
+
+
+-- | The IAM @Group@ data type.
+--
+-- <http://docs.aws.amazon.com/IAM/latest/APIReference/API_Group.html>
+data Group
+    = Group {
+        groupArn        :: Text
+      -- ^ ARN used to refer to this group.
+      , groupCreateDate :: UTCTime
+      -- ^ Date and time at which the group was created.
+      , groupPath       :: Text
+      -- ^ Path under which the group was created.
+      , groupGroupId     :: Text
+      -- ^ Unique identifier used to refer to this group. 
+      , groupGroupName   :: Text
+      -- ^ Name of the group.
+      }
+    deriving (Eq, Ord, Show, Typeable)
+
+-- | Parses the IAM @Group@ data type.
+parseGroup :: MonadThrow m => Cu.Cursor -> m Group
+parseGroup cursor = do
+    groupArn        <- attr "Arn"
+    groupCreateDate <- attr "CreateDate" >>= parseDateTime . Text.unpack
+    groupPath       <- attr "Path"
+    groupGroupId     <- attr "GroupId"
+    groupGroupName   <- attr "GroupName"
+    return Group{..}
   where
     attr name = force ("Missing " ++ Text.unpack name) $
                 cursor $// elContent name

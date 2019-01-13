@@ -49,19 +49,29 @@ Library
                        Aws.Ec2.InstanceMetadata
                        Aws.Iam
                        Aws.Iam.Commands
+                       Aws.Iam.Commands.AddUserToGroup
                        Aws.Iam.Commands.CreateAccessKey
+                       Aws.Iam.Commands.CreateGroup
                        Aws.Iam.Commands.CreateUser
                        Aws.Iam.Commands.DeleteAccessKey
+                       Aws.Iam.Commands.DeleteGroup
+                       Aws.Iam.Commands.DeleteGroupPolicy
                        Aws.Iam.Commands.DeleteUser
                        Aws.Iam.Commands.DeleteUserPolicy
+                       Aws.Iam.Commands.GetGroupPolicy
                        Aws.Iam.Commands.GetUser
                        Aws.Iam.Commands.GetUserPolicy
                        Aws.Iam.Commands.ListAccessKeys
                        Aws.Iam.Commands.ListMfaDevices
+                       Aws.Iam.Commands.ListGroupPolicies
+                       Aws.Iam.Commands.ListGroups
                        Aws.Iam.Commands.ListUserPolicies
                        Aws.Iam.Commands.ListUsers
+                       Aws.Iam.Commands.PutGroupPolicy
                        Aws.Iam.Commands.PutUserPolicy
+                       Aws.Iam.Commands.RemoveUserFromGroup
                        Aws.Iam.Commands.UpdateAccessKey
+                       Aws.Iam.Commands.UpdateGroup
                        Aws.Iam.Commands.UpdateUser
                        Aws.Iam.Core
                        Aws.Iam.Internal
