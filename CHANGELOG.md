@@ -1,6 +1,9 @@
 0.21 series
 -----------
 
+-   0.21.1
+    - S3: Add PutBucketVersioning command
+
 -   0.21
     - S3: Make user DisplayName field optional (used in "GetBucket"
       among other places)
@@ -34,13 +37,13 @@
 0.17 series
 -----------
 
+-   0.17.1
+    -   Fix testsuite build
+
 -   0.17
     -   HTTP proxy support
     -   DDB: Support for additional interfaces, bug fixes
     -   Relax version bounds
-
--   0.17.1
-    -   Fix testsuite build
 
 0.16 series
 -----------
