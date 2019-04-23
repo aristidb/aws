@@ -39,9 +39,10 @@ putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
 putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False False
 
 data PutObjectResponse
-  = PutObjectResponse {
-      porVersionId :: Maybe T.Text
-    }
+  = PutObjectResponse
+      { porVersionId :: Maybe T.Text
+      , porETag :: T.Text
+      }
   deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
@@ -78,7 +79,8 @@ instance ResponseConsumer PutObject PutObjectResponse where
     type ResponseMetadata PutObjectResponse = S3Metadata
     responseConsumer _ _ = s3ResponseConsumer $ \resp -> do
       let vid = T.decodeUtf8 `fmap` lookup "x-amz-version-id" (HTTP.responseHeaders resp)
-      return $ PutObjectResponse vid
+      let etag = fromMaybe "" $ T.decodeUtf8 `fmap` lookup "ETag" (HTTP.responseHeaders resp)
+      return $ PutObjectResponse vid etag
 
 instance Transaction PutObject PutObjectResponse
 
