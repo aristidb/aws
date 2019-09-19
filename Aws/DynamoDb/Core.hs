@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
@@ -119,6 +120,9 @@ module Aws.DynamoDb.Core
 import           Control.Applicative
 import qualified Control.Exception            as C
 import           Control.Monad
+#if MIN_VERSION_base(4,9,0)
+import qualified Control.Monad.Fail           as Fail
+#endif
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Resource (throwM)
 import qualified Crypto.Hash                  as CH
@@ -1250,8 +1254,16 @@ instance Monad Parser where
     {-# INLINE (>>=) #-}
     return a = Parser $ \_kf ks -> ks a
     {-# INLINE return #-}
+#if !(MIN_VERSION_base(4,13,0))
     fail msg = Parser $ \kf _ks -> kf msg
     {-# INLINE fail #-}
+#endif
+
+#if MIN_VERSION_base(4,9,0)
+instance Fail.MonadFail Parser where
+    fail msg = Parser $ \kf _ks -> kf msg
+    {-# INLINE fail #-}
+#endif
 
 instance Functor Parser where
     fmap f m = Parser $ \kf ks -> let ks' a = ks (f a)
