@@ -1394,7 +1394,7 @@ parseAttr
 parseAttr k m =
   case M.lookup k m of
     Nothing -> fail ("Key " Sem.<> T.unpack k Sem.<> " not found")
-    Just (DMap dv) -> either (fail "...") return $ fromItem dv
+    Just (DMap dv) -> either (const (fail "...")) return $ fromItem dv
     _       -> fail ("Key " Sem.<> T.unpack k Sem.<> " is not a map!")
 
 -------------------------------------------------------------------------------
