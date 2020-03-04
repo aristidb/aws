@@ -1,15 +1,23 @@
 sudo: false
+dist: bionic
+language: generic
+
 addons:
   apt:
-    sources:
-      - hvr-ghc
     packages:
       - libgmp-dev
-      - ghc-8.0.1
-      - cabal-install-1.24
+
+before_install:
+  - unset CC
+  # workaround Disallowing sources: hvr-ghc
+  - sudo add-apt-repository ppa:hvr/ghc -y
+  - sudo apt-get update -q
+  - sudo apt-get install ghc-8.8.3 cabal-install-2.4 -y
+  - export PATH="$HOME/.cabal/bin:/opt/ghc/bin:/opt/cabal/bin:$PATH"
+
 install:
-  - export PATH=/opt/cabal/1.24/bin:/opt/ghc/8.0.1/bin:$PATH
   - travis_retry cabal update
   - cabal install --only-dependencies -fexamples --enable-tests
+
 script:
   - cabal configure -fexamples --enable-tests && cabal build
