@@ -3,7 +3,7 @@
 , case-insensitive, cereal, conduit, conduit-combinators
 , conduit-extra, containers, cryptohash, data-default, directory
 , errors, filepath, http-client, http-client-tls, http-conduit
-, http-types, lifted-base, monad-control, mtl, network, old-locale
+, http-types, lifted-base, monad-control, mtl, network, network-bsd, old-locale
 , QuickCheck, quickcheck-instances, resourcet, safe, scientific
 , stdenv, tagged, tasty, tasty-hunit, tasty-quickcheck, text, time
 , transformers, transformers-base, unordered-containers
@@ -19,7 +19,7 @@ mkDerivation {
     aeson attoparsec base base16-bytestring base64-bytestring
     blaze-builder byteable bytestring case-insensitive cereal conduit
     conduit-extra containers cryptohash data-default directory filepath
-    http-conduit http-types lifted-base monad-control mtl network
+    http-conduit http-types lifted-base monad-control mtl network network-bsd
     old-locale resourcet safe scientific tagged text time transformers
     unordered-containers utf8-string vector xml-conduit
   ];
