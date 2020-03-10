@@ -169,7 +169,7 @@ Library
     Build-depends: network == 3.*, network-bsd == 2.8.*
   else
     Build-depends: network == 2.*
- 
+
   if !impl(ghc >= 7.6)
     Build-depends: ghc-prim
 
