@@ -1,3 +1,13 @@
+0.22 series
+-----------
+
+-   0.22
+    - Support GHC 8.8
+    - Support network-3
+    - Support http-client 0.6+
+    - S3: add etag to PutObjectResponse
+    - Add IAM group manipulation methods
+
 0.21 series
 -----------
 
