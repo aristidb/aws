@@ -73,6 +73,8 @@ data SesConfiguration qt
     = SesConfiguration {
         sesiHttpMethod :: Method
       , sesiHost       :: B.ByteString
+      , sesiPort       :: Int
+      , sesiProtocol   :: Protocol
       }
     deriving (Show)
 
@@ -96,18 +98,20 @@ sesUsWest2 :: B.ByteString
 sesUsWest2 = "email.us-west-2.amazonaws.com"
 
 sesHttpsGet :: B.ByteString -> SesConfiguration qt
-sesHttpsGet endpoint = SesConfiguration Get endpoint
+sesHttpsGet endpoint =
+  SesConfiguration Get endpoint (defaultPort HTTPS) HTTPS
 
 sesHttpsPost :: B.ByteString -> SesConfiguration NormalQuery
-sesHttpsPost endpoint = SesConfiguration PostQuery endpoint
+sesHttpsPost endpoint =
+  SesConfiguration PostQuery endpoint (defaultPort HTTPS) HTTPS
 
 sesSignQuery :: [(B.ByteString, B.ByteString)] -> SesConfiguration qt -> SignatureData -> SignedQuery
 sesSignQuery query si sd
     = SignedQuery {
         sqMethod        = sesiHttpMethod si
-      , sqProtocol      = HTTPS
+      , sqProtocol      = sesiProtocol si
       , sqHost          = sesiHost si
-      , sqPort          = defaultPort HTTPS
+      , sqPort          = sesiPort si
       , sqPath          = "/"
       , sqQuery         = HTTP.simpleQueryToQuery query'
       , sqDate          = Just $ signatureTime sd
