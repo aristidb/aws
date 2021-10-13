@@ -118,6 +118,7 @@ module Aws.DynamoDb.Core
 
 -------------------------------------------------------------------------------
 import           Control.Applicative
+import           Control.Arrow                (first)
 import qualified Control.Exception            as C
 import           Control.Monad
 #if MIN_VERSION_base(4,9,0)
@@ -141,7 +142,12 @@ import           Data.Conduit
 import           Data.Conduit.Attoparsec      (sinkParser)
 import           Data.Default
 import           Data.Function                (on)
+#if MIN_VERSION_aeson(2,0,0)
+import qualified Data.Aeson.Key               as AK (fromText, toText)
+import qualified Data.Aeson.KeyMap            as HM
+#else
 import qualified Data.HashMap.Strict          as HM
+#endif
 import           Data.Int
 import           Data.IORef
 import           Data.List
@@ -544,7 +550,7 @@ instance FromJSON PrimaryKey where
        case length l of
           1 -> return $ head l 
           _ -> fail "Unable to parse PrimaryKey"     
-      where listPKey p'= map (\(txt,dval)-> hk txt dval)
+      where listPKey p'= map (\(txt,dval)-> hk (toText txt) dval)
                           . HM.toList <$> parseJSON p'
 
 
@@ -663,7 +669,7 @@ instance ToJSON Attribute where
 parseAttributeJson :: Value -> A.Parser [Attribute]
 parseAttributeJson (Object v) = mapM conv $ HM.toList v
     where
-      conv (k, o) = Attribute k <$> parseJSON o
+      conv (k, o) = Attribute (toText k) <$> parseJSON o
 parseAttributeJson _ = error "Attribute JSON must be an Object"
 
 
@@ -674,7 +680,7 @@ attributesJson as = object $ map attributeJson as
 
 -- | Convert into JSON pair
 attributeJson :: Attribute -> Pair
-attributeJson (Attribute nm v) = nm .= v
+attributeJson (Attribute nm v) = fromText nm .= v
 
 
 -------------------------------------------------------------------------------
@@ -962,7 +968,7 @@ conditionsJson key (Conditions op es) = b ++ a
     where
       a = if null es
           then []
-          else [key .= object (map conditionJson es)]
+          else [fromText key .= object (map conditionJson es)]
 
       b = if length (take 2 es) > 1
           then ["ConditionalOperator" .= String (rendCondOp op) ]
@@ -1046,7 +1052,7 @@ renderCondOp c = case c of
 
 
 conditionJson :: Condition -> Pair
-conditionJson Condition{..} = condAttr .= condOp
+conditionJson Condition{..} = fromText condAttr .= condOp
 
 
 instance ToJSON CondOp where
@@ -1078,8 +1084,8 @@ data ConsumedCapacity = ConsumedCapacity {
 instance FromJSON ConsumedCapacity where
     parseJSON (Object v) = ConsumedCapacity
       <$> v .: "CapacityUnits"
-      <*> (HM.toList <$> v .:? "GlobalSecondaryIndexes" .!= mempty)
-      <*> (HM.toList <$> v .:? "LocalSecondaryIndexes" .!= mempty)
+      <*> (map (first toText) . HM.toList <$> v .:? "GlobalSecondaryIndexes" .!= mempty)
+      <*> (map (first toText) . HM.toList <$> v .:? "LocalSecondaryIndexes" .!= mempty)
       <*> (v .:? "Table" >>= maybe (return Nothing) (.: "CapacityUnits"))
       <*> v .: "TableName"
     parseJSON _ = fail "ConsumedCapacity must be an Object."
@@ -1117,7 +1123,7 @@ data ItemCollectionMetrics = ItemCollectionMetrics {
 instance FromJSON ItemCollectionMetrics where
     parseJSON (Object v) = ItemCollectionMetrics
       <$> (do m <- v .: "ItemCollectionKey"
-              return $ head $ HM.toList m)
+              return $ first toText $ head $ HM.toList m)
       <*> v .: "SizeEstimateRangeGB"
     parseJSON _ = fail "ItemCollectionMetrics must be an Object."
 
@@ -1402,3 +1408,21 @@ parseAttr k m =
 -- instance.
 fromItem :: FromDynItem a => Item -> Either String a
 fromItem i = runParser (parseItem i) Left Right
+
+#if MIN_VERSION_aeson(2,0,0)
+
+toText :: Key -> T.Text
+toText = AK.toText
+
+fromText :: T.Text -> Key
+fromText = AK.fromText
+
+#else
+
+toText :: T.Text -> T.Text
+toText = id
+
+fromText :: T.Text -> T.Text
+fromText = id
+
+#endif

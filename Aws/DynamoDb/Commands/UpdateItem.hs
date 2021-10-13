@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                       #-}
 {-# LANGUAGE DeriveDataTypeable        #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
@@ -31,6 +32,9 @@ module Aws.DynamoDb.Commands.UpdateItem
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
+#if MIN_VERSION_aeson(2,0,0)
+import qualified Data.Aeson.Key      as AK (fromText)
+#endif
 import           Data.Default
 import qualified Data.Text           as T
 import           Prelude
@@ -91,9 +95,9 @@ instance ToJSON AttributeUpdates where
     toJSON = object . map mk . getAttributeUpdates
         where
           mk AttributeUpdate { auAction = UDelete, auAttr = auAttr } =
-            (attrName auAttr) .= object
+            fromText (attrName auAttr) .= object
             ["Action" .= UDelete]
-          mk AttributeUpdate { .. } = (attrName auAttr) .= object
+          mk AttributeUpdate { .. } = fromText (attrName auAttr) .= object
             ["Value" .= (attrVal auAttr), "Action" .= auAction]
 
 
@@ -166,9 +170,10 @@ instance AsMemoryResponse UpdateItemResponse where
     loadToMemory = return
 
 
-
-
-
-
-
-
+#if MIN_VERSION_aeson(2,0,0)
+fromText :: T.Text -> Key
+fromText = AK.fromText
+#else
+fromText :: T.Text -> T.Text
+fromText = id
+#endif

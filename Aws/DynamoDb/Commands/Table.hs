@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -37,7 +38,11 @@ import           Data.Aeson            ((.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson            as A
 import qualified Data.Aeson.Types      as A
 import           Data.Char             (toUpper)
+#if MIN_VERSION_aeson(2,0,0)
+import qualified Data.Aeson.KeyMap     as M
+#else
 import qualified Data.HashMap.Strict   as M
+#endif
 import           Data.Scientific       (Scientific)
 import qualified Data.Text             as T
 import           Data.Time
