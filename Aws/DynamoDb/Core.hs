@@ -128,6 +128,8 @@ import           Control.Monad.Trans.Resource (throwM)
 import qualified Crypto.Hash                  as CH
 import           Data.Aeson
 import qualified Data.Aeson                   as A
+import qualified Data.Aeson.Key               as AK
+import qualified Data.Aeson.KeyMap            as KM
 import           Data.Aeson.Types             (Pair, parseEither)
 import qualified Data.Aeson.Types             as A
 import qualified Data.Attoparsec.ByteString   as AttoB (endOfInput)
@@ -141,7 +143,6 @@ import           Data.Conduit
 import           Data.Conduit.Attoparsec      (sinkParser)
 import           Data.Default
 import           Data.Function                (on)
-import qualified Data.HashMap.Strict          as HM
 import           Data.Int
 import           Data.IORef
 import           Data.List
@@ -536,7 +537,7 @@ instance ToJSON PrimaryKey where
     toJSON (PrimaryKey h (Just r)) =
       let Object p1 = toJSON h
           Object p2 = toJSON r
-      in Object (p1 `HM.union` p2)
+      in Object (p1 `KM.union` p2)
 
 instance FromJSON PrimaryKey where
     parseJSON p = do
@@ -544,8 +545,8 @@ instance FromJSON PrimaryKey where
        case length l of
           1 -> return $ head l 
           _ -> fail "Unable to parse PrimaryKey"     
-      where listPKey p'= map (\(txt,dval)-> hk txt dval)
-                          . HM.toList <$> parseJSON p'
+      where listPKey p'= map (\(k,dval)-> hk (AK.toText k) dval)
+                          . KM.toList <$> parseJSON p'
 
 
 -- | A key-value pair
@@ -661,9 +662,9 @@ instance ToJSON Attribute where
 -------------------------------------------------------------------------------
 -- | Parse a JSON object that contains attributes
 parseAttributeJson :: Value -> A.Parser [Attribute]
-parseAttributeJson (Object v) = mapM conv $ HM.toList v
+parseAttributeJson (Object v) = mapM conv $ KM.toList v
     where
-      conv (k, o) = Attribute k <$> parseJSON o
+      conv (k, o) = Attribute (AK.toText k) <$> parseJSON o
 parseAttributeJson _ = error "Attribute JSON must be an Object"
 
 
@@ -674,7 +675,7 @@ attributesJson as = object $ map attributeJson as
 
 -- | Convert into JSON pair
 attributeJson :: Attribute -> Pair
-attributeJson (Attribute nm v) = nm .= v
+attributeJson (Attribute nm v) = AK.fromText nm .= v
 
 
 -------------------------------------------------------------------------------
@@ -962,7 +963,7 @@ conditionsJson key (Conditions op es) = b ++ a
     where
       a = if null es
           then []
-          else [key .= object (map conditionJson es)]
+          else [AK.fromText key .= object (map conditionJson es)]
 
       b = if length (take 2 es) > 1
           then ["ConditionalOperator" .= String (rendCondOp op) ]
@@ -1046,7 +1047,7 @@ renderCondOp c = case c of
 
 
 conditionJson :: Condition -> Pair
-conditionJson Condition{..} = condAttr .= condOp
+conditionJson Condition{..} = AK.fromText condAttr .= condOp
 
 
 instance ToJSON CondOp where
@@ -1076,12 +1077,12 @@ data ConsumedCapacity = ConsumedCapacity {
 
 
 instance FromJSON ConsumedCapacity where
-    parseJSON (Object v) = ConsumedCapacity
-      <$> v .: "CapacityUnits"
-      <*> (HM.toList <$> v .:? "GlobalSecondaryIndexes" .!= mempty)
-      <*> (HM.toList <$> v .:? "LocalSecondaryIndexes" .!= mempty)
-      <*> (v .:? "Table" >>= maybe (return Nothing) (.: "CapacityUnits"))
-      <*> v .: "TableName"
+    parseJSON (Object o) = ConsumedCapacity
+      <$> o .: "CapacityUnits"
+      <*> (map (\(k, v) -> (AK.toText k, v)) . KM.toList <$> o .:? "GlobalSecondaryIndexes" .!= mempty)
+      <*> (map (\(k, v) -> (AK.toText k, v)) . KM.toList <$> o .:? "LocalSecondaryIndexes" .!= mempty)
+      <*> (o .:? "Table" >>= maybe (return Nothing) (.: "CapacityUnits"))
+      <*> o .: "TableName"
     parseJSON _ = fail "ConsumedCapacity must be an Object."
 
 
@@ -1115,10 +1116,10 @@ data ItemCollectionMetrics = ItemCollectionMetrics {
 
 
 instance FromJSON ItemCollectionMetrics where
-    parseJSON (Object v) = ItemCollectionMetrics
-      <$> (do m <- v .: "ItemCollectionKey"
-              return $ head $ HM.toList m)
-      <*> v .: "SizeEstimateRangeGB"
+    parseJSON (Object o) = ItemCollectionMetrics
+      <$> (do m <- o .: "ItemCollectionKey"
+              return $ (\(k, v) -> (AK.toText k, v)) $ head $ KM.toList m)
+      <*> o .: "SizeEstimateRangeGB"
     parseJSON _ = fail "ItemCollectionMetrics must be an Object."
 
 

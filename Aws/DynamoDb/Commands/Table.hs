@@ -35,9 +35,9 @@ module Aws.DynamoDb.Commands.Table
 import           Control.Applicative
 import           Data.Aeson            ((.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson            as A
+import qualified Data.Aeson.KeyMap     as KM
 import qualified Data.Aeson.Types      as A
 import           Data.Char             (toUpper)
-import qualified Data.HashMap.Strict   as M
 import           Data.Scientific       (Scientific)
 import qualified Data.Text             as T
 import           Data.Time
@@ -281,7 +281,7 @@ data TableDescription
 
 instance A.FromJSON TableDescription where
     parseJSON = A.withObject "Table must be an object" $ \o -> do
-        t <- case (M.lookup "Table" o, M.lookup "TableDescription" o) of
+        t <- case (KM.lookup "Table" o, KM.lookup "TableDescription" o) of
                 (Just (A.Object t), _) -> return t
                 (_, Just (A.Object t)) -> return t
                 _ -> fail "Table description must have key 'Table' or 'TableDescription'"
