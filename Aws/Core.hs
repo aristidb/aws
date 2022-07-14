@@ -84,6 +84,8 @@ module Aws.Core
 , loadCredentialsFromEnvOrFile
 , loadCredentialsFromEnvOrFileOrInstanceMetadata
 , loadCredentialsDefault
+, anonymousCredentials
+, isAnonymousCredentials
   -- * Service configuration
 , DefaultServiceConfiguration(..)
   -- * HTTP types
@@ -262,9 +264,11 @@ data Credentials
       , v4SigningKeys :: IORef [V4Key]
         -- | Signed IAM token
       , iamToken :: Maybe B.ByteString
+        -- | Set when the credentials are intended for anonymous access.
+      , isAnonymousCredentials :: Bool
       }
 instance Show Credentials where
-    show c = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ ",iamToken=" ++ show (iamToken c) ++ "}"
+    show c@(Credentials {}) = "Credentials{accessKeyID=" ++ show (accessKeyID c) ++ ",secretAccessKey=" ++ show (secretAccessKey c) ++ ",iamToken=" ++ show (iamToken c) ++ "}"
 
 makeCredentials :: MonadIO io
                 => B.ByteString -- ^ AWS Access Key ID
@@ -273,6 +277,7 @@ makeCredentials :: MonadIO io
 makeCredentials accessKeyID secretAccessKey = liftIO $ do
     v4SigningKeys <- newIORef []
     let iamToken = Nothing
+    let isAnonymousCredentials = False
     return Credentials { .. }
 
 -- | The file where access credentials are loaded, when using 'loadCredentialsDefault'.
@@ -350,7 +355,8 @@ loadCredentialsFromInstanceMetadata = do
               return (Credentials <$> (T.encodeUtf8 . T.pack <$> keyID)
                                   <*> (T.encodeUtf8 . T.pack <$> secret)
                                   <*> return ref
-                                  <*> (Just . T.encodeUtf8 . T.pack <$> token))
+                                  <*> (Just . T.encodeUtf8 . T.pack <$> token)
+				  <*> return False)
           Nothing -> return Nothing
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
@@ -393,6 +399,13 @@ loadCredentialsDefault = do
   case mfile of
       Just file -> loadCredentialsFromEnvOrFileOrInstanceMetadata file credentialsDefaultKey
       Nothing   -> loadCredentialsFromEnv
+
+-- | Make a dummy Credentials that can be used to access some AWS services
+-- anonymously.
+anonymousCredentials :: MonadIO io => io Credentials
+anonymousCredentials = do
+	cr <- makeCredentials mempty mempty
+	return (cr { isAnonymousCredentials = True })
 
 -- | Protocols supported by AWS. Currently, all AWS services use the HTTP or HTTPS protocols.
 data Protocol

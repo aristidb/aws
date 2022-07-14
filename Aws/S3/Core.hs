@@ -230,7 +230,12 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV2, .. } Signatur
       , sqStringToSign = stringToSign
       }
     where
-      amzHeaders = merge $ sortBy (compare `on` fst) (s3QAmzHeaders ++ (fmap (\(k, v) -> (CI.mk k, v)) iamTok))
+      -- This also implements anonymous queries.
+      isanon = isAnonymousCredentials signatureCredentials 
+      amzHeaders = merge $ sortBy (compare `on` fst) $ s3QAmzHeaders ++ 
+        if isanon 
+          then []
+          else fmap (\(k, v) -> (CI.mk k, v)) iamTok
           where merge (x1@(k1,v1):x2@(k2,v2):xs) | k1 == k2  = merge ((k1, B8.intercalate "," [v1, v2]) : xs)
                                                  | otherwise = x1 : merge (x2 : xs)
                 merge xs = xs
@@ -278,30 +283,36 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV2, .. } Signatur
                        ]
           where amzHeader (k, v) = Blaze.copyByteString (CI.foldedCase k) `mappend` Blaze8.fromChar ':' `mappend` Blaze.copyByteString v
       (authorization, authQuery) = case ti of
-                                 AbsoluteTimestamp _ -> (Just $ return $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
+                                 AbsoluteTimestamp _
+                                        | isanon -> (Nothing, [])
+                                        | otherwise -> (Just $ return $ B.concat ["AWS ", accessKeyID signatureCredentials, ":", sig], [])
                                  AbsoluteExpires time -> (Nothing, HTTP.toQuery $ makeAuthQuery time)
       makeAuthQuery time
-          = [("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)
-            , ("AWSAccessKeyId", accessKeyID signatureCredentials)
-            , ("SignatureMethod", "HmacSHA256")
-            , ("Signature", sig)] ++ iamTok
-s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV4 signpayload, .. } sd@SignatureData{..}
-    = SignedQuery
-    { sqMethod = s3QMethod
-    , sqProtocol = s3Protocol
-    , sqHost = B.intercalate "." $ catMaybes host
-    , sqPort = s3Port
-    , sqPath = mconcat $ catMaybes path
-    , sqQuery = queryString ++ signatureQuery :: HTTP.Query
-    , sqDate = Just signatureTime
-    , sqAuthorization = authorization
-    , sqContentType = s3QContentType
-    , sqContentMd5 = s3QContentMd5
-    , sqAmzHeaders = Map.toList amzHeaders
-    , sqOtherHeaders = s3QOtherHeaders
-    , sqBody = s3QRequestBody
-    , sqStringToSign = stringToSign
-    }
+        | isanon = []
+        | otherwise = 
+                [ ("Expires" :: B8.ByteString, fmtTimeEpochSeconds time)
+                , ("AWSAccessKeyId", accessKeyID signatureCredentials)
+                , ("SignatureMethod", "HmacSHA256")
+                , ("Signature", sig)] ++ iamTok
+s3SignQuery sq@S3Query{..} sc@S3Configuration{ s3SignVersion = S3SignV4 signpayload, .. } sd@SignatureData{..}
+    | isAnonymousCredentials signatureCredentials =
+      s3SignQuery sq (sc { s3SignVersion = S3SignV2 }) sd
+    | otherwise = SignedQuery
+      { sqMethod = s3QMethod
+      , sqProtocol = s3Protocol
+      , sqHost = B.intercalate "." $ catMaybes host
+      , sqPort = s3Port
+      , sqPath = mconcat $ catMaybes path
+      , sqQuery = queryString ++ signatureQuery :: HTTP.Query
+      , sqDate = Just signatureTime
+      , sqAuthorization = authorization
+      , sqContentType = s3QContentType
+      , sqContentMd5 = s3QContentMd5
+      , sqAmzHeaders = Map.toList amzHeaders
+      , sqOtherHeaders = s3QOtherHeaders
+      , sqBody = s3QRequestBody
+      , sqStringToSign = stringToSign
+      }
     where
         -- V4 signing
         -- * <http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html>

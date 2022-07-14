@@ -58,6 +58,7 @@ module Aws
 , loadCredentialsFromEnvOrFile
 , loadCredentialsFromEnvOrFileOrInstanceMetadata
 , loadCredentialsDefault
+, anonymousCredentials
 )
 where
 
