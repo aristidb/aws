@@ -136,5 +136,6 @@ Contributors
   John Wiegley        |[jwiegley](https://github.com/jwiegley)          |johnw@fpcomplete.com            |[FP Complete](http://fpcomplete.com)                 |Co-Maintainer, S3
   Chris Dornan        |[cdornan](https://github.com/cdornan)            |chris.dornan@irisconnect.co.uk  |[Iris Connect](http://irisconnect.co.uk)             |Core
   John Lenz           |[wuzzeb](https://github/com/wuzzeb)              |                                |                                                     |DynamoDB, Core
+  Joey Hess           |[joeyh](https://github.com/joeyh)                |id@joeyh.name                   |-                                                    |Co-Maintainer, S3
 
 
