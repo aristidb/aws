@@ -31,6 +31,7 @@ module Aws.DynamoDb.Commands.UpdateItem
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
+import qualified Data.Aeson.Key      as AK
 import           Data.Default
 import qualified Data.Text           as T
 import           Prelude
@@ -91,9 +92,9 @@ instance ToJSON AttributeUpdates where
     toJSON = object . map mk . getAttributeUpdates
         where
           mk AttributeUpdate { auAction = UDelete, auAttr = auAttr } =
-            (attrName auAttr) .= object
+            (AK.fromText (attrName auAttr)) .= object
             ["Action" .= UDelete]
-          mk AttributeUpdate { .. } = (attrName auAttr) .= object
+          mk AttributeUpdate { .. } = AK.fromText (attrName auAttr) .= object
             ["Value" .= (attrVal auAttr), "Action" .= auAction]
 
 
