@@ -1,6 +1,12 @@
 0.22 series
 -----------
 
+-   0.22.1
+    - Update to aeson-2
+    - Support http-client 0.7
+    - Support base64-bytestring 1.2
+    - Support attoparsec 0.14
+    - Support base16-bytestring 1.0
 -   0.22
     - Support GHC 8.8
     - Support network-3
