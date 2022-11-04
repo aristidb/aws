@@ -14,7 +14,8 @@ import qualified Text.XML.Cursor      as Cu
 import           Text.XML.Cursor      (($/), (&|))
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Char8 ({- IsString -})
-import           Control.Applicative     ((<$>))
+import           Control.Applicative
+import           Prelude
 
 data DeleteObjects
     = DeleteObjects {

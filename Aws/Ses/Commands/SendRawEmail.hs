@@ -5,10 +5,11 @@ module Aws.Ses.Commands.SendRawEmail
 
 import Data.Text (Text)
 import Data.Typeable
-import Control.Applicative ((<$>))
+import Control.Applicative
 import qualified Data.ByteString.Char8 as BS
 import Text.XML.Cursor (($//))
 import qualified Data.Text.Encoding as T
+import Prelude
 
 import Aws.Core
 import Aws.Ses.Core

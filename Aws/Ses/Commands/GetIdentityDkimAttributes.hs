@@ -4,13 +4,14 @@ module Aws.Ses.Commands.GetIdentityDkimAttributes
     , IdentityDkimAttributes(..)
     ) where
 
-import           Control.Applicative   ((<$>))
 import qualified Data.ByteString.Char8 as BS
 import           Data.Text             (Text)
 import           Data.Text             as T (toCaseFold)
 import           Data.Text.Encoding    as T (encodeUtf8)
 import           Data.Typeable
 import           Text.XML.Cursor       (laxElement, ($/), ($//), (&/), (&|))
+import           Control.Applicative
+import           Prelude
 
 import           Aws.Core
 import           Aws.Ses.Core

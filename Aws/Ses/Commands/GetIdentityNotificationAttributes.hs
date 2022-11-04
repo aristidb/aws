@@ -6,11 +6,12 @@ module Aws.Ses.Commands.GetIdentityNotificationAttributes
 
 import Data.Text (Text)
 import qualified Data.ByteString.Char8 as BS
-import Control.Applicative ((<$>))
+import Control.Applicative
 import Data.Text.Encoding as T (encodeUtf8)
 import Data.Text as T (toCaseFold)
 import Data.Typeable
 import Text.XML.Cursor (($//), ($/), (&|), laxElement)
+import Prelude
 
 import Aws.Core
 import Aws.Ses.Core

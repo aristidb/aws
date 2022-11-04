@@ -5,10 +5,11 @@ module Aws.Ses.Commands.SetIdentityNotificationTopic
     ) where
 
 import Data.Text (Text)
-import Control.Applicative ((<$>))
+import Control.Applicative
 import Data.Maybe (maybeToList)
 import Data.Text.Encoding as T (encodeUtf8)
 import Data.Typeable
+import Prelude
 import Aws.Core
 import Aws.Ses.Core
 

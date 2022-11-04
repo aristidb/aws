@@ -19,7 +19,7 @@ import           Control.Monad
 import           Control.Monad.Trans.Resource (MonadThrow)
 import           Data.ByteString     (ByteString)
 import           Data.Maybe
-import           Data.Monoid         ((<>))
+import           Data.Monoid
 import           Prelude
 import           Data.Text           (Text)
 import qualified Data.Text           as Text

@@ -9,7 +9,7 @@ import           Control.Monad.Trans.Resource   (MonadThrow, throwM)
 import           Data.Char                      (isAscii, isAlphaNum, toUpper, ord)
 import           Data.Conduit                   ((.|))
 import           Data.Function
-import           Data.Functor                   ((<$>))
+import           Data.Functor
 import           Data.IORef
 import           Data.List
 import           Data.Maybe
