@@ -85,7 +85,6 @@ module Aws.Core
 , loadCredentialsFromEnvOrFileOrInstanceMetadata
 , loadCredentialsDefault
 , anonymousCredentials
-, isAnonymousCredentials
   -- * Service configuration
 , DefaultServiceConfiguration(..)
   -- * HTTP types
