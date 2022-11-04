@@ -1,3 +1,14 @@
+0.23 series
+-----------
+
+NOTES: 0.23 brings technically breaking changes, which should not affect
+most users. I recommend using smart constructors and {} matching syntax
+whenever possible when interacting with aws types.
+
+-   0.23
+    - Support anonymous access of S3 buckets.a
+    - [breaking change] added isAnonymousCredentials to Credentials.
+
 0.22 series
 -----------
 
