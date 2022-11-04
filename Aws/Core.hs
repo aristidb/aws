@@ -355,7 +355,7 @@ loadCredentialsFromInstanceMetadata = do
                                   <*> (T.encodeUtf8 . T.pack <$> secret)
                                   <*> return ref
                                   <*> (Just . T.encodeUtf8 . T.pack <$> token)
-				  <*> return False)
+                                  <*> return False)
           Nothing -> return Nothing
 
 -- | Load credentials from environment variables if possible, or alternatively from a file with a given key name.
@@ -403,8 +403,8 @@ loadCredentialsDefault = do
 -- anonymously.
 anonymousCredentials :: MonadIO io => io Credentials
 anonymousCredentials = do
-	cr <- makeCredentials mempty mempty
-	return (cr { isAnonymousCredentials = True })
+  cr <- makeCredentials mempty mempty
+  return (cr { isAnonymousCredentials = True })
 
 -- | Protocols supported by AWS. Currently, all AWS services use the HTTP or HTTPS protocols.
 data Protocol
