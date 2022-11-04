@@ -8,6 +8,7 @@ whenever possible when interacting with aws types.
 -   0.23
     - Support anonymous access of S3 buckets.a
     - [breaking change] added isAnonymousCredentials to Credentials.
+    - Support bytestring 0.11
 
 0.22 series
 -----------
