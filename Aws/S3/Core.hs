@@ -70,6 +70,7 @@ data S3Configuration qt
     = S3Configuration
        { s3Protocol :: Protocol
        , s3Endpoint :: B.ByteString
+       , s3Region :: Maybe B.ByteString
        , s3RequestStyle :: RequestStyle
        , s3Port :: Int
        , s3ServerSideEncryption :: Maybe ServerSideEncryption
@@ -117,6 +118,7 @@ s3 protocol endpoint uri
     = S3Configuration
        { s3Protocol = protocol
        , s3Endpoint = endpoint
+       , s3Region = Nothing
        , s3RequestStyle = BucketStyle
        , s3Port = defaultPort protocol
        , s3ServerSideEncryption = Nothing
@@ -130,6 +132,7 @@ s3v4 protocol endpoint uri payload
     = S3Configuration
        { s3Protocol = protocol
        , s3Endpoint = endpoint
+       , s3Region = Nothing
        , s3RequestStyle = BucketStyle
        , s3Port = defaultPort protocol
        , s3ServerSideEncryption = Nothing
@@ -373,7 +376,7 @@ s3SignQuery sq@S3Query{..} sc@S3Configuration{ s3SignVersion = S3SignV4 signpayl
                 )
             where
                 allQueries = s3QSubresources ++ s3QQuery
-                region = s3ExtractRegion s3Endpoint
+                region = fromMaybe (s3ExtractRegion s3Endpoint) s3Region
                 auth = authorizationV4 sd HmacSHA256 region "s3" signedHeaders stringToSign
                 sig  = signatureV4     sd HmacSHA256 region "s3"               stringToSign
                 cred = credentialV4    sd            region "s3"
@@ -410,7 +413,10 @@ s3RenderQuery qm = mconcat . qmf . intersperse (B8.singleton '&') . map renderIt
         renderItem (k, Just v) = s3UriEncode True k Sem.<> "=" Sem.<> s3UriEncode True v
         renderItem (k, Nothing) = s3UriEncode True k Sem.<> "="
 
--- | see: <http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region>
+-- | Extract a S3 region from the S3 endpoint. AWS encodes the region names
+-- in the hostnames of endpoints in a way that makes this possible,
+-- see: <http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region>
+-- For other S3 implementations, may instead need to specify s3Region.
 s3ExtractRegion :: B.ByteString -> B.ByteString
 s3ExtractRegion "s3.amazonaws.com"            = "us-east-1"
 s3ExtractRegion "s3-external-1.amazonaws.com" = "us-east-1"

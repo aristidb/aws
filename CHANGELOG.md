@@ -1,3 +1,14 @@
+0.24 series
+-----------
+
+NOTES: 0.24 brings technically breaking changes, which should not affect
+most users. I recommend using smart constructors and {} matching syntax
+whenever possible when interacting with aws types.
+
+-   0.24
+    - Added s3Region constructor to S3Configuration, to support custom
+      S3 regions.
+
 0.23 series
 -----------
 
@@ -6,7 +17,7 @@ most users. I recommend using smart constructors and {} matching syntax
 whenever possible when interacting with aws types.
 
 -   0.23
-    - Support anonymous access of S3 buckets.a
+    - Support anonymous access of S3 buckets.
     - [breaking change] added isAnonymousCredentials to Credentials.
     - Support bytestring 0.11
 
