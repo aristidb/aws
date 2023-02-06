@@ -38,7 +38,6 @@ module Utils
 , prop_jsonRoundtrip
 ) where
 
-import Control.Applicative
 import Control.Concurrent (threadDelay)
 import qualified Control.Exception.Lifted as LE
 import Control.Error hiding (syncIO)
@@ -47,10 +46,12 @@ import Control.Monad.Identity
 import Control.Monad.IO.Class
 import Control.Monad.Base
 import Control.Monad.Trans.Control
+import Control.Applicative
+import Data.Monoid
+import Prelude
 
 import Data.Aeson (FromJSON, ToJSON, encode, eitherDecode)
 import Data.Dynamic (Dynamic)
-import Data.Monoid
 import Data.Proxy
 import Data.String
 import qualified Data.Text as T

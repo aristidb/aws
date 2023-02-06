@@ -35,8 +35,9 @@ import Control.Monad.Trans.Resource
 
 import Data.IORef
 import qualified Data.List as L
-import Data.Monoid
 import qualified Data.Text as T
+import Data.Monoid
+import Prelude
 
 import qualified Network.HTTP.Client as HTTP
 
