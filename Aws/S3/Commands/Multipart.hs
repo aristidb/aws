@@ -370,7 +370,7 @@ putConduit ::
   -> T.Text
   -> T.Text
   -> T.Text
-  -> Conduit BL.ByteString m T.Text
+  -> ConduitT BL.ByteString T.Text m ()
 putConduit cfg s3cfg mgr bucket object uploadId = loop 1
   where
     loop n = do
@@ -383,13 +383,13 @@ putConduit cfg s3cfg mgr bucket object uploadId = loop 1
           loop (n+1)
         Nothing -> return ()
 
-chunkedConduit :: (MonadResource m) => Integer -> Conduit B8.ByteString m BL.ByteString
+chunkedConduit :: (MonadResource m) => Integer -> ConduitT B8.ByteString BL.ByteString m ()
 chunkedConduit size = loop 0 []
   where
-    loop :: Monad m => Integer -> [B8.ByteString] -> Conduit B8.ByteString m BL.ByteString
+    loop :: Monad m => Integer -> [B8.ByteString] -> ConduitT B8.ByteString BL.ByteString m ()
     loop cnt str = await >>= maybe (yieldChunk str) go
       where
-        go :: Monad m => B8.ByteString -> Conduit B8.ByteString m BL.ByteString
+        go :: Monad m => B8.ByteString -> ConduitT B8.ByteString BL.ByteString m ()
         go line
           | size <= len = yieldChunk newStr >> loop 0 []
           | otherwise   = loop len newStr
@@ -397,7 +397,7 @@ chunkedConduit size = loop 0 []
             len = fromIntegral (B8.length line) + cnt
             newStr = line:str
 
-    yieldChunk :: Monad m => [B8.ByteString] -> Conduit i m BL.ByteString
+    yieldChunk :: Monad m => [B8.ByteString] -> ConduitT i BL.ByteString m ()
     yieldChunk = yield . BL.fromChunks . reverse
 
 multipartUpload ::
@@ -424,7 +424,7 @@ multipartUploadSink :: MonadResource m
   -> T.Text    -- ^ Bucket name
   -> T.Text    -- ^ Object name
   -> Integer   -- ^ chunkSize (minimum: 5MB)
-  -> Sink B8.ByteString m ()
+  -> ConduitT B8.ByteString Void m ()
 multipartUploadSink cfg s3cfg = multipartUploadSinkWithInitiator cfg s3cfg postInitiateMultipartUpload
 
 multipartUploadWithInitiator ::
@@ -434,7 +434,7 @@ multipartUploadWithInitiator ::
   -> HTTP.Manager
   -> T.Text
   -> T.Text
-  -> Conduit () (ResourceT IO) B8.ByteString
+  -> ConduitT () B8.ByteString (ResourceT IO) ()
   -> Integer
   -> ResourceT IO ()
 multipartUploadWithInitiator cfg s3cfg initiator mgr bucket object src chunkSize = do
@@ -453,7 +453,7 @@ multipartUploadSinkWithInitiator :: MonadResource m
   -> T.Text    -- ^ Bucket name
   -> T.Text    -- ^ Object name
   -> Integer   -- ^ chunkSize (minimum: 5MB)
-  -> Sink B8.ByteString m ()
+  -> ConduitT B8.ByteString Void m ()
 multipartUploadSinkWithInitiator cfg s3cfg initiator mgr bucket object chunkSize = do
   uploadId <- liftIO $ imurUploadId <$> memoryAws cfg s3cfg mgr (initiator bucket object)
   etags <- chunkedConduit chunkSize
