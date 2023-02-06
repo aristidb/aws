@@ -1,5 +1,5 @@
 module Aws.S3.Commands.Multipart
-       where
+where
 import           Aws.Aws
 import           Aws.Core
 import           Aws.S3.Core
@@ -406,15 +406,15 @@ multipartUpload ::
   -> HTTP.Manager
   -> T.Text
   -> T.Text
-  -> Conduit () (ResourceT IO) B8.ByteString
+  -> ConduitT () B8.ByteString (ResourceT IO) ()
   -> Integer
   -> ResourceT IO ()
 multipartUpload cfg s3cfg mgr bucket object src chunkSize = do
   uploadId <- liftIO $ getUploadId cfg s3cfg mgr bucket object
-  etags <- src
-           $= chunkedConduit chunkSize
-           $= putConduit cfg s3cfg mgr bucket object uploadId
-           $$ CL.consume
+  etags <- (src
+           .| chunkedConduit chunkSize
+           .| putConduit cfg s3cfg mgr bucket object uploadId
+           ) `connect` CL.consume
   void $ liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
 
 multipartUploadSink :: MonadResource m
@@ -439,10 +439,10 @@ multipartUploadWithInitiator ::
   -> ResourceT IO ()
 multipartUploadWithInitiator cfg s3cfg initiator mgr bucket object src chunkSize = do
   uploadId <- liftIO $ imurUploadId <$> memoryAws cfg s3cfg mgr (initiator bucket object)
-  etags <- src
-           $= chunkedConduit chunkSize
-           $= putConduit cfg s3cfg mgr bucket object uploadId
-           $$ CL.consume
+  etags <- (src
+           .| chunkedConduit chunkSize
+           .| putConduit cfg s3cfg mgr bucket object uploadId
+           ) `connect` CL.consume
   void $ liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags
 
 multipartUploadSinkWithInitiator :: MonadResource m
@@ -457,6 +457,6 @@ multipartUploadSinkWithInitiator :: MonadResource m
 multipartUploadSinkWithInitiator cfg s3cfg initiator mgr bucket object chunkSize = do
   uploadId <- liftIO $ imurUploadId <$> memoryAws cfg s3cfg mgr (initiator bucket object)
   etags <- chunkedConduit chunkSize
-           $= putConduit cfg s3cfg mgr bucket object uploadId
-           $= CL.consume
+           .| putConduit cfg s3cfg mgr bucket object uploadId
+           .| CL.consume
   void $ liftIO $ sendEtag cfg s3cfg mgr bucket object uploadId etags

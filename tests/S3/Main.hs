@@ -228,10 +228,10 @@ test_versioning = askOption $ \(BucketOption bucket) ->
         (cfg, s3cfg, mgr) <- setup
         resp <- runResourceT $ do
             uploadId <- liftIO $ getUploadId cfg s3cfg mgr bucket k
-            etags <- sourceLazy testStr
-                $= chunkedConduit 65536
-                $= putConduit cfg s3cfg mgr bucket k uploadId
-                $$ sinkList
+            etags <- (sourceLazy testStr
+                .| chunkedConduit 65536
+                .| putConduit cfg s3cfg mgr bucket k uploadId
+                ) `connect` sinkList
             liftIO $ sendEtag cfg s3cfg mgr bucket k uploadId etags
         let Just vid = cmurVersionId resp
         bs <- runResourceT $ do

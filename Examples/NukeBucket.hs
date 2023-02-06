@@ -30,7 +30,7 @@ main = do
             liftIO $ putStrLn ("Deleting objects: " ++ show keys)
             _ <- Aws.pureAws cfg s3cfg mgr (S3.deleteObjects bucket (map S3.objectKey os))
             return ()
-    src C.$$ CL.mapM_ (deleteObjects . S3.gbrContents <=< Aws.readResponseIO)
+    src `C.connect` CL.mapM_ (deleteObjects . S3.gbrContents <=< Aws.readResponseIO)
     liftIO $ putStrLn ("Deleting bucket: " ++ show bucket)
     _ <- Aws.pureAws cfg s3cfg mgr (S3.DeleteBucket bucket)
     return ()

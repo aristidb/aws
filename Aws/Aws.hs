@@ -350,7 +350,7 @@ awsIteratedList'
     -- ^ An initial request
     -> forall i. C.ConduitT i c m ()
 awsIteratedList' run r0 =
-    awsIteratedSource' run' r0 C.=$=
+    awsIteratedSource' run' r0 `C.fuse`
     CL.concatMap listResponse
   where
     dupl a = (a,a)

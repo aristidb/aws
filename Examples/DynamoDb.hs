@@ -121,7 +121,7 @@ main = do
   let q0 = (scan "devel-1") { sLimit = Just 5 }
 
   mgr <- newManager tlsManagerSettings
-  xs <- runResourceT $ awsIteratedList cfg debugServiceConfig mgr q0 $$ C.consume
+  xs <- runResourceT $ awsIteratedList cfg debugServiceConfig mgr q0 `connect` C.consume
   echo ("Pagination returned " ++ show (length xs) ++ " items")
 
 
