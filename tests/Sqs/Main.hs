@@ -354,8 +354,8 @@ prop_connectionReuse queue = do
         ref <- newIORef (0 :: Int)
 
         -- Use a single manager for all HTTP requests
-        void . HTTP.withManager (managerSettings ref) $ \manager -> runExceptT $
-
+        manager <- HTTP.newManager (managerSettings ref)
+        void $ runExceptT $
             flip catchE (error . T.unpack) . replicateM_ 3 $ do
                 void . sqsT cfg manager $ SQS.ListQueues Nothing
                 mustFail . sqsT cfg manager $
