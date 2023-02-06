@@ -138,7 +138,8 @@ prop_connectionReuse = do
         -- counts the number of TCP connections
         ref <- newIORef (0 :: Int)
 
-        void . HTTP.withManager (managerSettings ref) $ \manager -> runExceptT $
+        manager <- HTTP.newManager (managerSettings ref)
+        void $ runExceptT $
             flip catchE (error . T.unpack) . replicateM_ 3 $ do
                 void $ dyT cfg manager DY.ListTables
                 mustFail . dyT cfg manager $ DY.DescribeTable "____"

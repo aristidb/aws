@@ -122,6 +122,7 @@ import qualified Data.Conduit             as C
 import qualified Data.Conduit.Binary      as CB
 #endif
 import qualified Data.Conduit.List        as CL
+import           Data.Kind
 import           Data.IORef
 import           Data.List
 import qualified Data.Map                 as M
@@ -226,7 +227,7 @@ instance ResponseConsumer r (HTTP.Response L.ByteString) where
 
 -- | Class for responses that are fully loaded into memory
 class AsMemoryResponse resp where
-    type MemoryResponse resp :: *
+    type MemoryResponse resp :: Type
     loadToMemory :: resp -> ResourceT IO (MemoryResponse resp)
 
 -- | Responses that have one main list in them, and perhaps some decoration.
@@ -590,7 +591,7 @@ data UriOnlyQuery
 -- | A "signable" request object. Assembles together the Query, and signs it in one go.
 class SignQuery request where
     -- | Additional information, like API endpoints and service-specific preferences.
-    type ServiceConfiguration request :: * {- Query Type -} -> *
+    type ServiceConfiguration request :: Type {- Query Type -} -> Type
 
     -- | Create a 'SignedQuery' from a request, additional 'Info', and 'SignatureData'.
     signQuery :: request -> ServiceConfiguration request queryType -> SignatureData -> SignedQuery

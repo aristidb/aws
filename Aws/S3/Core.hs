@@ -67,16 +67,16 @@ data S3SignVersion
     deriving (Eq, Show, Read, Typeable)
 
 data S3Configuration qt
-    = S3Configuration {
-        s3Protocol :: Protocol
-      , s3Endpoint :: B.ByteString
-      , s3RequestStyle :: RequestStyle
-      , s3Port :: Int
-      , s3ServerSideEncryption :: Maybe ServerSideEncryption
-      , s3UseUri :: Bool
-      , s3DefaultExpiry :: NominalDiffTime
-      , s3SignVersion :: S3SignVersion
-      }
+    = S3Configuration
+       { s3Protocol :: Protocol
+       , s3Endpoint :: B.ByteString
+       , s3RequestStyle :: RequestStyle
+       , s3Port :: Int
+       , s3ServerSideEncryption :: Maybe ServerSideEncryption
+       , s3UseUri :: Bool
+       , s3DefaultExpiry :: NominalDiffTime
+       , s3SignVersion :: S3SignVersion
+       }
     deriving (Show)
 
 instance DefaultServiceConfiguration (S3Configuration NormalQuery) where
@@ -114,8 +114,8 @@ s3EndpointApNorthEast = "s3-ap-northeast-1.amazonaws.com"
 
 s3 :: Protocol -> B.ByteString -> Bool -> S3Configuration qt
 s3 protocol endpoint uri
-    = S3Configuration {
-         s3Protocol = protocol
+    = S3Configuration
+       { s3Protocol = protocol
        , s3Endpoint = endpoint
        , s3RequestStyle = BucketStyle
        , s3Port = defaultPort protocol
@@ -128,15 +128,15 @@ s3 protocol endpoint uri
 s3v4 :: Protocol -> B.ByteString -> Bool -> S3SignPayloadMode -> S3Configuration qt
 s3v4 protocol endpoint uri payload
     = S3Configuration
-    { s3Protocol = protocol
-    , s3Endpoint = endpoint
-    , s3RequestStyle = BucketStyle
-    , s3Port = defaultPort protocol
-    , s3ServerSideEncryption = Nothing
-    , s3UseUri = uri
-    , s3DefaultExpiry = 15*60
-    , s3SignVersion = S3SignV4 payload
-    }
+       { s3Protocol = protocol
+       , s3Endpoint = endpoint
+       , s3RequestStyle = BucketStyle
+       , s3Port = defaultPort protocol
+       , s3ServerSideEncryption = Nothing
+       , s3UseUri = uri
+       , s3DefaultExpiry = 15*60
+       , s3SignVersion = S3SignV4 payload
+       }
 
 
 type ErrorCode = T.Text

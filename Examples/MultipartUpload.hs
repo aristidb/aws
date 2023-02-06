@@ -4,7 +4,7 @@ import qualified Aws
 import qualified Aws.Core as Aws
 import qualified Aws.S3 as S3
 import qualified Data.ByteString.Char8 as B
-import           Data.Conduit (($$))
+import           Data.Conduit (connect)
 import           Data.Conduit.Binary (sourceFile)
 import qualified Data.Text as T
 import           Network.HTTP.Conduit (newManager, tlsManagerSettings, responseBody)
@@ -27,4 +27,4 @@ main = do
       let s3cfg = S3.s3v4 Aws.HTTPS (B.pack endpoint) False S3.SignWithEffort
       mgr <- newManager tlsManagerSettings
       runResourceT $
-        sourceFile file $$ S3.multipartUploadSink cfg s3cfg mgr (T.pack bucket) (T.pack obj) (chunkSize*1024*1024)
+        sourceFile file `connect` S3.multipartUploadSink cfg s3cfg mgr (T.pack bucket) (T.pack obj) (chunkSize*1024*1024)

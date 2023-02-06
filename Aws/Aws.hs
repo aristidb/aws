@@ -296,7 +296,7 @@ awsIteratedSource
     -> ServiceConfiguration r NormalQuery
     -> HTTP.Manager
     -> r
-    -> C.Producer (ResourceT IO) (Response (ResponseMetadata a) a)
+    -> forall i. C.ConduitT i (Response (ResponseMetadata a) a) (ResourceT IO) ()
 awsIteratedSource cfg scfg manager req_ = awsIteratedSource' run req_
   where
     run r = do
@@ -311,7 +311,7 @@ awsIteratedList
     -> ServiceConfiguration r NormalQuery
     -> HTTP.Manager
     -> r
-    -> C.Producer (ResourceT IO) i
+    -> forall j. C.ConduitT j i (ResourceT IO) ()
 awsIteratedList cfg scfg manager req = awsIteratedList' run req
   where
     run r = readResponseIO =<< aws cfg scfg manager r
@@ -327,7 +327,7 @@ awsIteratedSource'
     -- ^ A runner function for executing transactions.
     -> r
     -- ^ An initial request
-    -> C.Producer m b
+    -> forall i. C.ConduitT i b m ()
 awsIteratedSource' run r0 = go r0
     where
       go q = do
@@ -348,9 +348,9 @@ awsIteratedList'
     -- ^ A runner function for executing transactions.
     -> r
     -- ^ An initial request
-    -> C.Producer m c
+    -> forall i. C.ConduitT i c m ()
 awsIteratedList' run r0 =
-    awsIteratedSource' run' r0 C.=$=
+    awsIteratedSource' run' r0 `C.fuse`
     CL.concatMap listResponse
   where
     dupl a = (a,a)
