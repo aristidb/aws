@@ -5,6 +5,9 @@ NOTES: 0.24 brings technically breaking changes, which should not affect
 most users. I recommend using smart constructors and {} matching syntax
 whenever possible when interacting with aws types.
 
+-   0.24.1
+    - Support resourcet 1.3
+    - Support transformers 0.6
 -   0.24
     - [breaking change] Added s3Region constructor to S3Configuration, to
       support custom S3 regions.
