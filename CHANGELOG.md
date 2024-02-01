@@ -7,6 +7,8 @@ whenever possible when interacting with aws types.
 
 -   0.24.2
     - Support bytestring 0.12
+    - Support building with aeson 2.2, adding dependency on
+      attoparsec-json.
 -   0.24.1
     - Support resourcet 1.3
     - Support transformers 0.6

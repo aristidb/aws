@@ -130,6 +130,7 @@ import           Data.Aeson
 import qualified Data.Aeson                   as A
 import qualified Data.Aeson.Key               as AK
 import qualified Data.Aeson.KeyMap            as KM
+import           Data.Aeson.Parser            as A (json')
 import           Data.Aeson.Types             (Pair, parseEither)
 import qualified Data.Aeson.Types             as A
 import qualified Data.Attoparsec.ByteString   as AttoB (endOfInput)
@@ -1164,7 +1165,7 @@ data QuerySelect
 instance Default QuerySelect where def = SelectAll
 
 -------------------------------------------------------------------------------
-querySelectJson :: KeyValue t => QuerySelect -> [t]
+querySelectJson :: KeyValue A.Value t => QuerySelect -> [t]
 querySelectJson (SelectSpecific as) =
     [ "Select" .= String "SPECIFIC_ATTRIBUTES"
     , "AttributesToGet" .= as]
