@@ -5,6 +5,8 @@ NOTES: 0.24 brings technically breaking changes, which should not affect
 most users. I recommend using smart constructors and {} matching syntax
 whenever possible when interacting with aws types.
 
+-   0.24.2
+    - Support bytestring 0.12
 -   0.24.1
     - Support resourcet 1.3
     - Support transformers 0.6
