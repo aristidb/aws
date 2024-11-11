@@ -524,7 +524,7 @@ queryToHttpRequest SignedQuery{..} =  do
                          PostQuery -> Just "application/x-www-form-urlencoded; charset=utf-8"
                          _ -> Nothing
 
--- | Create a URI fro a 'SignedQuery' object.
+-- | Create a URI from a 'SignedQuery' object.
 --
 -- Unused / incompatible fields will be silently ignored.
 queryToUri :: SignedQuery -> B.ByteString

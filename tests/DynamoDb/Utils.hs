@@ -118,7 +118,7 @@ withTable
 withTable = withTable_ True
 
 withTable_
-    :: Bool -- ^ whether to prefix te table name
+    :: Bool -- ^ whether to prefix the table name
     -> T.Text -- ^ table Name
     -> Int -- ^ read capacity (#(non-consistent) reads * itemsize/4KB)
     -> Int -- ^ write capacity (#writes * itemsize/1KB)
