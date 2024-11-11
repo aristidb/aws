@@ -497,7 +497,7 @@ queryToHttpRequest SignedQuery{..} =  do
                               ++ sqOtherHeaders
       , HTTP.requestBody =
 
-        -- An explicityly defined body parameter should overwrite everything else.
+        -- An explicitly defined body parameter should overwrite everything else.
         case sqBody of
           Just x -> x
           Nothing ->
