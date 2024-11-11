@@ -105,7 +105,7 @@ instance ToJSON AttributeUpdates where
 --
 -- @http:\/\/docs.aws.amazon.com\/amazondynamodb\/latest\/APIReference\/API_UpdateItem.html@
 data UpdateAction
-    = UPut                      -- ^ Simpley write, overwriting any previous value
+    = UPut                      -- ^ Simply write, overwriting any previous value
     | UAdd                      -- ^ Numerical add or add to set.
     | UDelete                   -- ^ Empty value: remove; Set value: Subtract from set.
     deriving (Eq,Show,Read,Ord)

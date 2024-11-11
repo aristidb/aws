@@ -19,7 +19,7 @@ module Aws.Sqs.Commands.Message
 , ReceiveMessage(..)
 , ReceiveMessageResponse(..)
 
--- * Change Message Visiblity
+-- * Change Message Visibility
 , ChangeMessageVisibility(..)
 , ChangeMessageVisibilityResponse(..)
 ) where
@@ -426,7 +426,7 @@ data ReceiveMessage = ReceiveMessage
 -- <http://queue.amazonaws.com/doc/2012-11-05/QueueService.wsdl>
 -- all elements except for the attributes are specified as required.
 -- At least for the field 'mMD5OfMessageAttributes' the the service
--- is not always returning a value and therefor we make this field optional.
+-- is not always returning a value and therefore we make this field optional.
 --
 data Message = Message
     { mMessageId :: !T.Text
@@ -508,7 +508,7 @@ readUserMessageAttributeValue cursor = do
             return $ UserMessageAttributeBinary c val
 
         (x, _) -> throwM . XmlException
-            $ "unkown data type for MessageAttributeValue: " <> T.unpack x
+            $ "unknown data type for MessageAttributeValue: " <> T.unpack x
   where
     parseType s = case T.break (== '.') s of
         (a, "") -> (a, Nothing)
@@ -519,7 +519,7 @@ readMessage :: Cu.Cursor -> Response SqsMetadata Message
 readMessage cursor = do
     mid <- force "Missing Message Id"
         $ cursor $// Cu.laxElement "MessageId" &/ Cu.content
-    rh <- force "Missing Reciept Handle"
+    rh <- force "Missing Receipt Handle"
         $ cursor $// Cu.laxElement "ReceiptHandle" &/ Cu.content
     md5 <- force "Missing MD5 Signature"
         $ cursor $// Cu.laxElement "MD5OfBody" &/ Cu.content

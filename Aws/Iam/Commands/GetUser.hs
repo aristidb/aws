@@ -15,7 +15,7 @@ import           Data.Text           (Text)
 import           Data.Typeable
 import           Prelude
 
--- | Retreives information about the given user.
+-- | Retrieves information about the given user.
 --
 -- If a user name is not given, IAM determines the user name based on the
 -- access key signing the request.
