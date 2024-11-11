@@ -39,7 +39,7 @@ data DeleteItem = DeleteItem {
     , diKey     :: PrimaryKey
     -- ^ The item to delete.
     , diExpect  :: Conditions
-    -- ^ (Possible) set of expections for a conditional Put
+    -- ^ (Possible) set of exceptions for a conditional Put
     , diReturn  :: UpdateReturn
     -- ^ What to return from this query.
     , diRetCons :: ReturnConsumption

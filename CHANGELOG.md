@@ -312,7 +312,7 @@ NOTE: 0.13 brings breaking changes compared to 0.12.1!
         \#72, \#74)
     -   SES: SendRawEmail now correctly encodes destinations and allows
         multiple destinations (\#73)
-    -   EC2: support fo Instance metadata (\#37)
+    -   EC2: support for Instance metadata (\#37)
     -   Core: queryToHttpRequest allows overriding "Date" for the
         benefit of Chris Dornan's Elastic Transcoder bindings (\#77)
 
