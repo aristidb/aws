@@ -77,6 +77,7 @@ data S3Configuration qt
        , s3UseUri :: Bool
        , s3DefaultExpiry :: NominalDiffTime
        , s3SignVersion :: S3SignVersion
+       , s3UserAgent :: Maybe T.Text
        }
     deriving (Show)
 
@@ -125,6 +126,7 @@ s3 protocol endpoint uri
        , s3UseUri = uri
        , s3DefaultExpiry = 15*60
        , s3SignVersion = S3SignV2
+       , s3UserAgent = Nothing
        }
 
 s3v4 :: Protocol -> B.ByteString -> Bool -> S3SignPayloadMode -> S3Configuration qt
@@ -139,6 +141,7 @@ s3v4 protocol endpoint uri payload
        , s3UseUri = uri
        , s3DefaultExpiry = 15*60
        , s3SignVersion = S3SignV4 payload
+       , s3UserAgent = Nothing
        }
 
 
@@ -228,7 +231,7 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV2, .. } Signatur
       , sqContentType = s3QContentType
       , sqContentMd5 = s3QContentMd5
       , sqAmzHeaders = amzHeaders
-      , sqOtherHeaders = s3QOtherHeaders
+      , sqOtherHeaders = useragent ++ s3QOtherHeaders
       , sqBody = s3QRequestBody
       , sqStringToSign = stringToSign
       }
@@ -297,6 +300,8 @@ s3SignQuery S3Query{..} S3Configuration{ s3SignVersion = S3SignV2, .. } Signatur
                 , ("AWSAccessKeyId", accessKeyID signatureCredentials)
                 , ("SignatureMethod", "HmacSHA256")
                 , ("Signature", sig)] ++ iamTok
+      
+      useragent = maybeToList $ (HTTP.hUserAgent,) . T.encodeUtf8 <$> s3UserAgent
 s3SignQuery sq@S3Query{..} sc@S3Configuration{ s3SignVersion = S3SignV4 signpayload, .. } sd@SignatureData{..}
     | isAnonymousCredentials signatureCredentials =
       s3SignQuery sq (sc { s3SignVersion = S3SignV2 }) sd
@@ -312,7 +317,7 @@ s3SignQuery sq@S3Query{..} sc@S3Configuration{ s3SignVersion = S3SignV4 signpayl
       , sqContentType = s3QContentType
       , sqContentMd5 = s3QContentMd5
       , sqAmzHeaders = Map.toList amzHeaders
-      , sqOtherHeaders = s3QOtherHeaders
+      , sqOtherHeaders = useragent ++ s3QOtherHeaders
       , sqBody = s3QRequestBody
       , sqStringToSign = stringToSign
       }
@@ -384,6 +389,8 @@ s3SignQuery sq@S3Query{..} sc@S3Configuration{ s3SignVersion = S3SignV4 signpayl
                     (False, t) -> t
                     (True, AbsoluteTimestamp time) -> AbsoluteExpires $ s3DefaultExpiry `addUTCTime` time
                     (True, AbsoluteExpires time) -> AbsoluteExpires time
+        
+        useragent = maybeToList $ (HTTP.hUserAgent,) . T.encodeUtf8 <$> s3UserAgent
 
 -- | Custom UriEncode function
 -- see <http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html>
