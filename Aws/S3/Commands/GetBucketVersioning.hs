@@ -26,7 +26,7 @@ getBucketVersioning = GetBucketVersioning
 data GetBucketVersioningResponse
     = GetBucketVersioningResponse
         { gbvVersioning :: Maybe VersioningState }
-	-- ^ Nothing when the bucket is not versioned
+        -- ^ Nothing when the bucket is not versioned
     deriving (Show)
 
 -- | ServiceConfiguration: 'S3Configuration'
