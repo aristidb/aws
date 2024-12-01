@@ -18,7 +18,7 @@ import qualified Network.HTTP.Types  as HTTP
 import           Text.XML.Cursor     (($//))
 import           Prelude
 
--- | Retreives the specified policy document for the specified user.
+-- | Retrieves the specified policy document for the specified user.
 --
 -- <http://docs.aws.amazon.com/IAM/latest/APIReference/API_GetUserPolicy.html>
 data GetUserPolicy

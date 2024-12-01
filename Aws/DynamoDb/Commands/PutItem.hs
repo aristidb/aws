@@ -40,7 +40,7 @@ data PutItem = PutItem {
     -- ^ An item to Put. Attributes here will replace what maybe under
     -- the key on DDB.
     , piExpect  :: Conditions
-    -- ^ (Possible) set of expections for a conditional Put
+    -- ^ (Possible) set of exceptions for a conditional Put
     , piReturn  :: UpdateReturn
     -- ^ What to return from this query.
     , piRetCons :: ReturnConsumption
