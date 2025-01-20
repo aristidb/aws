@@ -5,6 +5,9 @@ NOTES: 0.24 brings technically breaking changes, which should not affect
 most users. I recommend using smart constructors and {} matching syntax
 whenever possible when interacting with aws types.
 
+-   0.24.4
+    - Support filepath 1.5
+    - Support data-default 0.8
 -   0.24.3
     - [breaking change] Added s3UserAgent constructor to S3Configuration
     - S3: Add GetBucketVersioning command
