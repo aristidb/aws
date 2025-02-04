@@ -160,6 +160,7 @@ import           Data.Tagged
 import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as T
 import           Data.Time
+import           Data.Time.Clock.POSIX
 import           Data.Typeable
 import qualified Data.Vector                  as V
 import           Data.Word
@@ -398,45 +399,11 @@ instance DynVal Day where
 
 
 -------------------------------------------------------------------------------
--- | Losslessly encoded via 'Integer' picoseconds
+-- | Losslessly encoded via 'Scientific' picoseconds
 instance DynVal UTCTime where
     type DynRep UTCTime = DynNumber
-    fromRep num = fromTS <$> fromRep num
-    toRep x = toRep (toTS x)
-
-
--------------------------------------------------------------------------------
-pico :: Rational
-pico = toRational $ (10 :: Integer) ^ (12 :: Integer)
-
-
--------------------------------------------------------------------------------
-dayPico :: Integer
-dayPico = 86400 * round pico
-
-
--------------------------------------------------------------------------------
--- | Convert UTCTime to picoseconds
---
--- TODO: Optimize performance?
-toTS :: UTCTime -> Integer
-toTS (UTCTime (ModifiedJulianDay i) diff) = i' + diff'
-    where
-      diff' = floor (toRational diff * pico)
-      i' = i * dayPico
-
-
--------------------------------------------------------------------------------
--- | Convert picoseconds to UTCTime
---
--- TODO: Optimize performance?
-fromTS :: Integer -> UTCTime
-fromTS i = UTCTime (ModifiedJulianDay days) diff
-    where
-      (days, secs) = i `divMod` dayPico
-      diff = fromRational ((toRational secs) / pico)
-
-
+    fromRep (DynNumber i) = Just $ posixSecondsToUTCTime $ realToFrac i
+    toRep = DynNumber . realToFrac . utcTimeToPOSIXSeconds
 
 -- | Type wrapper for binary data to be written to DynamoDB. Wrap any
 -- 'Serialize' instance in there and 'DynVal' will know how to
