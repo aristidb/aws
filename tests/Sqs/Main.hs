@@ -84,7 +84,7 @@ help = L.intercalate "\n"
     , "By running the tests in this test-suite costs for usage of AWS"
     , "services may incur."
     , ""
-    , "In order to actually excute the tests in this test-suite you must"
+    , "In order to actually execute the tests in this test-suite you must"
     , "provide the command line options:"
     , ""
     , "    --run-with-aws-credentials"
@@ -298,7 +298,7 @@ prop_sendReceiveDeleteMessageLongPolling queue = do
 -- | Checks that long polling is actually enabled. We add a delay to the messages
 -- and immediately make a receive request with a polling wait time that is larger
 -- than the delay. Note that even though polling forces consistent reads, messages
--- will become available with some (small) offset. Therefor we request only a single
+-- will become available with some (small) offset. Therefore we request only a single
 -- message at a time.
 --
 prop_sendReceiveDeleteMessageLongPolling1

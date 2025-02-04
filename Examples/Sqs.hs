@@ -90,7 +90,7 @@ main = do
   -}
   exceptT T.putStrLn T.putStrLn . retryT 4 $ do
     qUrls <- liftIO $ do
-      putStrLn $ "Listing all queueus to check to see if " ++ show (Sqs.qName sqsQName) ++ " is gone"
+      putStrLn $ "Listing all queues to check to see if " ++ show (Sqs.qName sqsQName) ++ " is gone"
       Sqs.ListQueuesResponse qUrls_ <- Aws.simpleAws cfg sqscfg $ Sqs.ListQueues Nothing
       mapM_ T.putStrLn qUrls_
       return qUrls_
