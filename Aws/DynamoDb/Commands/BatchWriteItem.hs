@@ -25,7 +25,7 @@ module Aws.DynamoDb.Commands.BatchWriteItem where
 import           Control.Applicative
 import           Data.Aeson
 import           Data.Default
-import           Data.Foldable (asum)
+import qualified Data.Foldable as F (asum)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text           as T
 import           Prelude
@@ -89,7 +89,7 @@ instance ToJSON BatchWriteItem where
 instance FromJSON Request where
     parseJSON = withObject "PutRequest or DeleteRequest" $ \o ->
      
-     asum [
+     F.asum [
            do
              pr <- o .: "PutRequest"
              i  <- pr .: "Item"
