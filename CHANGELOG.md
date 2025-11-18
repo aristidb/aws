@@ -1,3 +1,13 @@
+0.25 series
+-----------
+
+NOTES: 0.25 brings technically breaking changes, which should not affect
+most users. I recommend using smart constructors and {} matching syntax
+whenever possible when interacting with aws types.
+
+-   0.25
+    - [breaking change] Added poTagging constructor to PutObject
+
 0.24 series
 -----------
 
