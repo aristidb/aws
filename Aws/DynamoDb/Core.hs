@@ -1254,7 +1254,7 @@ instance Monad Parser where
     m >>= g = Parser $ \kf ks -> let ks' a = runParser (g a) kf ks
                                  in runParser m kf ks'
     {-# INLINE (>>=) #-}
-    return a = Parser $ \_kf ks -> ks a
+    return = pure
     {-# INLINE return #-}
 #if !(MIN_VERSION_base(4,13,0))
     fail msg = Parser $ \kf _ks -> kf msg
@@ -1273,7 +1273,7 @@ instance Functor Parser where
     {-# INLINE fmap #-}
 
 instance Applicative Parser where
-    pure  = return
+    pure a = Parser $ \_kf ks -> ks a
     {-# INLINE pure #-}
     (<*>) = apP
     {-# INLINE (<*>) #-}
