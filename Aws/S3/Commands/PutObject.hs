@@ -5,16 +5,17 @@ where
 import           Aws.Core
 import           Aws.S3.Core
 import           Control.Applicative
-import           Control.Arrow         (second)
-import qualified Crypto.Hash           as CH
-import           Data.ByteString.Char8 ({- IsString -})
+import           Control.Arrow          (second)
+import qualified Crypto.Hash            as CH
+import           Data.ByteString.Char8  ({- IsString -})
 import           Data.Maybe
-import qualified Data.ByteString.Char8 as B
-import qualified Data.CaseInsensitive  as CI
-import qualified Data.Text             as T
-import qualified Data.Text.Encoding    as T
+import qualified Data.ByteString.Char8  as B
+import qualified Data.CaseInsensitive   as CI
+import qualified Data.Text              as T
+import qualified Data.Text.Encoding     as T
 import           Prelude
-import qualified Network.HTTP.Conduit  as HTTP
+import qualified Network.HTTP.Conduit   as HTTP
+import qualified Network.HTTP.Types.URI as URI
 
 data PutObject = PutObject {
   poObjectName :: T.Text,
@@ -32,11 +33,12 @@ data PutObject = PutObject {
   poRequestBody  :: HTTP.RequestBody,
   poMetadata :: [(T.Text,T.Text)],
   poAutoMakeBucket :: Bool, -- ^ Internet Archive S3 nonstandard extension
-  poExpect100Continue :: Bool -- ^ Note: Requires http-client >= 0.4.10
+  poExpect100Continue :: Bool, -- ^ Note: Requires http-client >= 0.4.10
+  poTagging :: [(T.Text,T.Text)] -- ^ tag-set as key/value pairs
 }
 
 putObject :: Bucket -> T.Text -> HTTP.RequestBody -> PutObject
-putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False False
+putObject bucket obj body = PutObject obj bucket Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing body [] False False []
 
 data PutObjectResponse
   = PutObjectResponse
@@ -55,13 +57,16 @@ instance SignQuery PutObject where
                                , s3QQuery = []
                                , s3QContentType = poContentType
                                , s3QContentMd5 = poContentMD5
-                               , s3QAmzHeaders = map (second T.encodeUtf8) $ catMaybes [
+                               , s3QAmzHeaders = map (second T.encodeUtf8) (catMaybes [
                                               ("x-amz-acl",) <$> writeCannedAcl <$> poAcl
                                             , ("x-amz-storage-class",) <$> writeStorageClass <$> poStorageClass
                                             , ("x-amz-website-redirect-location",) <$> poWebsiteRedirectLocation
                                             , ("x-amz-server-side-encryption",) <$> writeServerSideEncryption <$> poServerSideEncryption
                                             , if poAutoMakeBucket then Just ("x-amz-auto-make-bucket", "1")  else Nothing
                                             ] ++ map( \x -> (CI.mk . T.encodeUtf8 $ T.concat ["x-amz-meta-", fst x], snd x)) poMetadata
+                                            ) ++ if null poTagging
+                                                then []
+                                                else [("x-amz-tagging", URI.renderQuery False $ URI.queryTextToQuery $ map (second Just) poTagging)]
                                , s3QOtherHeaders = map (second T.encodeUtf8) $ catMaybes [
                                               ("Expires",) . T.pack . show <$> poExpires
                                             , ("Cache-Control",) <$> poCacheControl
