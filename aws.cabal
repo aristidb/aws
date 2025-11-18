@@ -29,10 +29,6 @@ Flag Examples
   Description: Build the examples.
   Default: False
 
-Flag NetworkBSD
-  Description: Build with network-3.0 which split out network-bsd
-  Default: True
-
 Library
   Exposed-modules:
                        Aws
@@ -166,11 +162,9 @@ Library
                        unordered-containers >= 0.2,
                        utf8-string          >= 0.3     && < 1.1,
                        vector               >= 0.10,
-                       xml-conduit          >= 1.8     && <2.0
-  if flag(NetworkBSD)
-    Build-depends: network == 3.*, network-bsd == 2.8.*
-  else
-    Build-depends: network == 2.*
+                       xml-conduit          >= 1.8     && <2.0,
+                       network              == 3.*,
+                       network-bsd          == 2.8.*
  
   if !impl(ghc >= 7.6)
     Build-depends: ghc-prim

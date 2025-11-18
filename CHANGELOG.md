@@ -7,6 +7,8 @@ whenever possible when interacting with aws types.
 
 -   0.25
     - [breaking change] Added poTagging constructor to PutObject
+    - Removed support for building with network-2.x, and removed the
+      NetworkBSD build flag.
 
 0.24 series
 -----------
