@@ -626,7 +626,9 @@ parseObjectVersionInfo el
            XML.NodeElement e | elName e == "Version" ->
              do eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
                 size <- forceM "Missing object Size" $ el $/ elContent "Size" &| textReadInt
-                storageClass <- forceM "Missing object StorageClass" $ el $/ elContent "StorageClass" &| return . parseStorageClass
+                storageClass <- case el $/ elContent "StorageClass" &| parseStorageClass of
+                        (x:_) -> return x
+                        [] -> return Standard
                 return ObjectVersion{
                              oviKey          = key
                            , oviVersionId    = versionId
@@ -672,7 +674,9 @@ parseObjectInfo el
          lastModified <- forceM "Missing object LastModified" $ el $/ elContent "LastModified" &| time
          eTag <- force "Missing object ETag" $ el $/ elContent "ETag"
          size <- forceM "Missing object Size" $ el $/ elContent "Size" &| textReadInt
-         storageClass <- forceM "Missing object StorageClass" $ el $/ elContent "StorageClass" &| return . parseStorageClass
+         storageClass <- case el $/ elContent "StorageClass" &| parseStorageClass of
+                    (x:_) -> return x
+                    [] -> return Standard
          owner <- case el $/ Cu.laxElement "Owner" &| parseUserInfo of
                     (x:_) -> fmap' Just x
                     [] -> return Nothing
