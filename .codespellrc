@@ -3,4 +3,4 @@
 skip = .git*,.codespellrc
 check-hidden = true
 ignore-regex = \b(TE|catchE|Ser|BU|bu)\b
-# ignore-words-list =
+ignore-words-list = re-used,re-use
